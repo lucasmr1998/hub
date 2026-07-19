@@ -1,0 +1,2858 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Gerenciar Leads - Megalink{% endblock %}
+
+{% block custom_css %}
+  <style>
+
+    /* Página */
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .title { display:flex; align-items:center; gap:.5rem; }
+    .title h1 { font-size:1.5rem; font-weight:700; }
+    .actions { display:flex; gap:.5rem; }
+    .btn { padding: .6rem 1rem; border:none; border-radius:10px; font-weight:600; cursor:pointer; }
+    .btn-primary { background: linear-gradient(135deg, #4facfe, #00f2fe); color:white; }
+    .btn-success { background: linear-gradient(135deg, #1F3D59, #2a4f73); color:white; }
+
+    .filters-card, .stats-card, .list-card { background:white; border:1px solid #e0e0e0; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .card-header { background: #fff; padding:1rem 1.25rem; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; border-top-left-radius:14px; border-top-right-radius:14px; }
+    
+    .filters-content { max-height: 1000px; overflow: hidden; transition: max-height 0.3s ease-in-out; }
+    .filters-content.collapsed { max-height: 0; }
+    .filters-content.collapsed .filters-grid, .filters-content.collapsed .filters-actions { display: none; }
+    .search { display:flex; gap:.5rem; align-items:center; }
+    .search input { padding:.6rem .8rem; border:2px solid #e0e0e0; border-radius:10px; min-width:260px; }
+    .search input:focus { outline:none; border-color:#0022fa; box-shadow:0 0 0 3px rgba(102,126,234,.1); }
+
+    .filters-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; padding: 1rem 1.25rem; }
+    .filters-grid .field label { display:block; color:#666; font-weight:600; font-size:.9rem; margin-bottom:.4rem; }
+    .filters-grid .field select, .filters-grid .field input { width:100%; padding:.6rem .8rem; border:2px solid #e0e0e0; border-radius:10px; box-sizing:border-box; height:40px; font-size:.9rem; }
+    .filters-actions { display:flex; gap:.5rem; align-items:end; padding: 0 1.25rem 1.25rem; }
+    .btn-filter { background:#1F3D59; color:#fff; border:none; padding:.6rem 1rem; border-radius:10px; font-weight:600; cursor:pointer; }
+    .btn-clear { background:#eef3f7; color:#1F3D59; border:none; padding:.6rem 1rem; border-radius:10px; font-weight:600; cursor:pointer; }
+
+    .stats-grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:1rem; padding:1rem; }
+    .stat { background:#fff; border:1px solid #e0e0e0; border-radius:12px; padding:1.25rem; display:flex; align-items:center; gap:1rem; }
+    .stat .icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; background:linear-gradient(135deg,#0022fa,#0018b0); }
+    .stat h4 { color:#666; font-weight:600; margin-bottom:.15rem; }
+    .stat .value { font-size:1.4rem; font-weight:800; }
+
+    .table-wrap { overflow:auto; padding: 0 2rem; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { background:#fff; color:#333; padding:.85rem 1rem; text-align:left; font-weight:700; font-size:.85rem; position:sticky; top:0; border-bottom:2px solid #f0f0f0; }
+    tbody td { padding:.85rem 1rem; border-bottom:1px solid #eee; background:transparent; font-size:.95rem; }
+    tbody tr:hover { background:#f8f9ff; transition:background .2s ease; }
+
+    .chip { background:#eef3f7; color:#1F3D59; border-radius:16px; padding:.25rem .6rem; font-size:.8rem; font-weight:600; display:inline-flex; align-items:center; gap:.35rem; }
+    .pill { border-radius:14px; padding:.35rem .6rem; font-weight:600; font-size:.8rem; display:inline-flex; align-items:center; gap:.35rem; }
+    .pill-blue { background:#eef3f7; color:#1F3D59; }
+    .btn-pill { border:2px solid #e0e0e0; background:#fff; color:#1F3D59; border-radius:10px; padding:.35rem .6rem; cursor:pointer; transition: all 0.3s ease; }
+    .btn-pill:hover { border-color:#0022fa; background:#0022fa; color:#fff; transform: translateY(-1px); }
+    .btn-pill.btn-danger { border-color:#e74c3c; color:#e74c3c; }
+    .btn-pill.btn-danger:hover { background:#e74c3c; color:#fff; }
+    .btn-pill.btn-success { border-color:#27ae60; color:#27ae60; }
+    .btn-pill.btn-success:hover { background:#27ae60; color:#fff; }
+    .btn-pill.btn-warning { border-color:#f39c12; color:#f39c12; }
+    .btn-pill.btn-warning:hover { background:#f39c12; color:#fff; }
+    .btn-pill.btn-pill-chat { border-color:#25d366; color:#25d366; }
+    .btn-pill.btn-pill-chat:hover { background:#25d366; color:#fff; }
+    
+    .id-badge { width:28px; height:28px; background:#6b7280; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; }
+    .name-cell { display:flex; align-items:center; gap:.6rem; }
+    .avatar { width:36px; height:36px; border-radius:50%; background:#2ecc71; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; }
+    .link-blue { color:#2a6df4; text-decoration:none; }
+    .link-blue:hover { text-decoration: underline; }
+    .list-card .card-header { border-bottom:0; padding-left:2rem; padding-right:2rem; }
+
+    .pagination { display:flex; gap:.5rem; justify-content:space-between; align-items:center; padding:1rem 2rem; background:#f8f9fa; border-top:1px solid #e0e0e0; }
+    .pagination-info { color:#666; font-size:.9rem; }
+    .pagination-controls { display:flex; gap:.5rem; }
+    .pagination-controls button { padding:.5rem 1rem; border:2px solid #e0e0e0; background:#fff; border-radius:8px; cursor:pointer; transition: all 0.3s ease; font-size:.9rem; }
+    .pagination-controls button.active, .pagination-controls button:hover { border-color:#0022fa; background:#0022fa; color:#fff; }
+    .pagination-controls button:disabled { opacity: 0.5; cursor: not-allowed; background:#f5f5f5; }
+    .per-page-selector { display:flex; align-items:center; gap:.5rem; }
+    .per-page-selector select { padding:.4rem; border:1px solid #e0e0e0; border-radius:6px; }
+
+    /* Modal Styles */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; backdrop-filter: blur(4px); }
+    .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 20px; padding: 2rem; min-width: 500px; max-width: 90vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .modal-header h3 { margin: 0; color: #333; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; transition: all 0.3s; }
+    .modal-close:hover { color: #333; transform: scale(1.1); }
+    .modal-body { margin-bottom: 1.5rem; }
+    .modal-footer { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    
+    /* Info Cards */
+    .info-card { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef; transition: all 0.3s; }
+    .info-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .info-icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; flex-shrink: 0; }
+    .info-details { flex: 1; }
+    .info-label { font-size: 0.75rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+    .info-value { font-size: 1.1rem; font-weight: 700; color: #1F3D59; }
+    
+    /* Form Sections */
+    .form-section { margin-bottom: 2rem; background: #fff; border: 1px solid #e9ecef; border-radius: 12px; padding: 1.5rem; transition: all 0.3s; }
+    .form-section:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .section-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 2px solid #f0f0f0; }
+    .section-header i { color: #0022fa; font-size: 1.2rem; }
+    .section-header h4 { margin: 0; color: #1F3D59; font-size: 1.1rem; font-weight: 700; }
+    
+    /* Form Fields Enhanced */
+    .form-field label { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; margin-bottom: 0.5rem; color: #495057; font-size: 0.9rem; }
+    .form-field label i { color: #0022fa; font-size: 0.9rem; }
+    .form-field input, .form-field select, .form-field textarea { 
+      padding: 0.75rem; 
+      border: 2px solid #e0e0e0; 
+      border-radius: 8px; 
+      transition: all 0.3s; 
+      font-size: 0.95rem;
+      background: #fff;
+    }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { 
+      outline: none; 
+      border-color: #0022fa; 
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      background: #f8f9ff;
+    }
+    .form-field input:disabled, .form-field select:disabled, .form-field textarea:disabled {
+      background: #f8f9fa;
+      color: #6c757d;
+      cursor: not-allowed;
+    }
+    .form-field textarea { 
+      resize: vertical; 
+      min-height: 80px; 
+      font-family: inherit;
+    }
+    .form-field textarea::placeholder {
+      color: #adb5bd;
+      font-style: italic;
+    }
+    
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .form-field { display: flex; flex-direction: column; }
+    .form-field.full-width { grid-column: span 2; }
+    .form-field label { font-weight: 600; margin-bottom: 0.5rem; color: #333; }
+    .form-field input, .form-field select, .form-field textarea { padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; transition: border-color 0.3s; }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: none; border-color: #0022fa; }
+    .form-field textarea { resize: vertical; min-height: 80px; }
+
+    /* Status badges */
+    .status-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+    .status-pendente { background: #fff3cd; color: #856404; }
+    .status-processado { background: #d1ecf1; color: #0c5460; }
+    .status-sucesso { background: #d4edda; color: #155724; }
+    .status-erro { background: #f8d7da; color: #721c24; }
+    .status-rejeitado { background: #f8d7da; color: #721c24; }
+
+    /* Score display */
+    .score-display { display: flex; align-items: center; gap: 0.5rem; }
+    .score-bar { width: 40px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
+    .score-fill { height: 100%; background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60); border-radius: 3px; }
+    
+    /* Action buttons grid */
+    .actions-grid { display: flex; gap: 0.3rem; justify-content: center; }
+
+    /* ===== CARD ÚNICO DO LEAD ===== */
+    .lead-info-card-unico {
+      background: linear-gradient(135deg, #1F3D59, #2a5a85);
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      color: white;
+      box-shadow: 0 4px 16px rgba(31,61,89,0.25);
+    }
+    .lead-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      margin-bottom: 0.85rem;
+    }
+    .lead-card-avatar {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+    .lead-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .lead-card-nome {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .lead-card-empresa {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-top: 0.2rem;
+    }
+    .lead-card-status-badge {
+      display: inline-block;
+      margin-top: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      white-space: nowrap;
+    }
+    .lead-card-status-badge.sucesso { background: rgba(39,174,96,0.4); border-color: rgba(39,174,96,0.5); }
+    .lead-card-status-badge.erro { background: rgba(231,76,60,0.4); border-color: rgba(231,76,60,0.5); }
+    .lead-card-status-badge.pendente { background: rgba(243,156,18,0.3); border-color: rgba(243,156,18,0.5); }
+    .lead-card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+    .lead-card-item {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+    }
+    .lead-card-item-label {
+      font-size: 0.6rem;
+      opacity: 0.7;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.2rem;
+    }
+    .lead-card-item-value {
+      font-size: 0.82rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+    .lead-card-value-destaque {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #7fffba;
+    }
+    .lead-card-btn-ver {
+      display: block;
+      width: 100%;
+      margin-top: 0.85rem;
+      padding: 0.55rem;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.82rem;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .lead-card-btn-ver:hover {
+      background: rgba(255,255,255,0.25);
+    }
+
+    /* ===== CHAT / CONVERSA ===== */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      padding: 0.5rem 0;
+    }
+
+    .chat-date-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 0.75rem 0 0.25rem;
+    }
+    .chat-date-divider span {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #9ca3af;
+      background: #f3f4f6;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .chat-date-divider::before,
+    .chat-date-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    /* Bolha de mensagem */
+    .chat-bubble-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+    .chat-bubble-wrap.sistema { flex-direction: row-reverse; }
+    .chat-bubble-wrap.robô { flex-direction: row-reverse; }
+    .chat-bubble-wrap.robo { flex-direction: row-reverse; }
+
+    .chat-avatar-mini {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: white;
+    }
+    .avatar-sistema { background: linear-gradient(135deg, #0022fa, #0018b0); }
+    .avatar-contato { background: linear-gradient(135deg, #1F3D59, #2a5a85); }
+    .avatar-robo { background: linear-gradient(135deg, #f39c12, #e67e22); }
+    .avatar-outros { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
+
+    .chat-bubble {
+      max-width: 72%;
+      border-radius: 14px;
+      padding: 0.65rem 0.9rem;
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Lado esquerdo - contato/lead */
+    .chat-bubble-wrap:not(.sistema):not(.robo):not(.robô) .chat-bubble {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Lado direito - sistema/robô */
+    .chat-bubble-wrap.sistema .chat-bubble,
+    .chat-bubble-wrap.robo .chat-bubble,
+    .chat-bubble-wrap.robô .chat-bubble {
+      background: linear-gradient(135deg, #e8f4fd, #dbeafe);
+      border: 1px solid #bfdbfe;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* Sucesso/Venda - destaque */
+    .chat-bubble.bubble-sucesso {
+      background: linear-gradient(135deg, #d1fae5, #a7f3d0) !important;
+      border-color: #6ee7b7 !important;
+    }
+    .chat-bubble.bubble-venda {
+      background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+      border-color: #fbbf24 !important;
+    }
+    .chat-bubble.bubble-erro {
+      background: linear-gradient(135deg, #fee2e2, #fecaca) !important;
+      border-color: #fca5a5 !important;
+    }
+
+    .chat-bubble-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+    .chat-bubble-origem {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #0022fa;
+    }
+    .bubble-sucesso .chat-bubble-origem { color: #059669; }
+    .bubble-venda .chat-bubble-origem { color: #d97706; }
+    .bubble-erro .chat-bubble-origem { color: #dc2626; }
+
+    .chat-bubble-hora {
+      font-size: 0.65rem;
+      color: #9ca3af;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chat-bubble-status {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .chat-bubble-mensagem {
+      font-size: 0.82rem;
+      color: #4b5563;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .chat-bubble.bubble-sucesso .chat-bubble-mensagem,
+    .chat-bubble.bubble-sucesso .chat-bubble-status { color: #065f46; }
+    .chat-bubble.bubble-venda .chat-bubble-mensagem,
+    .chat-bubble.bubble-venda .chat-bubble-status { color: #78350f; }
+    .chat-bubble.bubble-erro .chat-bubble-mensagem,
+    .chat-bubble.bubble-erro .chat-bubble-status { color: #7f1d1d; }
+
+    /* Mini-dados dentro da bolha */
+    .chat-meta-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+    }
+    .chat-meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(0,0,0,0.06);
+      border-radius: 20px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    .chat-meta-tag i { font-size: 0.6rem; color: #0022fa; }
+    .bubble-sucesso .chat-meta-tag { background: rgba(6,95,70,0.1); color: #065f46; }
+    .bubble-sucesso .chat-meta-tag i { color: #059669; }
+    .bubble-venda .chat-meta-tag { background: rgba(120,53,15,0.1); color: #78350f; }
+    .bubble-venda .chat-meta-tag i { color: #d97706; }
+
+    /* Badges de conversão dentro da bolha */
+    .chat-badges {
+      display: flex;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+      margin-top: 0.4rem;
+    }
+    .chat-badge {
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .cbadge-converteu { background: #d1fae5; color: #065f46; }
+    .cbadge-venda { background: #fef3c7; color: #78350f; }
+    .cbadge-sucesso { background: #dbeafe; color: #1e40af; }
+
+    /* Grupo de pergunta + resposta */
+    .chat-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Linha de meta-dados do grupo (protocolo, conta, etc) */
+    .chat-group-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      padding: 0 0.5rem;
+      justify-content: center;
+      margin-top: 0.15rem;
+    }
+    .chat-group-meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(0,0,0,0.05);
+      border-radius: 20px;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.63rem;
+      font-weight: 600;
+      color: #6b7280;
+      border: 1px solid #e5e7eb;
+    }
+    .chat-group-meta-tag i { font-size: 0.58rem; color: #9ca3af; }
+
+    /* Contagem de mensagens na conversa */
+    .chat-count-info {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #9ca3af;
+      padding: 0.5rem;
+      background: #f9fafb;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Scrollbar para chat */
+    .chat-scroll {
+      max-height: 480px;
+      overflow-y: auto;
+      padding: 0 0.25rem;
+    }
+    .chat-scroll::-webkit-scrollbar { width: 5px; }
+    .chat-scroll::-webkit-scrollbar-track { background: #f3f4f6; border-radius: 10px; }
+    .chat-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+    .chat-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    
+    /* Loading spinner */
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0022fa; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ===== RESPONSIVIDADE PARA LEADS ===== */
+    
+    /* Tablet e Desktop Pequeno */
+    @media (max-width: 1024px) {
+      .container {
+        padding: 1.5rem;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+      }
+      
+      .filters-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+    }
+
+    /* Tablet */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      
+      .card-header > div:first-child {
+        width: 100%;
+      }
+      
+      .actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        padding: 0.75rem;
+      }
+      
+      .stat {
+        padding: 1rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+        min-height: auto;
+      }
+      
+      .stat .icon {
+        width: 50px;
+        height: 50px;
+        margin: 0 auto;
+      }
+      
+      .stat h4 {
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+      }
+      
+      .stat .value {
+        font-size: 1.2rem;
+      }
+      
+      .stat small {
+        font-size: 0.7rem;
+        margin-top: 0.25rem;
+        display: block;
+      }
+      
+      .filters-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 1rem;
+      }
+      
+      .filters-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0 1rem 1rem;
+      }
+      
+      .btn-filter, .btn-clear {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+      }
+      
+      .search input {
+        min-width: 100%;
+        width: 100%;
+      }
+      
+      .table-wrap {
+        padding: 0 1rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      table {
+        min-width: 800px;
+      }
+      
+      thead th, tbody td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+      }
+      
+      .name-cell {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+      }
+      
+      .actions-grid {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      
+      .btn-pill {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+      
+      .pagination {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+        align-items: center;
+      }
+      
+      .pagination-controls {
+        order: 2;
+      }
+      
+      .pagination-info {
+        order: 1;
+        text-align: center;
+      }
+      
+      .per-page-selector {
+        order: 3;
+      }
+      
+      .pagination-controls button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 480px) {
+      .container {
+        padding: 0.75rem;
+      }
+      
+      .title h1 {
+        font-size: 1.25rem;
+      }
+      
+      .card-header {
+        padding: 0.75rem;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 0.5rem;
+      }
+      
+      .stat {
+        padding: 0.75rem;
+        flex-direction: row;
+        text-align: left;
+        gap: 1rem;
+        align-items: center;
+      }
+      
+      .stat .icon {
+        width: 40px;
+        height: 40px;
+        margin: 0;
+        flex-shrink: 0;
+      }
+      
+      .stat h4 {
+        font-size: 0.8rem;
+        margin-bottom: 0.15rem;
+      }
+      
+      .stat .value {
+        font-size: 1.1rem;
+        margin-bottom: 0.15rem;
+      }
+      
+      .stat small {
+        font-size: 0.65rem;
+        margin-top: 0.15rem;
+        display: block;
+      }
+      
+      .filters-grid {
+        padding: 0.75rem;
+      }
+      
+      .filters-actions {
+        padding: 0 0.75rem 0.75rem;
+      }
+      
+      .table-wrap {
+        padding: 0 0.5rem;
+      }
+      
+      table {
+        min-width: 700px;
+      }
+      
+      thead th, tbody td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.8rem;
+      }
+      
+      .btn-pill {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.7rem;
+        min-height: 40px;
+      }
+      
+      .chip {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+      }
+      
+      .pagination {
+        padding: 0.75rem;
+      }
+      
+      .pagination-controls button {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+        min-height: 40px;
+      }
+      
+      .pagination-info {
+        font-size: 0.8rem;
+      }
+    }
+
+    /* Mobile Landscape */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      
+      .stat {
+        flex-direction: row;
+        text-align: left;
+        gap: 0.75rem;
+      }
+      
+      .stat .icon {
+        width: 35px;
+        height: 35px;
+        margin: 0;
+      }
+    }
+
+    /* Melhorias de Touch */
+    @media (hover: none) and (pointer: coarse) {
+      .btn, .btn-pill, .btn-filter, .btn-clear {
+        min-height: 44px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .btn:hover, .btn-pill:hover {
+        transform: none;
+      }
+      
+      .btn-pill:hover {
+        transform: none;
+      }
+    }
+
+    /* Scrollbar personalizada para mobile */
+    .table-wrap::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    .table-wrap::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    
+    .table-wrap::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+    
+    .table-wrap::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    /* Melhorias para inputs em mobile */
+    @media (max-width: 768px) {
+      input[type="date"], input[type="text"], select {
+        font-size: 16px; /* Previne zoom no iOS */
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+    }
+
+    /* Ajustes para telas muito pequenas */
+    @media (max-width: 360px) {
+      .container {
+        padding: 0.5rem;
+      }
+      
+      .card-header {
+        padding: 0.5rem;
+      }
+      
+      .filters-grid {
+        padding: 0.5rem;
+      }
+      
+      .filters-actions {
+        padding: 0 0.5rem 0.5rem;
+      }
+      
+      .table-wrap {
+        padding: 0 0.25rem;
+      }
+      
+      table {
+        min-width: 600px;
+      }
+      
+      thead th, tbody td {
+        padding: 0.4rem 0.2rem;
+        font-size: 0.75rem;
+      }
+      
+      .stat {
+        padding: 0.5rem;
+        gap: 0.75rem;
+      }
+      
+      .stat .icon {
+        width: 35px;
+        height: 35px;
+      }
+      
+      .stat h4 {
+        font-size: 0.75rem;
+      }
+      
+      .stat .value {
+        font-size: 1rem;
+      }
+      
+      .stat small {
+        font-size: 0.6rem;
+      }
+    }
+
+    /* Modal de histórico responsivo */
+    @media (max-width: 860px) {
+      #modalHistorico .modal-content {
+        min-width: 98vw !important;
+      }
+      #modalHistorico .modal-content > div:nth-child(2) {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+      }
+      #modalHistorico .modal-content > div:nth-child(2) > div:first-child {
+        max-height: 240px;
+        border-right: none !important;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      #modalHistorico .modal-content > div:nth-child(2) > div:last-child {
+        min-height: 320px;
+        max-height: 50vh;
+      }
+      .chat-bubble { max-width: 88%; }
+    }
+
+    /* Modal responsivo */
+    @media (max-width: 1024px) {
+      .modal-content {
+        min-width: 90vw !important;
+      }
+      
+      .info-card {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .info-icon {
+        margin: 0 auto;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .modal-content {
+        min-width: 95vw !important;
+        margin: 1rem;
+        padding: 1.5rem;
+      }
+      
+      .form-grid {
+        grid-template-columns: 1fr !important;
+      }
+      
+      .modal-body {
+        padding: 1rem;
+      }
+      
+      .form-section {
+        padding: 1rem;
+      }
+      
+      .section-header h4 {
+        font-size: 1rem;
+      }
+      
+      .info-card {
+        padding: 1rem;
+      }
+      
+      .info-icon {
+        width: 45px;
+        height: 45px;
+      }
+      
+      .info-value {
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .modal-content {
+        min-width: 100vw !important;
+        margin: 0;
+        border-radius: 0;
+        max-height: 100vh;
+        padding: 1rem;
+      }
+      
+      .modal-header {
+        padding: 1rem !important;
+        margin: -1rem -1rem 0 -1rem !important;
+      }
+      
+      .modal-header > div:first-child {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      
+      .modal-header h3 {
+        font-size: 1.25rem !important;
+      }
+      
+      .modal-body {
+        padding: 1rem;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+      }
+      
+      .modal-footer {
+        padding: 1rem !important;
+        margin: 0 -1rem -1rem -1rem !important;
+      }
+      
+      .info-card {
+        flex-direction: row;
+        text-align: left;
+        padding: 0.75rem;
+      }
+      
+      .info-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+      }
+      
+      .info-label {
+        font-size: 0.7rem;
+      }
+      
+      .info-value {
+        font-size: 0.9rem;
+      }
+      
+      .form-section {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      
+      .section-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      
+      .section-header h4 {
+        font-size: 0.95rem;
+      }
+      
+      .form-field label {
+        font-size: 0.85rem;
+      }
+      
+      .form-field input, .form-field select, .form-field textarea {
+        padding: 0.6rem;
+        font-size: 0.9rem;
+      }
+      
+      .historico-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+      }
+      
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .modal-footer {
+        flex-direction: column-reverse;
+      }
+      
+      .modal-footer button {
+        width: 100%;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+  <div class="container">
+    <!-- Filtros -->
+    <div class="filters-card">
+      <div class="card-header" style="cursor: pointer;" onclick="toggleFiltros()">
+        <div style="display:flex; align-items:center; gap:.5rem;">
+          <i class="fas fa-filter" style="color:#1F3D59"></i>
+          <strong>Filtros</strong>
+          <i class="fas fa-chevron-down" id="filtrosChevron" style="transition: transform 0.3s; margin-left: auto; transform: rotate(-90deg);"></i>
+        </div>
+      </div>
+      <div id="filtrosContent" class="filters-content collapsed">
+      <div class="filters-grid">
+        <div class="field">
+          <label>Status API</label>
+          <select id="statusFilter"><option value="">Todos</option></select>
+        </div>
+        <div class="field">
+          <label>Origem</label>
+          <select id="origemFilter"><option value="">Todos</option></select>
+        </div>
+        <div class="field">
+          <label>Situação</label>
+          <select id="ativoFilter">
+            <option value="">Todos</option>
+            <option value="true">Ativos</option>
+            <option value="false">Inativos</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Pesquisar</label>
+          <input type="text" id="searchInput" placeholder="Nome, email, telefone, empresa..." />
+        </div>
+        <div class="field">
+          <label>Data Início</label>
+          <input type="date" id="dataInicio" />
+        </div>
+        <div class="field">
+          <label>Data Fim</label>
+          <input type="date" id="dataFim" />
+        </div>
+
+        <div class="field">
+          <label>Com Valor</label>
+          <select id="valorFilter">
+            <option value="">Todos</option>
+            <option value="sim">Com valor</option>
+            <option value="nao">Sem valor</option>
+          </select>
+        </div>
+      </div>
+        <div class="filters-actions">
+          <button class="btn-filter" id="btnFiltrar"><i class="fas fa-search"></i> Filtrar</button>
+          <button class="btn-clear" id="btnLimpar"><i class="fas fa-times"></i> Limpar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-card" style="margin-top:1rem;">
+      <div class="card-header">
+        <div style="display:flex; align-items:center; gap:.5rem;">
+          <i class="fas fa-chart-line" style="color:#1F3D59"></i>
+          <strong>Estatísticas dos Leads</strong>
+        </div>
+        <div class="actions">
+          <button class="btn-success" id="btnNovoLead"><i class="fas fa-plus"></i> Novo Lead</button>
+          <button class="btn-primary" id="btnExportar"><i class="fas fa-download"></i> Exportar</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="icon" style="background:linear-gradient(135deg,#1F3D59,#2a4f73)"><i class="fas fa-database"></i></div>
+          <div>
+            <h4>Total de Leads</h4>
+            <div class="value" id="statTotal">0</div>
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="icon" style="background:linear-gradient(135deg,#1F3D59,#2a4f73)"><i class="fas fa-chart-line"></i></div>
+          <div>
+            <h4>Valor Total</h4>
+            <div class="value" id="statValorTotal">R$ 0,00</div>
+            <small style="color:#666; font-size:0.7rem;">Todos os leads com valor</small>
+          </div>
+        </div>
+        <div class="stat">
+          <div class="icon" style="background:linear-gradient(135deg,#1F3D59,#2a4f73)"><i class="fas fa-exclamation-triangle"></i></div>
+          <div>
+            <h4>Com Erro</h4>
+            <div class="value" id="statErros">0</div>
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="icon" style="background:linear-gradient(135deg,#1F3D59,#2a4f73)"><i class="fas fa-calendar-day"></i></div>
+          <div>
+            <h4>Hoje</h4>
+            <div class="value" id="statHoje">0</div>
+            <small style="color:#666; font-size:0.7rem;">Total do dia</small>
+          </div>
+        </div>
+        <div class="stat">
+          <div class="icon" style="background:linear-gradient(135deg,#1F3D59,#2a4f73)"><i class="fas fa-calendar-week"></i></div>
+          <div>
+            <h4>Esta Semana</h4>
+            <div class="value" id="statSemana">0</div>
+            <small style="color:#666; font-size:0.7rem;">Total da semana</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista -->
+    <div class="list-card" style="margin-top:1rem;">
+      <div class="card-header">
+        <div style="display:flex; align-items:center; gap:.5rem;">
+          <i class="fas fa-table" style="color:#1F3D59"></i>
+          <strong>Leads</strong>
+        </div>
+        <div class="chip" id="contadorChip">0 registro(s)</div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="leadsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Lead</th>
+              <th>Contato</th>
+              <th>Valor</th>
+              <th>Origem</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <div class="pagination-info">
+          <span id="paginationInfo">Mostrando 0 de 0 registros</span>
+        </div>
+        <div class="pagination-controls" id="paginationControls"></div>
+        <div class="per-page-selector">
+          <span>Por página:</span>
+          <select id="perPageSelect">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Visualizar/Editar Lead -->
+  <div id="modalLead" class="modal">
+    <div class="modal-content" style="min-width: 900px; max-width: 95vw;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0022fa, #0018b0); color: white; padding: 1.5rem 2rem; border-radius: 20px 20px 0 0; margin: -2rem -2rem 0 -2rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-user-circle" style="font-size: 24px;"></i>
+          </div>
+          <div>
+            <h3 id="modalTitle" style="margin: 0; font-size: 1.5rem;">Detalhes do Lead</h3>
+            <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;" id="leadSubtitle">Informações completas do lead</p>
+          </div>
+        </div>
+        <button class="modal-close" onclick="fecharModal('modalLead')" style="color: white; opacity: 0.9; font-size: 2rem; background: none;">&times;</button>
+      </div>
+      
+      <div class="modal-body" style="padding: 2rem;">
+        <!-- Info Cards no topo -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+          <div class="info-card">
+            <div class="info-icon" style="background: linear-gradient(135deg, #0022fa, #0018b0);">
+              <i class="fas fa-hashtag"></i>
+            </div>
+            <div class="info-details">
+              <div class="info-label">ID do Lead</div>
+              <div class="info-value" id="displayId">-</div>
+            </div>
+          </div>
+          
+          <div class="info-card">
+            <div class="info-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+              <i class="fas fa-calendar"></i>
+            </div>
+            <div class="info-details">
+              <div class="info-label">Data Cadastro</div>
+              <div class="info-value" id="displayDataCadastro">-</div>
+            </div>
+          </div>
+          
+          <div class="info-card">
+            <div class="info-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+              <i class="fas fa-signal"></i>
+            </div>
+            <div class="info-details">
+              <div class="info-label">Status</div>
+              <div class="info-value" id="displayStatus">-</div>
+            </div>
+          </div>
+          
+          <div class="info-card">
+            <div class="info-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+              <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="info-details">
+              <div class="info-label">Valor</div>
+              <div class="info-value" id="displayValor">R$ 0,00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulário organizado em seções -->
+        <form id="formLead">
+          <!-- Seção: 👤 Informações Principais -->
+          <div class="form-section">
+            <div class="section-header">
+              <i class="fas fa-user"></i>
+              <h4>👤 Informações Principais</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Dados básicos do lead/cliente</small>
+            </div>
+            <div class="form-grid">
+              <div class="form-field full-width">
+                <label><i class="fas fa-id-card"></i> Nome/Razão Social *</label>
+                <input type="text" id="nome_razaosocial" required placeholder="Nome completo ou razão social do cliente">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-envelope"></i> Email</label>
+                <input type="email" id="email" placeholder="Email válido do cliente">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-phone"></i> Telefone *</label>
+                <input type="text" id="telefone" required placeholder="Telefone de contato">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-building"></i> Empresa</label>
+                <input type="text" id="empresa" placeholder="Nome da empresa">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-hashtag"></i> ID HubSoft</label>
+                <input type="text" id="id_hubsoft" placeholder="ID no sistema HubSoft">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-barcode"></i> ID Origem</label>
+                <input type="text" id="id_origem" placeholder="ID de origem">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-code"></i> ID Origem Serviço</label>
+                <input type="text" id="id_origem_servico" placeholder="ID do serviço de origem">
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: 📄 Documentos e Localização -->
+          <div class="form-section">
+            <div class="section-header">
+              <i class="fas fa-file-alt"></i>
+              <h4>📄 Documentos e Localização</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Informações de documentos e endereço</small>
+            </div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label><i class="fas fa-id-badge"></i> CPF/CNPJ</label>
+                <input type="text" id="cpf_cnpj" placeholder="CPF ou CNPJ do cliente">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-address-card"></i> RG</label>
+                <input type="text" id="rg" placeholder="Número do RG do cliente">
+              </div>
+              <div class="form-field full-width">
+                <label><i class="fas fa-road"></i> Endereço Completo</label>
+                <input type="text" id="endereco" placeholder="Endereço completo do cliente">
+              </div>
+              <div class="form-field full-width">
+                <label><i class="fas fa-map-signs"></i> Rua</label>
+                <input type="text" id="rua" placeholder="Logradouro do endereço">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-home"></i> Número da Residência</label>
+                <input type="text" id="numero_residencia" placeholder="Número do endereço">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-map"></i> Bairro</label>
+                <input type="text" id="bairro" placeholder="Bairro do endereço">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-city"></i> Cidade</label>
+                <input type="text" id="cidade" placeholder="Cidade">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-flag"></i> Estado</label>
+                <input type="text" id="estado" maxlength="2" style="text-transform: uppercase;" placeholder="UF do estado">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-mail-bulk"></i> CEP</label>
+                <input type="text" id="cep" placeholder="CEP">
+              </div>
+              <div class="form-field full-width">
+                <label><i class="fas fa-map-marker-alt"></i> Ponto de Referência</label>
+                <input type="text" id="ponto_referencia" placeholder="Ponto de referência para facilitar a localização">
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: 💼 Dados Comerciais -->
+          <div class="form-section">
+            <div class="section-header">
+              <i class="fas fa-briefcase"></i>
+              <h4>💼 Dados Comerciais</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Informações comerciais e de vendedor</small>
+            </div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label><i class="fas fa-wifi"></i> ID Plano (RP)</label>
+                <input type="text" id="id_plano_rp" placeholder="ID do plano de internet">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-calendar-check"></i> ID Dia de Vencimento</label>
+                <input type="text" id="id_dia_vencimento" placeholder="ID do dia de vencimento">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-user-tie"></i> ID Vendedor (RP)</label>
+                <input type="text" id="id_vendedor_rp" placeholder="ID do vendedor responsável">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-birthday-cake"></i> Data de Nascimento</label>
+                <input type="date" id="data_nascimento" placeholder="Data de nascimento">
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: 💰 Vendas e Status -->
+          <div class="form-section">
+            <div class="section-header">
+              <i class="fas fa-dollar-sign"></i>
+              <h4>💰 Vendas e Status</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Status do lead e informações de venda</small>
+            </div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label><i class="fas fa-money-bill-wave"></i> Valor (R$)</label>
+                <input type="number" step="0.01" id="valor" placeholder="Valor da venda">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-funnel-dollar"></i> Custo de Aquisição (R$)</label>
+                <input type="number" step="0.01" id="custo_aquisicao" placeholder="Custo para adquirir o lead">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-tag"></i> Origem</label>
+                <select id="origem">
+                  <option value="">Selecione...</option>
+                  <option value="site">Site</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="google">Google Ads</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="indicacao">Indicação</option>
+                  <option value="telefone">Telefone</option>
+                  <option value="email">Email</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-tasks"></i> Status API</label>
+                <select id="status_api">
+                  <option value="">Selecione...</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="processado">Processado</option>
+                  <option value="erro">Erro</option>
+                  <option value="sucesso">Sucesso</option>
+                  <option value="rejeitado">Rejeitado</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-toggle-on"></i> Ativo</label>
+                <select id="ativo">
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-star"></i> Score de Qualificação</label>
+                <input type="number" id="score_qualificacao" placeholder="Score de 0 a 100" min="0" max="100">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-phone-volume"></i> Tentativas de Contato</label>
+                <input type="number" id="tentativas_contato" placeholder="Número de tentativas">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-clock"></i> Data Último Contato</label>
+                <input type="datetime-local" id="data_ultimo_contato">
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: 📝 Observações e Detalhes -->
+          <div class="form-section">
+            <div class="section-header">
+              <i class="fas fa-comment-dots"></i>
+              <h4>📝 Observações e Detalhes</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Anotações e informações adicionais</small>
+            </div>
+            <div class="form-field full-width">
+              <label><i class="fas fa-sticky-note"></i> Observações</label>
+              <textarea id="observacoes" rows="4" placeholder="Adicione observações sobre este lead..."></textarea>
+            </div>
+            <div class="form-field full-width">
+              <label><i class="fas fa-times-circle"></i> Motivo de Rejeição</label>
+              <textarea id="motivo_rejeicao" rows="2" placeholder="Motivo da rejeição (se aplicável)"></textarea>
+            </div>
+          </div>
+
+          <!-- Seção: 📊 Campanhas e Rastreamento -->
+          <div class="form-section">
+            <div class="section-header">
+              <i class="fas fa-bullhorn"></i>
+              <h4>📊 Campanhas e Rastreamento</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Informações de campanhas de marketing</small>
+            </div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label><i class="fas fa-rocket"></i> Campanha de Origem</label>
+                <input type="text" id="campanha_origem_nome" disabled placeholder="Nome da campanha de origem">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-check-circle"></i> Campanha de Conversão</label>
+                <input type="text" id="campanha_conversao_nome" disabled placeholder="Nome da campanha de conversão">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-chart-bar"></i> Total de Campanhas Detectadas</label>
+                <input type="number" id="total_campanhas_detectadas" disabled placeholder="Total">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-door-open"></i> Canal de Entrada</label>
+                <input type="text" id="canal_entrada" placeholder="Canal de entrada">
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-sign-in-alt"></i> Tipo de Entrada</label>
+                <input type="text" id="tipo_entrada" placeholder="Tipo de entrada">
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: 📋 Documentação e Contrato -->
+          <div class="form-section">
+            <div class="section-header">
+              <i class="fas fa-file-contract"></i>
+              <h4>📋 Documentação e Contrato</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Status da documentação e contrato</small>
+            </div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label><i class="fas fa-check-double"></i> Documentação Completa</label>
+                <select id="documentacao_completa" disabled>
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-clipboard-check"></i> Documentação Validada</label>
+                <select id="documentacao_validada" disabled>
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-file-signature"></i> Contrato Aceito</label>
+                <select id="contrato_aceito" disabled>
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-calendar-alt"></i> Data Documentação Completa</label>
+                <input type="datetime-local" id="data_documentacao_completa" disabled>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-calendar-check"></i> Data Documentação Validada</label>
+                <input type="datetime-local" id="data_documentacao_validada" disabled>
+              </div>
+              <div class="form-field">
+                <label><i class="fas fa-calendar-plus"></i> Data Aceite Contrato</label>
+                <input type="datetime-local" id="data_aceite_contrato" disabled>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção: 💬 Conversa do Atendimento -->
+          <div class="form-section" id="secaoConversa" style="display:none;">
+            <div class="section-header">
+              <i class="fas fa-comments"></i>
+              <h4>💬 Conversa do Atendimento</h4>
+              <small style="color: #666; font-weight: normal; margin-left: auto;">Histórico da conversa via WhatsApp/Bot</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
+              <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #25d366, #128c7e); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-comments" style="color: white; font-size: 20px;"></i>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #166534; margin-bottom: 2px;">Conversa disponível</div>
+                <div style="font-size: 0.85rem; color: #15803d;" id="infoDataConversa">Gerada em: —</div>
+              </div>
+              <button type="button" id="btnVerConversa" onclick="" style="background: linear-gradient(135deg, #25d366, #128c7e); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; text-decoration: none; font-size: 0.9rem;">
+                <i class="fas fa-external-link-alt"></i> Abrir Conversa
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer" style="background: #f8f9fa; padding: 1.5rem 2rem; margin: 0 -2rem -2rem -2rem; border-radius: 0 0 20px 20px; display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modalLead')" style="padding: 0.75rem 1.5rem;">
+          <i class="fas fa-times"></i> Fechar
+        </button>
+        <button type="button" class="btn btn-success" id="btnSalvarLead" style="padding: 0.75rem 1.5rem;">
+          <i class="fas fa-save"></i> Salvar Alterações
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmação -->
+  <div id="modalConfirmacao" class="modal">
+    <div class="modal-content" style="min-width: 400px;">
+      <div class="modal-header">
+        <h3>Confirmar Ação</h3>
+        <button class="modal-close" onclick="fecharModal('modalConfirmacao')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="mensagemConfirmacao">Tem certeza que deseja realizar esta ação?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modalConfirmacao')">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Histórico de Contatos -->
+  <div id="modalHistorico" class="modal">
+    <div class="modal-content" style="min-width: 820px; max-width: 95vw; padding: 0; border-radius: 20px; overflow: hidden;">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #1F3D59, #2a5a85); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-comments" style="color: white; font-size: 1rem;"></i>
+          </div>
+          <div>
+            <h3 id="historicoTitle" style="margin: 0; color: white; font-size: 1rem; font-weight: 700;">Histórico de Contatos</h3>
+            <div style="color: rgba(255,255,255,0.7); font-size: 0.75rem;" id="historicoSubtitle">Conversa completa</div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="fecharModal('modalHistorico')" style="color: white; opacity: 0.8; font-size: 1.75rem; background: none; border: none; cursor: pointer;">&times;</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 320px 1fr; height: calc(90vh - 120px); overflow: hidden;">
+
+        <!-- Coluna Esquerda: Card do lead + estatísticas -->
+        <div style="background: #f8f9fa; border-right: 1px solid #e5e7eb; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Card único do lead -->
+          <div id="leadInfoCardUnico">
+            <div style="text-align: center; color: #9ca3af; padding: 2rem 1rem;">
+              <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i>
+              <div style="margin-top: 0.5rem; font-size: 0.8rem;">Carregando...</div>
+            </div>
+          </div>
+
+          <!-- Estatísticas -->
+          <div style="background: white; border-radius: 10px; padding: 1rem; border: 1px solid #e5e7eb;">
+            <div style="font-size: 0.7rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">Estatísticas</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div style="text-align: center; padding: 0.6rem; background: #f0f4ff; border-radius: 8px;">
+                <div style="font-size: 1.3rem; font-weight: 800; color: #1F3D59;" id="statTotalContatos">0</div>
+                <div style="font-size: 0.68rem; color: #6b7280; font-weight: 600;">Contatos</div>
+              </div>
+              <div style="text-align: center; padding: 0.6rem; background: #f0fdf4; border-radius: 8px;">
+                <div style="font-size: 1.3rem; font-weight: 800; color: #059669;" id="statConvertidos">0</div>
+                <div style="font-size: 0.68rem; color: #6b7280; font-weight: 600;">Convertidos</div>
+              </div>
+              <div style="text-align: center; padding: 0.6rem; background: #fefce8; border-radius: 8px;">
+                <div style="font-size: 1.3rem; font-weight: 800; color: #d97706;" id="statVendas">0</div>
+                <div style="font-size: 0.68rem; color: #6b7280; font-weight: 600;">Vendas</div>
+              </div>
+              <div style="text-align: center; padding: 0.6rem; background: #faf5ff; border-radius: 8px;">
+                <div style="font-size: 1.3rem; font-weight: 800; color: #7c3aed;" id="statTaxaConversao">0%</div>
+                <div style="font-size: 0.68rem; color: #6b7280; font-weight: 600;">Conversão</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna Direita: Chat -->
+        <div style="display: flex; flex-direction: column; background: #f0f2f5; overflow: hidden;">
+          <div style="padding: 0.75rem 1rem; background: white; border-bottom: 1px solid #e5e7eb; font-size: 0.75rem; color: #6b7280;" id="chatCountInfo">
+            Carregando conversa...
+          </div>
+          <div class="chat-scroll" style="flex: 1; padding: 1rem;" id="historicoTimeline">
+            <div style="text-align: center; padding: 3rem 1rem; color: #9ca3af;">
+              <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+              <div style="margin-top: 1rem; font-size: 0.85rem;">Carregando histórico...</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="background: white; padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modalHistorico')">
+          <i class="fas fa-times"></i> Fechar
+        </button>
+        <button type="button" class="btn btn-primary" id="btnExportarHistorico">
+          <i class="fas fa-download"></i> Exportar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    const API_LEADS = '{% url "vendas_web:dashboard_leads" %}';
+    const API_HISTORICO = '{% url "vendas_web:historico_contatos" %}';
+    let page = 1; 
+    let perPage = 20;
+    let search = ''; 
+    let filtros = { 
+      origem: '', 
+      status: '', 
+      ativo: '', 
+      data_inicio: '', 
+      data_fim: '',
+      valor: ''
+    };
+    let leadEditando = null;
+
+    // Função para toggle dos filtros
+    function toggleFiltros() {
+      const content = document.getElementById('filtrosContent');
+      const chevron = document.getElementById('filtrosChevron');
+      
+      if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        chevron.style.transform = 'rotate(0deg)';
+      } else {
+        content.classList.add('collapsed');
+        chevron.style.transform = 'rotate(-90deg)';
+      }
+    }
+
+    // ── Retry fetch: tenta novamente em caso de 503/erro de rede ──────────
+    let _retryTimer    = null;
+    let _retryCount    = 0;
+    const _RETRY_MAX   = 30;                 // até ~2 min tentando
+    const _RETRY_DELAY = [2,3,5,8,13,21];   // backoff em segundos
+
+    function _retryDelay() {
+      const idx = Math.min(_retryCount, _RETRY_DELAY.length - 1);
+      return _RETRY_DELAY[idx] * 1000;
+    }
+
+    function _mostrarBannerRetry(visivel, tentativa) {
+      let banner = document.getElementById('retryBanner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'retryBanner';
+        banner.style.cssText = `
+          position:fixed; bottom:1rem; left:50%; transform:translateX(-50%);
+          background:#1F3D59; color:#fff; padding:0.65rem 1.4rem;
+          border-radius:30px; font-size:0.82rem; font-weight:600;
+          box-shadow:0 4px 16px rgba(0,0,0,.25); z-index:9998;
+          display:flex; align-items:center; gap:0.6rem; transition:opacity .3s;
+        `;
+        document.body.appendChild(banner);
+      }
+      if (visivel) {
+        banner.innerHTML = `<i class="fas fa-sync fa-spin"></i> Reconectando… (tentativa ${tentativa})`;
+        banner.style.opacity = '1';
+        banner.style.display = 'flex';
+      } else {
+        banner.style.opacity = '0';
+        setTimeout(() => { banner.style.display = 'none'; }, 400);
+      }
+    }
+
+    async function fetchComRetry(url, opts = {}) {
+      clearTimeout(_retryTimer);
+      while (_retryCount <= _RETRY_MAX) {
+        try {
+          const resp = await fetch(url, { ...opts, signal: AbortSignal.timeout(15000) });
+          if (resp.status === 503 || resp.status === 502 || resp.status === 504) {
+            throw new Error(`HTTP ${resp.status}`);
+          }
+          // Verificar se a resposta é JSON antes de parsear
+          const ct = resp.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            throw new Error('Resposta não-JSON (servidor reiniciando?)');
+          }
+          _retryCount = 0;
+          _mostrarBannerRetry(false);
+          return resp;
+        } catch (err) {
+          _retryCount++;
+          if (_retryCount > _RETRY_MAX) {
+            _mostrarBannerRetry(false);
+            throw err;
+          }
+          const delay = _retryDelay();
+          _mostrarBannerRetry(true, _retryCount);
+          console.warn(`[retry ${_retryCount}] ${err.message} — próxima tentativa em ${delay/1000}s`);
+          await new Promise(res => { _retryTimer = setTimeout(res, delay); });
+        }
+      }
+    }
+
+    // Funções principais
+    async function carregarLeads() {
+      mostrarLoading(true);
+      try {
+        const params = new URLSearchParams({ page, per_page: perPage, search, ...filtros });
+        const resp = await fetchComRetry(`${API_LEADS}?${params}`);
+        const data = await resp.json();
+
+        if (data.error) throw new Error(data.error);
+
+        renderizarTabela(data.leads || []);
+        renderPaginacao(data.page || 1, data.pages || 1, data.total || 0);
+        popularFiltros(data);
+        atualizarStats(data);
+
+      } catch (error) {
+        console.error('Erro ao carregar leads:', error);
+        // Não exibe alerta para o usuário — o banner de retry já informa
+      } finally {
+        mostrarLoading(false);
+      }
+    }
+
+    function renderizarTabela(leads) {
+      const tbody = document.querySelector('#leadsTable tbody');
+      tbody.innerHTML = '';
+      
+      if (leads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">Nenhum lead encontrado</td></tr>';
+        return;
+      }
+
+      leads.forEach(lead => {
+        const tr = document.createElement('tr');
+        const iniciais = (lead.nome_razaosocial || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+        const nomeDisplay = limitarTexto(lead.nome_razaosocial || '?', 35);
+        
+        // Status badge
+        const statusClass = getStatusClass(lead.status_api);
+
+        tr.innerHTML = `
+          <td>${lead.id}</td>
+          <td>
+            <div class="name-cell">
+              <div class="avatar">${iniciais}</div>
+              <div>
+                <div style="font-weight:700" title="${lead.nome_razaosocial}">${nomeDisplay}</div>
+                <div style="color:#666; font-size:.85rem;">${lead.empresa || 'Sem empresa'}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div>
+              <div>${lead.email || '-'}</div>
+              <div><a class="link-blue" href="tel:${lead.telefone}">${lead.telefone}</a></div>
+            </div>
+          </td>
+          <td style="font-weight:600; color:${lead.valor && parseFloat(lead.valor.replace(/[^\d,]/g, '').replace(',', '.')) > 0 ? '#27ae60' : '#666'}">${lead.valor || 'R$ 0,00'}</td>
+          <td><span class="pill pill-blue">${lead.origem}</span></td>
+          <td><span class="status-badge ${statusClass}">${lead.status_api}</span></td>
+          <td>${formatarDataLocal(lead.data_cadastro)}</td>
+          <td>
+            <div class="actions-grid">
+              <button class="btn-pill" onclick="visualizarLead(${lead.id})" title="Visualizar">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button class="btn-pill" onclick="visualizarHistorico(${lead.id}, 'lead')" title="Histórico de Contatos">
+                <i class="fas fa-history"></i>
+              </button>
+              ${lead.html_conversa_path ? `<button class="btn-pill btn-pill-chat" onclick="abrirConversa(${lead.id})" title="Ver Conversa do Atendimento">
+                <i class="fas fa-comments"></i>
+              </button>` : ''}
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getStatusClass(status) {
+      const statusMap = {
+        'pendente': 'status-pendente',
+        'processado': 'status-processado',
+        'sucesso': 'status-sucesso',
+        'erro': 'status-erro',
+        'rejeitado': 'status-rejeitado'
+      };
+      return statusMap[status] || 'status-pendente';
+    }
+
+    function renderPaginacao(currentPage, totalPages, total = 0) {
+      const controls = document.getElementById('paginationControls');
+      const info = document.getElementById('paginationInfo');
+      
+      // Atualizar informações da paginação
+      const startItem = (currentPage - 1) * perPage + 1;
+      const endItem = Math.min(currentPage * perPage, total);
+      info.textContent = `Mostrando ${startItem} a ${endItem} de ${total} registros`;
+      
+      controls.innerHTML = '';
+      
+      if (totalPages <= 1) return;
+
+      // Botão anterior
+      const prev = document.createElement('button');
+      prev.innerHTML = '<i class="fas fa-chevron-left"></i> Anterior';
+      prev.disabled = currentPage === 1;
+      prev.onclick = () => { page = currentPage - 1; carregarLeads(); };
+      controls.appendChild(prev);
+
+      // Primeira página
+      if (currentPage > 3) {
+        const first = document.createElement('button');
+        first.textContent = '1';
+        first.onclick = () => { page = 1; carregarLeads(); };
+        controls.appendChild(first);
+        
+        if (currentPage > 4) {
+          const dots = document.createElement('span');
+          dots.textContent = '...';
+          dots.style.padding = '0.5rem';
+          dots.style.color = '#666';
+          controls.appendChild(dots);
+        }
+      }
+
+      // Números das páginas
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, currentPage + 2);
+
+      for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        if (i === currentPage) btn.classList.add('active');
+        btn.onclick = () => { page = i; carregarLeads(); };
+        controls.appendChild(btn);
+      }
+
+      // Última página
+      if (currentPage < totalPages - 2) {
+        if (currentPage < totalPages - 3) {
+          const dots = document.createElement('span');
+          dots.textContent = '...';
+          dots.style.padding = '0.5rem';
+          dots.style.color = '#666';
+          controls.appendChild(dots);
+        }
+        
+        const last = document.createElement('button');
+        last.textContent = totalPages;
+        last.onclick = () => { page = totalPages; carregarLeads(); };
+        controls.appendChild(last);
+      }
+
+      // Botão próximo
+      const next = document.createElement('button');
+      next.innerHTML = 'Próximo <i class="fas fa-chevron-right"></i>';
+      next.disabled = currentPage === totalPages;
+      next.onclick = () => { page = currentPage + 1; carregarLeads(); };
+      controls.appendChild(next);
+    }
+
+    function popularFiltros(data) {
+      const origemSel = document.getElementById('origemFilter');
+      const statusSel = document.getElementById('statusFilter');
+      
+      if (origemSel.children.length === 1 && data.origemChoices) {
+        data.origemChoices.forEach(opcao => {
+          const opt = document.createElement('option');
+          opt.value = opcao.value;
+          opt.textContent = opcao.label;
+          origemSel.appendChild(opt);
+        });
+      }
+      
+      if (statusSel.children.length === 1 && data.statusChoices) {
+        data.statusChoices.forEach(opcao => {
+          const opt = document.createElement('option');
+          opt.value = opcao.value;
+          opt.textContent = opcao.label;
+          statusSel.appendChild(opt);
+        });
+      }
+    }
+
+    function atualizarStats(data) {
+      document.getElementById('contadorChip').textContent = `${data.total || 0} registro(s)`;
+      
+      // Stats básicas
+      document.getElementById('statTotal').textContent = data.total || 0;
+      
+      // Usar dados reais quando disponíveis
+      const leads = data.leads || [];
+      const erros = leads.filter(l => l.status_api === 'erro').length;
+      
+      document.getElementById('statErros').textContent = erros;
+      
+      // Calcular valor total - usar dados do servidor se disponíveis, senão calcular dos leads visíveis
+      let valorTotal = 0;
+      if (data.valor_total !== undefined) {
+        // Se o servidor forneceu o valor total, usar esse valor
+        valorTotal = data.valor_total;
+      } else {
+        // Senão, calcular apenas dos leads visíveis (fallback)
+        valorTotal = leads.reduce((sum, l) => {
+          if (l.valor) {
+            const valor = parseFloat(l.valor.replace(/[^\d,]/g, '').replace(',', '.'));
+            return sum + (isNaN(valor) ? 0 : valor);
+          }
+          return sum;
+        }, 0);
+      }
+      
+      document.getElementById('statValorTotal').textContent = formatarMoeda(valorTotal);
+      
+      // Stats temporais - usar dados do servidor se disponíveis
+      if (data.leads_hoje !== undefined) {
+        document.getElementById('statHoje').textContent = data.leads_hoje;
+      } else {
+        // Fallback: calcular dos leads visíveis
+        const hoje = new Date();
+        const leadsHoje = leads.filter(l => {
+          if (!l.data_cadastro) return false;
+          try {
+            const dataLead = new Date(l.data_cadastro);
+            return dataLead.toDateString() === hoje.toDateString();
+          } catch (error) {
+            return false;
+          }
+        }).length;
+        document.getElementById('statHoje').textContent = leadsHoje;
+      }
+      
+      if (data.leads_semana !== undefined) {
+        document.getElementById('statSemana').textContent = data.leads_semana;
+      } else {
+        // Fallback: estimativa baseada no total
+        document.getElementById('statSemana').textContent = Math.floor(data.total * 0.15);
+      }
+    }
+
+    // Funções de histórico
+    async function visualizarHistorico(id, tipo) {
+      try {
+        mostrarLoading(true);
+
+        const params = new URLSearchParams();
+        if (tipo === 'lead') params.append('lead_id', id);
+        else if (tipo === 'prospecto') params.append('prospecto_id', id);
+
+        const response = await fetchComRetry(`${API_HISTORICO}?${params}`);
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || 'Erro ao carregar histórico');
+
+        const historicos = data.historicos || [];
+        const stats     = data.estatisticas || {};
+
+        // Título
+        document.getElementById('historicoTitle').textContent    = `Conversa #${id}`;
+        document.getElementById('historicoSubtitle').textContent = `${historicos.length} interaç${historicos.length === 1 ? 'ão' : 'ões'} registradas`;
+
+        // Estatísticas
+        const total     = stats.total_contatos  || historicos.length;
+        const convert   = stats.contatos_convertidos || historicos.filter(h => h.converteu_lead).length;
+        const vendas    = stats.vendas_convertidas   || historicos.filter(h => h.converteu_venda).length;
+        const taxa      = stats.taxa_conversao_lead  || (total > 0 ? (convert / total * 100) : 0);
+
+        document.getElementById('statTotalContatos').textContent = total;
+        document.getElementById('statConvertidos').textContent   = convert;
+        document.getElementById('statVendas').textContent        = vendas;
+        document.getElementById('statTaxaConversao').textContent = `${taxa.toFixed(0)}%`;
+
+        // Card único do lead (pega dados do primeiro histórico que tem lead)
+        // A API retorna lead.nome, normalizamos para nome_razaosocial usado internamente
+        const rawLead = historicos.find(h => h.lead)?.lead || null;
+        if (rawLead && rawLead.nome && !rawLead.nome_razaosocial) {
+          rawLead.nome_razaosocial = rawLead.nome;
+        }
+        renderizarCardLead(rawLead, id);
+
+        // Chat
+        renderizarChat(historicos);
+
+        document.getElementById('modalHistorico').style.display = 'block';
+
+      } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        mostrarNotificacao('Erro ao carregar histórico: ' + error.message, 'erro');
+      } finally {
+        mostrarLoading(false);
+      }
+    }
+
+    // Renderiza o card único do lead na coluna esquerda
+    function renderizarCardLead(lead, fallbackId) {
+      const container = document.getElementById('leadInfoCardUnico');
+      if (!lead) {
+        container.innerHTML = `
+          <div style="background: #f3f4f6; border-radius: 10px; padding: 1rem; text-align: center; color: #9ca3af; font-size: 0.8rem;">
+            <i class="fas fa-user-slash" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+            Sem dados do lead
+          </div>`;
+        return;
+      }
+
+      const iniciais = (lead.nome_razaosocial || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+      const statusClass = `lead-card-status-badge ${lead.status_api || 'pendente'}`;
+
+      const itens = [
+        lead.telefone    && { icon: 'fa-phone',       label: 'Telefone',  value: lead.telefone },
+        lead.email       && { icon: 'fa-envelope',    label: 'Email',     value: lead.email },
+        lead.cpf_cnpj    && { icon: 'fa-id-card',     label: 'CPF/CNPJ',  value: lead.cpf_cnpj },
+        lead.cidade      && { icon: 'fa-map-marker-alt', label: 'Cidade', value: lead.cidade + (lead.estado ? '/' + lead.estado : '') },
+        lead.id_hubsoft  && { icon: 'fa-hashtag',     label: 'HubSoft',   value: lead.id_hubsoft },
+        lead.id_plano_rp && { icon: 'fa-wifi',        label: 'Plano',     value: '#' + lead.id_plano_rp },
+        lead.id_dia_vencimento && { icon: 'fa-calendar-check', label: 'Vencimento', value: 'Dia ' + lead.id_dia_vencimento },
+        lead.origem      && { icon: 'fa-tag',         label: 'Origem',    value: lead.origem },
+      ].filter(Boolean);
+
+      container.innerHTML = `
+        <div class="lead-info-card-unico">
+          <div class="lead-card-top">
+            <div class="lead-card-avatar">${iniciais}</div>
+            <div class="lead-card-info">
+              <div class="lead-card-nome">${lead.nome_razaosocial || 'Sem nome'}</div>
+              ${lead.empresa ? `<div class="lead-card-empresa"><i class="fas fa-building" style="font-size:0.65rem;"></i> ${lead.empresa}</div>` : ''}
+              <div class="${statusClass}">${lead.status_api || 'pendente'}</div>
+            </div>
+          </div>
+          ${lead.valor ? `<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(255,255,255,0.1); border-radius:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:0.7rem; opacity:0.8;">Valor do Lead</span>
+            <span class="lead-card-value-destaque">${lead.valor}</span>
+          </div>` : ''}
+          <div class="lead-card-grid">
+            ${itens.map(it => `
+              <div class="lead-card-item">
+                <div class="lead-card-item-label"><i class="fas ${it.icon}"></i> ${it.label}</div>
+                <div class="lead-card-item-value">${it.value}</div>
+              </div>`).join('')}
+          </div>
+          ${lead.observacoes ? `<div style="margin-top:0.75rem; padding:0.6rem 0.75rem; background:rgba(255,255,255,0.1); border-radius:8px; font-size:0.75rem; opacity:0.9; line-height:1.4;">
+            <i class="fas fa-sticky-note" style="margin-right:0.3rem;"></i>${lead.observacoes}
+          </div>` : ''}
+          <button class="lead-card-btn-ver" onclick="fecharModal('modalHistorico'); visualizarLead(${lead.id})">
+            <i class="fas fa-expand-alt"></i> Ver detalhes completos
+          </button>
+        </div>`;
+    }
+
+    // Renderiza a conversa em formato de chat
+    function renderizarChat(historicos) {
+      const chat = document.getElementById('historicoTimeline');
+      const countInfo = document.getElementById('chatCountInfo');
+
+      if (!historicos || historicos.length === 0) {
+        chat.innerHTML = `
+          <div style="text-align:center; padding:3rem 1rem; color:#9ca3af;">
+            <i class="fas fa-comment-slash" style="font-size:2.5rem; margin-bottom:1rem; display:block;"></i>
+            Nenhuma interação registrada
+          </div>`;
+        countInfo.textContent = 'Sem interações';
+        return;
+      }
+
+      countInfo.innerHTML = `<i class="fas fa-comments"></i> ${historicos.length} interaç${historicos.length === 1 ? 'ão' : 'ões'} &nbsp;·&nbsp; ordem cronológica`;
+
+      // Ordenar do mais antigo para o mais recente
+      const ordenados = [...historicos].sort((a, b) => {
+        const da = a.data_hora ? new Date(a.data_hora) : new Date(0);
+        const db = b.data_hora ? new Date(b.data_hora) : new Date(0);
+        return da - db;
+      });
+
+      chat.innerHTML = '';
+      let ultimaDiaSemana = null;
+
+      ordenados.forEach((h, idx) => {
+        if (!h || typeof h !== 'object') return;
+
+        const status      = h.status || {};
+        const categoria   = status.categoria || 'outros';
+        const statusLabel = status.display   || 'Contato';
+        const nomeContato = h.nome_contato   || 'Contato';
+        const telefone    = h.telefone       || '';
+
+        // Separador de data
+        const dataHora = h.data_hora ? new Date(h.data_hora) : null;
+        if (dataHora) {
+          const diaStr = formatarDiaSemanaFull(dataHora);
+          if (diaStr !== ultimaDiaSemana) {
+            ultimaDiaSemana = diaStr;
+            const divider = document.createElement('div');
+            divider.className = 'chat-date-divider';
+            divider.innerHTML = `<span>${diaStr}</span>`;
+            chat.appendChild(divider);
+          }
+        }
+
+        // h.status pode ser string OU objeto {status, display, categoria}
+        const statusStr = typeof h.status === 'object' && h.status !== null
+                            ? (h.status.status || '')
+                            : (h.status || '');
+
+        // Classe extra da bolha do sistema (conversão / erro)
+        let bubbleClass = '';
+        if (h.converteu_venda)          bubbleClass = 'bubble-venda';
+        else if (h.converteu_lead || h.sucesso) bubbleClass = 'bubble-sucesso';
+        else if (categoria === 'erro')  bubbleClass = 'bubble-erro';
+
+        // Iniciais do cliente para avatar
+        const nomeParaAvatar   = (nomeContato && nomeContato !== 'Não identificado') ? nomeContato : (h.telefone || 'C');
+        const iniciaisCliente  = nomeParaAvatar.trim().split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+
+        const horaFormatada = dataHora
+          ? `${dataHora.getHours().toString().padStart(2,'0')}:${dataHora.getMinutes().toString().padStart(2,'0')}`
+          : '';
+
+        // ── Extrair pergunta e resposta do campo observacoes ──────────────
+        // Formato esperado: "Pergunta : {texto}. Resposta: {texto}"
+        // Também suporta "Pergunta: {texto}. Resposta: {texto}"
+        let perguntaTexto = '';
+        let respostaTexto = '';
+
+        const obs = h.observacoes || '';
+        const regexPR = /Pergunta\s*:\s*(.*?)(?:\.\s*Resposta\s*:\s*(.*))?$/is;
+        const matchPR = obs.match(regexPR);
+        if (matchPR) {
+          perguntaTexto = (matchPR[1] || '').trim().replace(/\.$/, '').trim();
+          respostaTexto = (matchPR[2] || '').trim();
+        } else if (obs) {
+          // Se não tem o padrão, usa como mensagem única
+          respostaTexto = obs;
+        }
+
+        // Fallback para ultima_mensagem e transcricao
+        if (!respostaTexto && h.ultima_mensagem) respostaTexto = h.ultima_mensagem;
+        if (!respostaTexto && h.transcricao)     respostaTexto = h.transcricao;
+
+        // ── Meta-tags do grupo (protocolo, conta, etc.) ───────────────────
+        const metas = [];
+        if (h.protocolo_atendimento) metas.push({ icon: 'fa-file-alt',    text: 'Proto: ' + h.protocolo_atendimento });
+        if (h.codigo_atendimento)    metas.push({ icon: 'fa-barcode',      text: 'Cód: '  + h.codigo_atendimento });
+        if (h.id_conta)              metas.push({ icon: 'fa-id-card',      text: 'Conta: '+ h.id_conta });
+        if (h.numero_conta)          metas.push({ icon: 'fa-hashtag',      text: 'N°: '   + h.numero_conta });
+        if (h.origem_contato)        metas.push({ icon: 'fa-tag',          text: h.origem_contato });
+        if (h.duracao_segundos)      metas.push({ icon: 'fa-clock',        text: formatarDuracao(h.duracao_segundos) });
+        if (h.valor_venda)           metas.push({ icon: 'fa-dollar-sign',  text: formatarMoeda(parseFloat(h.valor_venda)) });
+        if (h.data_conversao_lead)   metas.push({ icon: 'fa-user-plus',    text: 'Lead: ' + formatarHoraSimples(h.data_conversao_lead) });
+        if (h.data_conversao_venda)  metas.push({ icon: 'fa-handshake',    text: 'Venda: '+ formatarHoraSimples(h.data_conversao_venda) });
+
+        const metasHtml = metas.length ? `
+          <div class="chat-group-meta">
+            ${metas.map(m => `<span class="chat-group-meta-tag"><i class="fas ${m.icon}"></i>${m.text}</span>`).join('')}
+          </div>` : '';
+
+        // ── Badges de conversão ───────────────────────────────────────────
+        let badgesHtml = '';
+        if (h.sucesso || h.converteu_lead || h.converteu_venda) {
+          badgesHtml = '<div class="chat-badges" style="justify-content:center; margin-top:0.25rem;">';
+          if (h.sucesso)         badgesHtml += '<span class="chat-badge cbadge-sucesso"><i class="fas fa-check-circle"></i> Sucesso</span>';
+          if (h.converteu_lead)  badgesHtml += '<span class="chat-badge cbadge-converteu"><i class="fas fa-user-plus"></i> Lead convertido</span>';
+          if (h.converteu_venda) badgesHtml += '<span class="chat-badge cbadge-venda"><i class="fas fa-handshake"></i> Venda realizada</span>';
+          badgesHtml += '</div>';
+        }
+
+        // ── Montar grupo de bolhas ────────────────────────────────────────
+        // No payload: "Pergunta" = mensagem do SISTEMA/ROBÔ, "Resposta" = mensagem do CLIENTE
+        const grupo = document.createElement('div');
+        grupo.className = 'chat-group';
+
+        // Bolha do SISTEMA/ROBÔ (pergunta) — lado direito
+        if (perguntaTexto) {
+          const bubbleSistema = document.createElement('div');
+          bubbleSistema.className = 'chat-bubble-wrap sistema';
+          bubbleSistema.innerHTML = `
+            <div class="chat-avatar-mini avatar-sistema" title="Robô / Sistema"><i class="fas fa-robot"></i></div>
+            <div class="chat-bubble ${bubbleClass}">
+              <div class="chat-bubble-header">
+                <span class="chat-bubble-origem" style="color:#7c3aed;">Robô / Sistema</span>
+                <span class="chat-bubble-hora">${horaFormatada}</span>
+              </div>
+              <div class="chat-bubble-mensagem">${perguntaTexto}</div>
+            </div>`;
+          grupo.appendChild(bubbleSistema);
+        }
+
+        // Bolha do CLIENTE (resposta) — lado esquerdo
+        if (respostaTexto) {
+          const nomeExibir = (nomeContato && nomeContato !== 'Não identificado') ? nomeContato : (h.telefone || 'Cliente');
+          const bubbleCliente = document.createElement('div');
+          bubbleCliente.className = 'chat-bubble-wrap contato';
+          bubbleCliente.innerHTML = `
+            <div class="chat-avatar-mini avatar-contato" title="${nomeExibir}">${iniciaisCliente}</div>
+            <div class="chat-bubble">
+              <div class="chat-bubble-header">
+                <span class="chat-bubble-origem">${nomeExibir}</span>
+                <span class="chat-bubble-hora">${horaFormatada}</span>
+              </div>
+              ${telefone ? `<div style="font-size:0.68rem;color:#9ca3af;margin-bottom:0.2rem;">${telefone}</div>` : ''}
+              <div class="chat-bubble-mensagem">${respostaTexto}</div>
+            </div>`;
+          grupo.appendChild(bubbleCliente);
+        }
+
+        // Se não tem nem pergunta nem resposta (evento puro de status — ex: fluxo_inicializado)
+        if (!perguntaTexto && !respostaTexto) {
+          const bubbleEvento = document.createElement('div');
+          bubbleEvento.className = 'chat-bubble-wrap sistema';
+          bubbleEvento.innerHTML = `
+            <div class="chat-avatar-mini avatar-sistema" title="Sistema"><i class="fas fa-robot"></i></div>
+            <div class="chat-bubble ${bubbleClass}">
+              <div class="chat-bubble-header">
+                <span class="chat-bubble-origem" style="color:#7c3aed;">Sistema</span>
+                <span class="chat-bubble-hora">${horaFormatada}</span>
+              </div>
+              <div class="chat-bubble-status">${statusLabel}${telefone ? ` <span style="font-weight:400;color:#9ca3af;font-size:0.72rem;">· ${telefone}</span>` : ''}</div>
+            </div>`;
+          grupo.appendChild(bubbleEvento);
+        }
+
+        // Meta-dados e badges centralizados no grupo
+        if (metas.length) {
+          const metaDiv = document.createElement('div');
+          metaDiv.innerHTML = metasHtml;
+          grupo.appendChild(metaDiv);
+        }
+        if (badgesHtml) {
+          const badgeDiv = document.createElement('div');
+          badgeDiv.innerHTML = badgesHtml;
+          grupo.appendChild(badgeDiv);
+        }
+
+        chat.appendChild(grupo);
+      });
+
+      // Rolar para baixo (mais recente)
+      chat.scrollTop = chat.scrollHeight;
+    }
+    
+    // Retorna dia da semana por extenso para divisor de data no chat
+    function formatarDiaSemanaFull(data) {
+      const agora = new Date();
+      const dataNorm = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+      const agoraNorm = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+      const diff = Math.floor((agoraNorm - dataNorm) / (1000 * 60 * 60 * 24));
+      if (diff === 0) return 'Hoje';
+      if (diff === 1) return 'Ontem';
+      const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+      const dia = data.getDate().toString().padStart(2, '0');
+      const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+      const ano = data.getFullYear();
+      if (diff < 7) return `${dias[data.getDay()]}, ${dia}/${mes}`;
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    // Retorna apenas hora de uma data
+    function formatarHoraSimples(dataString) {
+      if (!dataString) return '';
+      try {
+        const d = new Date(dataString);
+        if (isNaN(d.getTime())) return dataString;
+        return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+      } catch(e) { return dataString; }
+    }
+
+    // Função auxiliar para formatar duração em segundos
+    function formatarDuracao(segundos) {
+      if (!segundos) return 'N/A';
+      const horas = Math.floor(segundos / 3600);
+      const minutos = Math.floor((segundos % 3600) / 60);
+      const segs = segundos % 60;
+      
+      if (horas > 0) {
+        return `${horas}h ${minutos}m ${segs}s`;
+      } else if (minutos > 0) {
+        return `${minutos}m ${segs}s`;
+      } else {
+        return `${segs}s`;
+      }
+    }
+    
+    // Função auxiliar para formatar data simples (sem hora)
+    function formatarDataSimples(dataString) {
+      if (!dataString) return '-';
+      try {
+        const data = new Date(dataString);
+        if (isNaN(data.getTime())) return dataString;
+        const dia = data.getDate().toString().padStart(2, '0');
+        const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+        const ano = data.getFullYear();
+        return `${dia}/${mes}/${ano}`;
+      } catch (error) {
+        return dataString;
+      }
+    }
+
+    // Funções de ação
+    async function visualizarLead(id) {
+      try {
+        mostrarLoading(true);
+        const resp = await fetchComRetry(`${API_LEADS}?id=${id}`);
+        const data = await resp.json();
+        
+        if (data.error || !data.leads || data.leads.length === 0) {
+          throw new Error('Lead não encontrado');
+        }
+        
+        const lead = data.leads[0];
+        preencherFormulario(lead);
+        
+        // Desabilitar campos no modo visualização
+        const inputs = document.querySelectorAll('#formLead input, #formLead select, #formLead textarea');
+        inputs.forEach(input => input.disabled = true);
+        
+        document.getElementById('modalTitle').textContent = 'Visualizar Lead';
+        document.getElementById('btnSalvarLead').style.display = 'none';
+        document.getElementById('modalLead').style.display = 'block';
+        
+      } catch (error) {
+        mostrarNotificacao('Erro ao carregar lead: ' + error.message, 'erro');
+      } finally {
+        mostrarLoading(false);
+      }
+    }
+
+
+
+    function novoLead() {
+      leadEditando = null;
+      limparFormulario();
+      
+      // Habilitar campos
+      const inputs = document.querySelectorAll('#formLead input, #formLead select, #formLead textarea');
+      inputs.forEach(input => input.disabled = false);
+      
+      document.getElementById('modalTitle').textContent = 'Novo Lead';
+      document.getElementById('btnSalvarLead').style.display = 'block';
+      document.getElementById('modalLead').style.display = 'block';
+    }
+
+
+
+    function abrirConversa(leadId) {
+      window.open((window.APP_BASE||"") + `/leads/${leadId}/conversa/`, "_blank");
+    }
+
+    async function exportarDados() {
+      try {
+        mostrarLoading(true);
+        // Implementar exportação
+        mostrarNotificacao('Funcionalidade de exportação em desenvolvimento', 'info');
+      } catch (error) {
+        mostrarNotificacao('Erro ao exportar: ' + error.message, 'erro');
+      } finally {
+        mostrarLoading(false);
+      }
+    }
+
+    // Funções de formulário
+    function preencherFormulario(lead) {
+      // Preencher os info cards no topo
+      document.getElementById('displayId').textContent = lead.id || '-';
+      document.getElementById('displayDataCadastro').textContent = formatarDataLocal(lead.data_cadastro) || '-';
+      
+      // Formatar e exibir status com badge
+      const statusClass = getStatusClass(lead.status_api_codigo || lead.status_api);
+      const statusDisplay = document.getElementById('displayStatus');
+      statusDisplay.innerHTML = `<span class="status-badge ${statusClass}" style="display: inline-block;">${lead.status_api || '-'}</span>`;
+      
+      // Formatar e exibir valor
+      document.getElementById('displayValor').textContent = lead.valor || 'R$ 0,00';
+      
+      // Atualizar subtítulo com nome do lead
+      document.getElementById('leadSubtitle').textContent = lead.nome_razaosocial || 'Informações completas do lead';
+      
+      // 👤 Informações Principais
+      document.getElementById('nome_razaosocial').value = lead.nome_razaosocial || '';
+      document.getElementById('email').value = lead.email || '';
+      document.getElementById('telefone').value = lead.telefone || '';
+      document.getElementById('empresa').value = lead.empresa || '';
+      document.getElementById('id_hubsoft').value = lead.id_hubsoft || '';
+      document.getElementById('id_origem').value = lead.id_origem || '';
+      document.getElementById('id_origem_servico').value = lead.id_origem_servico || '';
+      
+      // 📄 Documentos e Localização
+      document.getElementById('cpf_cnpj').value = lead.cpf_cnpj || '';
+      document.getElementById('rg').value = lead.rg || '';
+      document.getElementById('endereco').value = lead.endereco || '';
+      document.getElementById('rua').value = lead.rua || '';
+      document.getElementById('numero_residencia').value = lead.numero_residencia || '';
+      document.getElementById('bairro').value = lead.bairro || '';
+      document.getElementById('cidade').value = lead.cidade || '';
+      document.getElementById('estado').value = lead.estado || '';
+      document.getElementById('cep').value = lead.cep || '';
+      document.getElementById('ponto_referencia').value = lead.ponto_referencia || '';
+      
+      // 💼 Dados Comerciais
+      document.getElementById('id_plano_rp').value = lead.id_plano_rp || '';
+      document.getElementById('id_dia_vencimento').value = lead.id_dia_vencimento || '';
+      document.getElementById('id_vendedor_rp').value = lead.id_vendedor_rp || '';
+      document.getElementById('data_nascimento').value = lead.data_nascimento ? lead.data_nascimento.split('T')[0] : '';
+      
+      // 💰 Vendas e Status
+      document.getElementById('valor').value = lead.valor_numerico || (lead.valor ? lead.valor.replace(/[^\d,]/g, '').replace(',', '.') : '');
+      document.getElementById('custo_aquisicao').value = lead.custo_aquisicao || '';
+      document.getElementById('origem').value = lead.origem_codigo || lead.origem || '';
+      document.getElementById('status_api').value = lead.status_api_codigo || lead.status_api || '';
+      document.getElementById('ativo').value = lead.ativo ? 'true' : 'false';
+      document.getElementById('score_qualificacao').value = lead.score_qualificacao || '';
+      document.getElementById('tentativas_contato').value = lead.tentativas_contato || '';
+      
+      // Data último contato - converter para formato datetime-local
+      if (lead.data_ultimo_contato) {
+        try {
+          const dataUltimoContato = new Date(lead.data_ultimo_contato);
+          const ano = dataUltimoContato.getFullYear();
+          const mes = String(dataUltimoContato.getMonth() + 1).padStart(2, '0');
+          const dia = String(dataUltimoContato.getDate()).padStart(2, '0');
+          const hora = String(dataUltimoContato.getHours()).padStart(2, '0');
+          const minuto = String(dataUltimoContato.getMinutes()).padStart(2, '0');
+          document.getElementById('data_ultimo_contato').value = `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+        } catch (e) {
+          document.getElementById('data_ultimo_contato').value = '';
+        }
+      } else {
+        document.getElementById('data_ultimo_contato').value = '';
+      }
+      
+      // 📝 Observações e Detalhes
+      document.getElementById('observacoes').value = lead.observacoes || '';
+      document.getElementById('motivo_rejeicao').value = lead.motivo_rejeicao || '';
+      
+      // 📊 Campanhas e Rastreamento
+      document.getElementById('campanha_origem_nome').value = lead.campanha_origem_nome || '';
+      document.getElementById('campanha_conversao_nome').value = lead.campanha_conversao_nome || '';
+      document.getElementById('total_campanhas_detectadas').value = lead.total_campanhas_detectadas || '';
+      document.getElementById('canal_entrada').value = lead.canal_entrada || '';
+      document.getElementById('tipo_entrada').value = lead.tipo_entrada || '';
+      
+      // 📋 Documentação e Contrato
+      document.getElementById('documentacao_completa').value = lead.documentacao_completa ? 'true' : 'false';
+      document.getElementById('documentacao_validada').value = lead.documentacao_validada ? 'true' : 'false';
+      document.getElementById('contrato_aceito').value = lead.contrato_aceito ? 'true' : 'false';
+
+      // 💬 Conversa do Atendimento
+      const secaoConversa = document.getElementById('secaoConversa');
+      const btnVerConversa = document.getElementById('btnVerConversa');
+      const infoDataConversa = document.getElementById('infoDataConversa');
+      if (lead.html_conversa_path) {
+        secaoConversa.style.display = 'block';
+        btnVerConversa.onclick = () => abrirConversa(lead.id);
+        if (lead.data_geracao_html) {
+          try {
+            const d = new Date(lead.data_geracao_html);
+            infoDataConversa.textContent = 'Gerada em: ' + d.toLocaleString('pt-BR');
+          } catch(e) {
+            infoDataConversa.textContent = 'Gerada em: —';
+          }
+        } else {
+          infoDataConversa.textContent = 'Gerada em: —';
+        }
+      } else {
+        secaoConversa.style.display = 'none';
+      }
+      
+      // Datas de documentação - converter para formato datetime-local
+      if (lead.data_documentacao_completa) {
+        try {
+          const data = new Date(lead.data_documentacao_completa);
+          document.getElementById('data_documentacao_completa').value = data.toISOString().slice(0, 16);
+        } catch (e) {
+          document.getElementById('data_documentacao_completa').value = '';
+        }
+      } else {
+        document.getElementById('data_documentacao_completa').value = '';
+      }
+      
+      if (lead.data_documentacao_validada) {
+        try {
+          const data = new Date(lead.data_documentacao_validada);
+          document.getElementById('data_documentacao_validada').value = data.toISOString().slice(0, 16);
+        } catch (e) {
+          document.getElementById('data_documentacao_validada').value = '';
+        }
+      } else {
+        document.getElementById('data_documentacao_validada').value = '';
+      }
+      
+      if (lead.data_aceite_contrato) {
+        try {
+          const data = new Date(lead.data_aceite_contrato);
+          document.getElementById('data_aceite_contrato').value = data.toISOString().slice(0, 16);
+        } catch (e) {
+          document.getElementById('data_aceite_contrato').value = '';
+        }
+      } else {
+        document.getElementById('data_aceite_contrato').value = '';
+      }
+    }
+
+    function limparFormulario() {
+      document.getElementById('formLead').reset();
+    }
+
+    // Funções utilitárias
+    function formatarMoeda(valor) {
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(valor);
+    }
+
+    function limitarTexto(texto, limite) {
+      if (!texto) return '';
+      return texto.length > limite ? texto.slice(0, limite - 1) + '…' : texto;
+    }
+
+    // Função para formatar datas no fuso horário local
+    function formatarDataLocal(dataString) {
+      if (!dataString) return '-';
+      
+      try {
+        const data = new Date(dataString);
+        if (isNaN(data.getTime())) return dataString; // Se não for uma data válida, retorna o original
+        
+        // Formatar no padrão específico: DD/MM/AAAA, HH:MM
+        const dia = data.getDate().toString().padStart(2, '0');
+        const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+        const ano = data.getFullYear();
+        const hora = data.getHours().toString().padStart(2, '0');
+        const minuto = data.getMinutes().toString().padStart(2, '0');
+        
+        return `${dia}/${mes}/${ano}, ${hora}:${minuto}`;
+      } catch (error) {
+        console.warn('Erro ao formatar data:', dataString, error);
+        return dataString;
+      }
+    }
+
+    // Função para formatar datas do histórico de forma mais legível
+    function formatarDataHistorico(dataString) {
+      if (!dataString) return '-';
+      
+      try {
+        const data = new Date(dataString);
+        if (isNaN(data.getTime())) return dataString;
+        
+        const agora = new Date();
+        
+        // Normalizar as datas para comparar apenas o dia (sem horário)
+        const dataNormalizada = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+        const agoraNormalizada = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+        
+        // Calcular diferença em dias
+        const diffMs = agoraNormalizada - dataNormalizada;
+        const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        // Formatação da data
+        const dia = data.getDate().toString().padStart(2, '0');
+        const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+        const ano = data.getFullYear();
+        const hora = data.getHours().toString().padStart(2, '0');
+        const minuto = data.getMinutes().toString().padStart(2, '0');
+        
+        // Determinar se é hoje, ontem ou data específica
+        let dataFormatada;
+        if (diffDias === 0) {
+          dataFormatada = `Hoje, ${hora}:${minuto}`;
+        } else if (diffDias === 1) {
+          dataFormatada = `Ontem, ${hora}:${minuto}`;
+        } else if (diffDias > 1 && diffDias < 7) {
+          const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+          const diaSemana = diasSemana[data.getDay()];
+          dataFormatada = `${diaSemana}, ${hora}:${minuto}`;
+        } else {
+          dataFormatada = `${dia}/${mes}/${ano}, ${hora}:${minuto}`;
+        }
+        
+        return dataFormatada;
+      } catch (error) {
+        console.warn('Erro ao formatar data do histórico:', dataString, error);
+        return dataString;
+      }
+    }
+
+    function mostrarLoading(mostrar) {
+      document.getElementById('loadingOverlay').style.display = mostrar ? 'flex' : 'none';
+    }
+
+    function mostrarNotificacao(mensagem, tipo = 'info') {
+      const cores = { sucesso: '#27ae60', erro: '#e74c3c', info: '#3498db', aviso: '#f39c12' };
+      const icones = { sucesso: 'fa-check-circle', erro: 'fa-exclamation-circle', info: 'fa-info-circle', aviso: 'fa-exclamation-triangle' };
+      const cor  = cores[tipo]  || cores.info;
+      const icon = icones[tipo] || icones.info;
+
+      // Não exibir alertas de erro de rede — o banner de retry já cuida disso
+      if (tipo === 'erro' && (mensagem.includes('503') || mensagem.includes('JSON') || mensagem.includes('token'))) return;
+
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position:fixed; bottom:4.5rem; left:50%; transform:translateX(-50%);
+        background:${cor}; color:#fff; padding:0.65rem 1.4rem;
+        border-radius:30px; font-size:0.82rem; font-weight:600;
+        box-shadow:0 4px 16px rgba(0,0,0,.2); z-index:9997;
+        display:flex; align-items:center; gap:0.6rem;
+        animation: fadeInUp .3s ease;
+      `;
+      toast.innerHTML = `<i class="fas ${icon}"></i> ${mensagem}`;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .4s'; setTimeout(() => toast.remove(), 400); }, 4000);
+    }
+
+    function fecharModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+      leadEditando = null;
+    }
+
+    function confirmarAcao(mensagem, callback) {
+      document.getElementById('mensagemConfirmacao').textContent = mensagem;
+      document.getElementById('btnConfirmar').onclick = () => {
+        fecharModal('modalConfirmacao');
+        callback();
+      };
+      document.getElementById('modalConfirmacao').style.display = 'block';
+    }
+
+    let _autoOpenLeadId = null;
+
+    function processarParametrosURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if (urlParams.has('search')) {
+        const searchValue = urlParams.get('search');
+        search = searchValue;
+        document.getElementById('searchInput').value = searchValue;
+      }
+      
+      if (urlParams.has('id')) {
+        const idValue = urlParams.get('id');
+        search = idValue;
+        document.getElementById('searchInput').value = idValue;
+      }
+
+      if (urlParams.has('lead_id')) {
+        _autoOpenLeadId = urlParams.get('lead_id');
+      }
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      // Processar parâmetros da URL antes de carregar
+      processarParametrosURL();
+      
+      // Filtros
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        search = e.target.value;
+        page = 1;
+        debounceCarregar();
+      });
+
+      ['origemFilter', 'statusFilter', 'ativoFilter', 'valorFilter'].forEach(filtroId => {
+        document.getElementById(filtroId).addEventListener('change', (e) => {
+          const key = filtroId.replace('Filter', '');
+          filtros[key] = e.target.value;
+          page = 1;
+          carregarLeads();
+        });
+      });
+
+      document.getElementById('dataInicio').addEventListener('change', (e) => {
+        filtros.data_inicio = e.target.value;
+        page = 1;
+        carregarLeads();
+      });
+
+      document.getElementById('dataFim').addEventListener('change', (e) => {
+        filtros.data_fim = e.target.value;
+        page = 1;
+        carregarLeads();
+      });
+
+      // Botões
+      document.getElementById('btnFiltrar').addEventListener('click', () => {
+        page = 1;
+        carregarLeads();
+      });
+
+      document.getElementById('btnLimpar').addEventListener('click', () => {
+        search = '';
+        filtros = { origem: '', status: '', ativo: '', data_inicio: '', data_fim: '', valor: '' };
+        
+        document.getElementById('searchInput').value = '';
+        document.getElementById('origemFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('ativoFilter').value = '';
+        document.getElementById('valorFilter').value = '';
+        document.getElementById('dataInicio').value = '';
+        document.getElementById('dataFim').value = '';
+        
+        page = 1;
+        carregarLeads();
+      });
+
+      document.getElementById('btnNovoLead').addEventListener('click', novoLead);
+      document.getElementById('btnExportar').addEventListener('click', exportarDados);
+
+      // Seletor de itens por página
+      document.getElementById('perPageSelect').addEventListener('change', (e) => {
+        perPage = parseInt(e.target.value);
+        page = 1; // Voltar para primeira página
+        carregarLeads();
+      });
+
+      // Dropdown navigation
+       const analisarMenu = document.getElementById('analisarMenu');
+       const analisarDropdown = document.getElementById('analisarDropdown');
+       let dropdownTimeout;
+
+       if (analisarMenu && analisarDropdown) {
+         analisarMenu.addEventListener('mouseenter', () => {
+           clearTimeout(dropdownTimeout);
+           analisarDropdown.classList.add('show');
+         });
+
+         analisarMenu.addEventListener('mouseleave', () => {
+           dropdownTimeout = setTimeout(() => {
+             analisarDropdown.classList.remove('show');
+           }, 200);
+         });
+
+         analisarDropdown.addEventListener('mouseenter', () => {
+           clearTimeout(dropdownTimeout);
+         });
+
+         analisarDropdown.addEventListener('mouseleave', () => {
+           dropdownTimeout = setTimeout(() => {
+             analisarDropdown.classList.remove('show');
+           }, 200);
+         });
+
+         document.addEventListener('click', (e) => {
+           if (!analisarMenu.contains(e.target) && !analisarDropdown.contains(e.target)) {
+             analisarDropdown.classList.remove('show');
+           }
+         });
+       }
+
+      // Modal handlers
+      window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+          e.target.style.display = 'none';
+        }
+      });
+
+      // Carregar dados iniciais
+      carregarLeads().then(() => {
+        if (_autoOpenLeadId) {
+          visualizarHistorico(parseInt(_autoOpenLeadId), 'lead');
+        }
+      });
+    });
+
+    // Debounce para busca
+    let timeoutBusca;
+    function debounceCarregar() {
+      clearTimeout(timeoutBusca);
+      timeoutBusca = setTimeout(carregarLeads, 400);
+    }
+    </script>
+{% endblock %}
+

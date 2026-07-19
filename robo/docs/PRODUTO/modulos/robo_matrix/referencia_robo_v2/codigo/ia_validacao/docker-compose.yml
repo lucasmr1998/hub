@@ -1,0 +1,26 @@
+services:
+  ia_validacao:
+    build: .
+    image: megalink/ia-validacao:latest
+    container_name: ia_validacao
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./fluxos:/app/fluxos:ro
+    networks:
+      - megalink
+
+  # Opcional: Redis para Fase 2 (contexto compartilhado entre workers)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: ia_validacao_redis
+  #   restart: unless-stopped
+  #   networks:
+  #     - megalink
+
+networks:
+  megalink:
+    driver: bridge

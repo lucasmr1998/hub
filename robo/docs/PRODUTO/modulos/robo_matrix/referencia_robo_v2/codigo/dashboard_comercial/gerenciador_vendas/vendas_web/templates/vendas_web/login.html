@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar — TecHub Comercial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    :root {
+        --primary: #000b4a;
+        --gradient: linear-gradient(135deg, #000b4a 0%, #0022fa 100%);
+        --text: #16182b; --text-2: #5b6072; --text-3: #9aa0b4;
+        --border: #e7e9f0; --danger: #dc2626; --success: #16a34a;
+        --font: 'Inter', system-ui, sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font); min-height: 100vh; display: flex; background: #f6f7fb; }
+
+    /* ── Painel de marca (esquerda) ── */
+    .brand-pane {
+        flex: 1.1; background: var(--gradient);
+        color: #fff; padding: 56px;
+        display: flex; flex-direction: column; justify-content: space-between;
+        position: relative; overflow: hidden;
+    }
+    .brand-pane::after {
+        content: ''; position: absolute; right: -120px; bottom: -120px;
+        width: 420px; height: 420px; border-radius: 50%;
+        background: rgba(255,255,255,.07);
+    }
+    .brand-pane::before {
+        content: ''; position: absolute; right: 40px; top: -90px;
+        width: 260px; height: 260px; border-radius: 50%;
+        background: rgba(255,255,255,.06);
+    }
+    .bp-logo { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 20px; }
+    .bp-logo .mark {
+        width: 40px; height: 40px; border-radius: 11px;
+        background: rgba(255,255,255,.18); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .bp-hero h1 { font-size: 34px; font-weight: 800; line-height: 1.18; letter-spacing: -.02em; max-width: 480px; }
+    .bp-hero p { margin-top: 14px; font-size: 15px; opacity: .85; max-width: 440px; line-height: 1.6; }
+    .bp-feats { display: flex; flex-direction: column; gap: 12px; margin-top: 34px; }
+    .bp-feat { display: flex; align-items: center; gap: 11px; font-size: 13.5px; opacity: .92; }
+    .bp-feat i { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,.15);
+                 display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .bp-foot { font-size: 12px; opacity: .65; position: relative; z-index: 1; }
+
+    /* ── Painel do formulário (direita) ── */
+    .form-pane { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px; }
+    .login-card { width: 100%; max-width: 400px; }
+    .login-logo-img { max-height: 52px; margin-bottom: 22px; }
+    .lc-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+    .lc-sub { font-size: 14px; color: var(--text-2); margin: 8px 0 28px; }
+
+    .alert { border-radius: 10px; padding: 11px 14px; font-size: 13px; margin-bottom: 16px;
+             display: flex; align-items: center; gap: 9px; }
+    .alert.error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+    .alert.success { background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+
+    .fg { margin-bottom: 18px; }
+    .fg label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-2); margin-bottom: 7px; }
+    .ig { position: relative; }
+    .ig i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px; }
+    .ig input {
+        width: 100%; padding: 12px 14px 12px 40px;
+        border: 1.5px solid var(--border); border-radius: 11px;
+        font-size: 14px; font-family: var(--font); color: var(--text);
+        background: #fff; outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    .ig input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(91,91,214,.12); }
+
+    .btn-entrar {
+        width: 100%; padding: 13px; border: none; border-radius: 11px;
+        background: var(--gradient); color: #fff;
+        font-size: 14.5px; font-weight: 700; font-family: var(--font);
+        cursor: pointer; margin-top: 6px;
+        transition: transform .12s, filter .12s;
+    }
+    .btn-entrar:hover { filter: brightness(1.06); transform: translateY(-1px); }
+    .btn-entrar:disabled { opacity: .7; cursor: wait; transform: none; }
+
+    .lc-foot { text-align: center; margin-top: 24px; font-size: 12px; color: var(--text-3); }
+
+    @media (max-width: 880px) {
+        .brand-pane { display: none; }
+    }
+    </style>
+</head>
+<body>
+
+    <!-- Marca / proposta de valor -->
+    <section class="brand-pane">
+        <div class="bp-logo">
+            <span style="background:#fff;border-radius:12px;padding:7px 14px;display:inline-flex;align-items:center;">
+                <img src="{% static 'images/logo_techub.png' %}" alt="TecHub" style="height:24px;display:block;">
+            </span>
+            <span style="font-size:15px;font-weight:600;opacity:.9;">Comercial</span>
+        </div>
+
+        <div class="bp-hero">
+            <h1>A operação comercial da sua fibra, num só lugar.</h1>
+            <p>Vendas pelo WhatsApp com IA, upgrades automáticos no HubSoft,
+               pipeline de CRM e instalação agendada — sem planilha, sem retrabalho.</p>
+            <div class="bp-feats">
+                <div class="bp-feat"><i class="fas fa-robot"></i> Atendimento e vendas conduzidos por IA</div>
+                <div class="bp-feat"><i class="fas fa-bolt"></i> Upgrade de plano aplicado automaticamente</div>
+                <div class="bp-feat"><i class="fas fa-table-columns"></i> CRM com pipelines de aquisição e pós-venda</div>
+                <div class="bp-feat"><i class="fas fa-calendar-check"></i> Agendamento de instalação integrado</div>
+            </div>
+        </div>
+
+        <div class="bp-foot">© Megalink Telecom — Plataforma interna</div>
+    </section>
+
+    <!-- Formulário -->
+    <section class="form-pane">
+        <div class="login-card">
+            {% if config_empresa and config_empresa.logo_empresa %}
+                <img src="{{ config_empresa.logo_empresa.url }}" alt="Logo" class="login-logo-img">
+            {% endif %}
+            <div class="lc-title">Bem-vindo de volta 👋</div>
+            <div class="lc-sub">Entre com suas credenciais para acessar o painel.</div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'error' %}error{% else %}success{% endif %}">
+                        <i class="fas {% if message.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" id="loginForm">
+                {% csrf_token %}
+                <div class="fg">
+                    <label for="username">Usuário</label>
+                    <div class="ig">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" name="username"
+                               placeholder="Seu usuário" required autocomplete="username" autofocus>
+                    </div>
+                </div>
+                <div class="fg">
+                    <label for="password">Senha</label>
+                    <div class="ig">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password"
+                               placeholder="Sua senha" required autocomplete="current-password">
+                    </div>
+                </div>
+                <button type="submit" class="btn-entrar" id="loginButton">Entrar</button>
+            </form>
+
+            <div class="lc-foot">Acesso restrito à equipe Megalink.</div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function () {
+            const b = document.getElementById('loginButton');
+            b.disabled = true;
+            b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando…';
+        });
+    </script>
+</body>
+</html>

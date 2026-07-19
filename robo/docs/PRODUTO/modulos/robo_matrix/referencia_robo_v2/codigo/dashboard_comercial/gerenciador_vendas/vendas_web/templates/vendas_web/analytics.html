@@ -1,0 +1,522 @@
+{% extends 'vendas_web/base.html' %}
+{% block page_title %}Análises{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+      --panel:#ffffff; --panel2:#f8fafc; --bd:#eef0f4;
+      --tx:#0b2a4a; --tx2:#374151; --tx3:#6b7280;
+      --violet:#6d28d9; --indigo:#4f46e5; --blue:#0022fa; --green:#10b981;
+      --orange:#f59e0b; --red:#ef4444; --cyan:#0891b2; --pink:#ec4899;
+    }
+    .an-wrap { padding:20px 24px; max-width:1500px; }
+
+    /* Header */
+    .top { display:flex; justify-content:space-between; align-items:flex-end;
+      flex-wrap:wrap; gap:16px; margin-bottom:20px; }
+    .title { font-size:22px; font-weight:800; color:var(--tx); }
+    .title i { color:var(--violet); }
+    .subtitle { color:var(--tx3); font-size:13px; margin-top:4px; }
+
+    /* Filtros */
+    .filtros { display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      background:var(--panel); border:1px solid var(--bd); border-radius:12px; padding:10px 14px; }
+    .filtros label { font-size:12px; color:var(--tx3); font-weight:600; }
+    .filtros input[type=date] { background:#fff; border:1px solid #d1d5db;
+      color:var(--tx2); border-radius:8px; padding:7px 10px; font-size:13px; }
+    .btn-aplicar { background:var(--violet); color:#fff;
+      border:none; border-radius:8px; padding:8px 16px; font-weight:700; font-size:13px;
+      cursor:pointer; }
+    .btn-aplicar:hover { opacity:.92; }
+    .preset { background:#f3f4f6; border:1px solid var(--bd); color:var(--tx2);
+      border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; }
+    .preset:hover { background:#ede9fe; color:var(--violet); }
+
+    /* KPIs */
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:14px; margin:18px 0; }
+    .kpi { background:var(--panel); border:1px solid var(--bd); border-radius:14px; padding:16px 20px; }
+    .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+      color:var(--tx3); font-weight:700; }
+    .kpi-val { font-size:28px; font-weight:800; margin-top:6px; color:var(--tx); }
+    .kpi-sub { font-size:11px; color:var(--tx3); margin-top:2px; }
+
+    /* Grid de seções */
+    .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+    .card { background:var(--panel); border:1px solid var(--bd); border-radius:14px;
+      padding:18px 20px; }
+    .card.col6 { grid-column:span 6; } .card.col4 { grid-column:span 4; }
+    .card.col8 { grid-column:span 8; } .card.col12 { grid-column:span 12; }
+    @media(max-width:1000px){ .card.col6,.card.col4,.card.col8{ grid-column:span 12; } }
+    .card-title { font-size:15px; font-weight:800; margin-bottom:4px; color:var(--tx);
+      display:flex; align-items:center; gap:8px; }
+    .card-title i { color:var(--violet); }
+    .card-sub { font-size:12px; color:var(--tx3); margin-bottom:14px; }
+    .chart-box { position:relative; height:280px; }
+
+    /* Funil */
+    .funil-bar { margin-bottom:10px; }
+    .funil-row { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; color:var(--tx2); }
+    .funil-track { background:#f3f4f6; border-radius:8px; height:30px; overflow:hidden; position:relative; }
+    .funil-fill { height:100%; border-radius:8px; display:flex; align-items:center;
+      padding-left:10px; font-size:12px; font-weight:700; color:#fff;
+      background:linear-gradient(90deg,var(--indigo),var(--violet)); transition:width .6s; }
+    .funil-pct { font-size:11px; color:var(--tx3); }
+
+    /* Vendedor destaque */
+    .vend-hero { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+    .vend-circle { position:relative; width:160px; height:160px; }
+    .vend-stat { flex:1; min-width:200px; }
+    .vend-big { font-size:40px; font-weight:800; color:var(--orange); }
+    .vend-desc { font-size:13px; color:var(--tx2); margin-top:4px; }
+    .vend-split { display:flex; gap:12px; margin-top:14px; }
+    .vend-pill { flex:1; background:var(--panel2); border:1px solid var(--bd); border-radius:10px; padding:12px; text-align:center; }
+    .vend-pill .n { font-size:22px; font-weight:800; }
+    .vend-pill .l { font-size:11px; color:var(--tx3); }
+
+    /* Tabelas */
+    .an-wrap table { width:100%; border-collapse:collapse; }
+    .an-wrap th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+      color:var(--tx3); padding:8px 10px; border-bottom:1px solid var(--bd); }
+    .an-wrap td { padding:9px 10px; font-size:13px; color:var(--tx2); border-bottom:1px solid #f3f4f6; }
+    .an-wrap tr:hover td { background:#f9fafb; }
+    .bar-cell { display:flex; align-items:center; gap:8px; }
+    .bar-mini { height:8px; border-radius:4px; background:linear-gradient(90deg,var(--green),var(--cyan)); }
+    .tag-n { background:#ede9fe; color:var(--violet); padding:2px 9px;
+      border-radius:999px; font-size:12px; font-weight:700; }
+
+    .loading { text-align:center; padding:60px; color:var(--tx3); }
+    .spinner { border:3px solid rgba(0,0,0,.08); border-top-color:var(--violet);
+      border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 16px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .section-head { font-size:17px; font-weight:800; margin:26px 0 12px;
+      color:var(--tx); display:flex; align-items:center; gap:10px; }
+    .section-head::before { content:''; width:4px; height:20px; background:var(--violet); border-radius:2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="an-wrap">
+
+  <div class="top">
+    <div>
+      <div class="title"><i class="fas fa-chart-pie"></i> Análises — Vendas, CRM & Robô</div>
+      <div class="subtitle">Funil · indicações · automação HubSoft · operação do CRM · performance e atrito do robô</div>
+    </div>
+    <div class="filtros">
+      <label>De</label>
+      <input type="date" id="f-inicio">
+      <label>Até</label>
+      <input type="date" id="f-fim">
+      <button class="btn-aplicar" onclick="carregar()"><i class="fas fa-filter"></i> Aplicar</button>
+      <button class="preset" onclick="preset(7)">7d</button>
+      <button class="preset" onclick="preset(30)">30d</button>
+      <button class="preset" onclick="preset(90)">90d</button>
+    </div>
+  </div>
+
+  <div id="conteudo">
+    <div class="loading"><div class="spinner"></div>Carregando dados...</div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  const fmt = n => (n ?? 0).toLocaleString('pt-BR');
+  let charts = {};
+
+  function preset(dias) {
+    const fim = new Date();
+    const ini = new Date(); ini.setDate(ini.getDate() - dias);
+    document.getElementById('f-inicio').value = ini.toISOString().slice(0,10);
+    document.getElementById('f-fim').value = fim.toISOString().slice(0,10);
+    carregar();
+  }
+
+  function destruirCharts() {
+    Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+    charts = {};
+  }
+
+  async function carregar() {
+    const ini = document.getElementById('f-inicio').value;
+    const fim = document.getElementById('f-fim').value;
+    document.getElementById('conteudo').innerHTML =
+      '<div class="loading"><div class="spinner"></div>Carregando dados...</div>';
+    try {
+      const url = `{% url 'vendas_web:api_analytics_data' %}?inicio=${ini}&fim=${fim}`;
+      const r = await fetch(url);
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error || 'erro');
+      render(d);
+    } catch(e) {
+      document.getElementById('conteudo').innerHTML =
+        `<div class="loading">⚠ Erro ao carregar: ${e.message}</div>`;
+    }
+  }
+
+  function render(d) {
+    destruirCharts();
+    const k = d.kpis, f = d.funil, v = d.vendedor, ia = d.ia, vd = d.vendas;
+    const ind = d.indicacoes || {}, au = d.automacao || {}, op = d.operacao || {}, rb = d.robo || {};
+
+    const html = `
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-label">Leads no período</div><div class="kpi-val">${fmt(k.total_leads)}</div></div>
+        <div class="kpi"><div class="kpi-label">Clientes convertidos</div><div class="kpi-val">${fmt(k.clientes_convertidos)}</div><div class="kpi-sub">${k.taxa_conversao}% de conversão</div></div>
+        <div class="kpi"><div class="kpi-label">Docs validados</div><div class="kpi-val">${fmt(k.docs_validados)}</div></div>
+        <div class="kpi"><div class="kpi-label">Instalações agendadas</div><div class="kpi-val">${fmt(k.instalacoes_agendadas)}</div></div>
+        <div class="kpi"><div class="kpi-label">Interações IA</div><div class="kpi-val">${fmt(ia.total_interacoes)}</div><div class="kpi-sub">${ia.duracao_media_ms}ms média</div></div>
+      </div>
+
+      <div class="section-head">Funil de Conversão</div>
+      <div class="grid">
+        <div class="card col8">
+          <div class="card-title"><i class="fas fa-filter"></i> Jornada do lead</div>
+          <div class="card-sub">Da entrada até virar cliente Hubsoft — % relativo ao topo e à etapa anterior</div>
+          <div id="funil-bars"></div>
+        </div>
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-percent"></i> Taxa final</div>
+          <div class="card-sub">Leads que viraram cliente</div>
+          <div class="chart-box" style="height:220px;"><canvas id="ch-conv"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-head">Vendedor: Automático vs Humano</div>
+      <div class="grid">
+        <div class="card col5" style="grid-column:span 5;">
+          <div class="card-title"><i class="fas fa-user-tie"></i> Reatribuição de vendas</div>
+          <div class="card-sub">Vendas geradas pela automação que foram passadas a um vendedor humano</div>
+          <div class="vend-hero">
+            <div class="vend-circle"><canvas id="ch-vend"></canvas></div>
+            <div class="vend-stat">
+              <div class="vend-big">${v.pct_reatribuidas}%</div>
+              <div class="vend-desc">das ${fmt(v.total_vendas_automacao)} vendas da automação foram reatribuídas a um vendedor humano</div>
+              <div class="vend-split">
+                <div class="vend-pill"><div class="n" style="color:var(--orange)">${fmt(v.reatribuidas_humano)}</div><div class="l">Reatribuídas</div></div>
+                <div class="vend-pill"><div class="n" style="color:var(--cyan)">${fmt(v.ainda_automatica)}</div><div class="l">Ainda automáticas</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card col7" style="grid-column:span 7;">
+          <div class="card-title"><i class="fas fa-ranking-star"></i> Vendedores que mais receberam vendas reatribuídas</div>
+          <div class="card-sub">Ranking de quem assumiu vendas iniciadas pelo bot</div>
+          <table><thead><tr><th>Vendedor</th><th>ID</th><th style="width:45%;">Vendas</th></tr></thead><tbody>
+            ${(v.ranking_vendedores||[]).map(r => {
+              const max = v.ranking_vendedores[0].n || 1;
+              return `<tr><td>${r.vendedor_nome||'—'}</td><td style="color:var(--tx3)">${r.id_vendedor||'—'}</td>
+                <td><div class="bar-cell"><div class="bar-mini" style="width:${Math.round(r.n/max*100)}%;"></div><span class="tag-n">${r.n}</span></div></td></tr>`;
+            }).join('') || '<tr><td colspan=3 style="text-align:center;color:var(--tx3)">Sem reatribuições no período</td></tr>'}
+          </tbody></table>
+        </div>
+      </div>
+
+      <div class="section-head">Performance da IA</div>
+      <div class="grid">
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-robot"></i> Chamadas por endpoint</div>
+          <div class="card-sub">Volume de cada API no período</div>
+          <div class="chart-box"><canvas id="ch-ep"></canvas></div>
+        </div>
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-image"></i> Validação de imagens</div>
+          <div class="card-sub">IA Vision: aprovadas vs rejeitadas (${ia.taxa_aprovacao_imagem}% aprovação)</div>
+          <div class="chart-box"><canvas id="ch-img"></canvas></div>
+        </div>
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-triangle-exclamation"></i> Indicadores</div>
+          <div class="card-sub">Resumo operacional da IA</div>
+          <table><tbody>
+            <tr><td>Validações OK</td><td><span class="tag-n">${fmt(ia.validacoes_ok)}</span></td></tr>
+            <tr><td>Validações falha</td><td><span class="tag-n">${fmt(ia.validacoes_falha)}</span></td></tr>
+            <tr><td>Taxa aprovação</td><td><span class="tag-n">${ia.taxa_aprovacao_validacao}%</span></td></tr>
+            <tr><td>Transbordos p/ atendente</td><td><span class="tag-n">${fmt(ia.transbordos)}</span></td></tr>
+            <tr><td>Tempo médio resposta</td><td><span class="tag-n">${ia.duracao_media_ms}ms</span></td></tr>
+          </tbody></table>
+        </div>
+        <div class="card col12">
+          <div class="card-title"><i class="fas fa-chart-line"></i> Volume de interações por dia</div>
+          <div class="chart-box"><canvas id="ch-iadia"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-head">Vendas & Instalações no Tempo</div>
+      <div class="grid">
+        <div class="card col8">
+          <div class="card-title"><i class="fas fa-calendar-days"></i> Leads por dia</div>
+          <div class="card-sub">Volume de novos leads recebidos</div>
+          <div class="chart-box"><canvas id="ch-leadsdia"></canvas></div>
+        </div>
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-box"></i> Por plano</div>
+          <div class="card-sub">Distribuição dos planos escolhidos</div>
+          <div class="chart-box"><canvas id="ch-plano"></canvas></div>
+        </div>
+        <div class="card col6">
+          <div class="card-title"><i class="fas fa-clock"></i> Turno de instalação</div>
+          <div class="chart-box" style="height:200px;"><canvas id="ch-turno"></canvas></div>
+        </div>
+        <div class="card col6">
+          <div class="card-title"><i class="fas fa-screwdriver-wrench"></i> Agendamentos IA</div>
+          <div class="card-sub">${fmt(vd.agendamentos_total)} agendamentos via bot</div>
+          <div class="chart-box" style="height:200px;"><canvas id="ch-agend"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-head">Indicações</div>
+      <div class="grid">
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-handshake"></i> Resumo do canal</div>
+          <div class="card-sub">Leads indicados no período</div>
+          <table><tbody>
+            <tr><td>Indicações recebidas</td><td><span class="tag-n">${fmt(ind.total||0)}</span></td></tr>
+            <tr><td>Convertidas em cliente</td><td><span class="tag-n">${fmt(ind.convertidos||0)}</span></td></tr>
+            <tr><td>Taxa de conversão</td><td><span class="tag-n">${ind.taxa_conversao||0}%</span></td></tr>
+          </tbody></table>
+          <div class="chart-box" style="height:150px;margin-top:10px;"><canvas id="ch-inddia"></canvas></div>
+        </div>
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-trophy"></i> Top indicadores</div>
+          <div class="card-sub">Quem mais indicou no período</div>
+          <table><thead><tr><th>Código</th><th style="width:50%;">Indicações</th></tr></thead><tbody>
+            ${(ind.top_indicadores||[]).map(r => {
+              const max = (ind.top_indicadores[0]||{}).n || 1;
+              return `<tr><td>${r.id_indicador}</td>
+                <td><div class="bar-cell"><div class="bar-mini" style="width:${Math.round(r.n/max*100)}%;"></div><span class="tag-n">${r.n}</span></div></td></tr>`;
+            }).join('') || '<tr><td colspan=2 style="text-align:center;color:var(--tx3)">Sem indicações no período</td></tr>'}
+          </tbody></table>
+        </div>
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-diagram-project"></i> Funil de indicações (agora)</div>
+          <div class="card-sub">Oportunidades por estágio (fotografia atual)</div>
+          <div class="chart-box"><canvas id="ch-indest"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-head">Automação HubSoft</div>
+      <div class="grid">
+        <div class="card col4">
+          <div class="card-title"><i class="fas fa-gears"></i> Saúde da automação</div>
+          <div class="card-sub">Execuções reais no período (sem dry-run)</div>
+          <div class="vend-hero">
+            <div class="vend-circle"><canvas id="ch-auto"></canvas></div>
+            <div class="vend-stat">
+              <div class="vend-big">${au.taxa_sucesso||0}%</div>
+              <div class="vend-desc">de sucesso em ${fmt(au.total_execucoes||0)} execuções · ${((au.duracao_media_ms||0)/1000).toFixed(1)}s por operação</div>
+            </div>
+          </div>
+        </div>
+        <div class="card col8">
+          <div class="card-title"><i class="fas fa-list-check"></i> Por processo</div>
+          <div class="card-sub">Novo serviço, upgrade e conversão prospecto→cliente</div>
+          <table><thead><tr><th>Processo</th><th>Total</th><th>Sucesso</th><th>Falha</th></tr></thead><tbody>
+            ${(au.por_processo||[]).map(p => `
+              <tr><td>${p.processo}</td><td><span class="tag-n">${p.n}</span></td>
+              <td style="color:#10b981;font-weight:700">${p.sucesso}</td>
+              <td style="color:${p.falha?'#ef4444':'var(--tx3)'};font-weight:700">${p.falha}</td></tr>`).join('')
+              || '<tr><td colspan=4 style="text-align:center;color:var(--tx3)">Sem execuções no período</td></tr>'}
+          </tbody></table>
+        </div>
+        ${(au.ultimas_falhas||[]).length ? `
+        <div class="card col12">
+          <div class="card-title"><i class="fas fa-triangle-exclamation"></i> Últimas falhas</div>
+          <div class="card-sub">Para investigação — o fallback/worker pode já ter reprocessado</div>
+          <table><thead><tr><th>Quando</th><th>Processo</th><th>Etapa</th><th>Erro</th></tr></thead><tbody>
+            ${au.ultimas_falhas.map(fl => `
+              <tr><td style="white-space:nowrap">${(fl.criado_em||'').slice(0,16).replace('T',' ')}</td>
+              <td>${fl.processo}</td><td>${fl.etapa||'—'}</td>
+              <td style="color:var(--tx3);font-size:11px">${fl.erro||''}</td></tr>`).join('')}
+          </tbody></table>
+        </div>` : ''}
+      </div>
+
+      <div class="section-head">Operação do CRM</div>
+      <div class="grid">
+        <div class="card col6">
+          <div class="card-title"><i class="fas fa-hourglass-half"></i> Tempo médio por estágio</div>
+          <div class="card-sub">Horas até a oportunidade sair do estágio (histórico do período)</div>
+          <div class="chart-box"><canvas id="ch-tempoest"></canvas></div>
+        </div>
+        <div class="card col6">
+          <div class="card-title"><i class="fas fa-hand"></i> Oportunidades paradas & carga</div>
+          <div class="card-sub">${fmt(op.paradas_7d_total||0)} paradas há 7+ dias · ${fmt(op.sem_responsavel||0)} sem responsável · ${fmt(op.ativas_total||0)} ativas</div>
+          <table><thead><tr><th>Paradas por pipeline</th><th>Qtde</th></tr></thead><tbody>
+            ${(op.paradas_por_pipeline||[]).map(p => `<tr><td>${p.pipeline}</td><td><span class="tag-n">${p.n}</span></td></tr>`).join('')
+              || '<tr><td colspan=2 style="text-align:center;color:var(--tx3)">Nenhuma oportunidade parada 🎉</td></tr>'}
+          </tbody></table>
+          <table style="margin-top:8px;"><thead><tr><th>Responsável</th><th>Ativas</th></tr></thead><tbody>
+            ${(op.carga_por_responsavel||[]).map(p => `<tr><td>${p.nome}</td><td><span class="tag-n">${p.n}</span></td></tr>`).join('')
+              || '<tr><td colspan=2 style="text-align:center;color:var(--tx3)">Sem atribuições</td></tr>'}
+          </tbody></table>
+        </div>
+      </div>
+
+      <div class="section-head">Robô — Atrito por Pergunta</div>
+      <div class="grid">
+        <div class="card col12">
+          <div class="card-title"><i class="fas fa-comment-slash"></i> Onde o cliente trava</div>
+          <div class="card-sub">% de respostas inválidas por pergunta (mín. 5 tentativas) · ${fmt(rb.recontatos_disparados||0)} recontatos por silêncio disparados no período</div>
+          <table><thead><tr><th>Pergunta</th><th>Tentativas</th><th>Inválidas</th><th style="width:40%;">% de atrito</th></tr></thead><tbody>
+            ${(rb.atrito_por_pergunta||[]).map(a => `
+              <tr><td>${a.question_id}</td><td>${a.total}</td><td>${a.invalidas}</td>
+              <td><div class="bar-cell"><div class="bar-mini" style="width:${Math.min(100,a.pct_invalidas)}%;background:${a.pct_invalidas>=25?'#ef4444':a.pct_invalidas>=10?'#f59e0b':'#10b981'};"></div><span class="tag-n">${a.pct_invalidas}%</span></div></td></tr>`).join('')
+              || '<tr><td colspan=4 style="text-align:center;color:var(--tx3)">Sem dados no período</td></tr>'}
+          </tbody></table>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:30px;color:var(--tx3);font-size:12px;">
+        Período: <strong>${d.periodo.inicio}</strong> a <strong>${d.periodo.fim}</strong>
+      </div>
+    `;
+    document.getElementById('conteudo').innerHTML = html;
+
+    // Funil bars
+    const cores = ['#6366f1','#7c3aed','#8b5cf6','#a855f7','#c026d3','#10b981'];
+    document.getElementById('funil-bars').innerHTML = f.etapas.map((e,i) => `
+      <div class="funil-bar">
+        <div class="funil-row"><span>${e.etapa}</span><span>${fmt(e.valor)} <span class="funil-pct">(${e.pct_topo}% do topo · ${e.pct_anterior}% da etapa anterior)</span></span></div>
+        <div class="funil-track"><div class="funil-fill" style="width:${e.pct_topo}%;background:linear-gradient(90deg,${cores[i]},${cores[i]}cc);">${e.pct_topo}%</div></div>
+      </div>`).join('');
+
+    const baseOpts = { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#374151', font:{size:11} } } },
+      scales:{ x:{ ticks:{color:'#6b7280',font:{size:10}}, grid:{color:'rgba(0,0,0,.06)'} },
+               y:{ ticks:{color:'#6b7280',font:{size:10}}, grid:{color:'rgba(0,0,0,.06)'} } } };
+
+    // Conversão (doughnut)
+    charts.conv = new Chart(document.getElementById('ch-conv'), {
+      type:'doughnut',
+      data:{ labels:['Convertidos','Não convertidos'],
+        datasets:[{ data:[k.clientes_convertidos, Math.max(0,k.total_leads-k.clientes_convertidos)],
+          backgroundColor:['#10b981','#e5e7eb'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'70%',
+        plugins:{ legend:{ position:'bottom', labels:{color:'#374151',font:{size:11}} } } }
+    });
+
+    // Vendedor (doughnut)
+    charts.vend = new Chart(document.getElementById('ch-vend'), {
+      type:'doughnut',
+      data:{ labels:['Reatribuídas','Automáticas'],
+        datasets:[{ data:[v.reatribuidas_humano, v.ainda_automatica],
+          backgroundColor:['#f59e0b','#06b6d4'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+        plugins:{ legend:{display:false} } }
+    });
+
+    // Endpoints (bar)
+    const epLabels = Object.keys(ia.por_endpoint);
+    charts.ep = new Chart(document.getElementById('ch-ep'), {
+      type:'bar',
+      data:{ labels:epLabels, datasets:[{ label:'Chamadas',
+        data:epLabels.map(l=>ia.por_endpoint[l]),
+        backgroundColor:['#6366f1','#3b82f6','#8b5cf6','#06b6d4','#ec4899'] }] },
+      options:{...baseOpts, plugins:{legend:{display:false}}}
+    });
+
+    // Imagens (doughnut)
+    charts.img = new Chart(document.getElementById('ch-img'), {
+      type:'doughnut',
+      data:{ labels:['Aprovadas','Rejeitadas'],
+        datasets:[{ data:[ia.imagens_aprovadas, ia.imagens_rejeitadas],
+          backgroundColor:['#10b981','#ef4444'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
+        plugins:{ legend:{position:'bottom',labels:{color:'#374151',font:{size:11}}} } }
+    });
+
+    // IA por dia (line)
+    charts.iadia = new Chart(document.getElementById('ch-iadia'), {
+      type:'line',
+      data:{ labels:ia.volume_por_dia.map(r=>r.data.slice(5)),
+        datasets:[{ label:'Interações', data:ia.volume_por_dia.map(r=>r.n),
+          borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,.15)', fill:true, tension:.3 }] },
+      options:baseOpts
+    });
+
+    // Leads por dia (bar)
+    charts.leadsdia = new Chart(document.getElementById('ch-leadsdia'), {
+      type:'bar',
+      data:{ labels:vd.leads_por_dia.map(r=>r.data.slice(5)),
+        datasets:[{ label:'Leads', data:vd.leads_por_dia.map(r=>r.n),
+          backgroundColor:'#3b82f6' }] },
+      options:{...baseOpts, plugins:{legend:{display:false}}}
+    });
+
+    // Plano (doughnut)
+    charts.plano = new Chart(document.getElementById('ch-plano'), {
+      type:'doughnut',
+      data:{ labels:vd.por_plano.map(r=>r.plano),
+        datasets:[{ data:vd.por_plano.map(r=>r.n),
+          backgroundColor:['#6366f1','#10b981','#f59e0b','#ec4899','#06b6d4'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+        plugins:{legend:{position:'bottom',labels:{color:'#374151',font:{size:10}}}} }
+    });
+
+    // Turno (bar horizontal)
+    charts.turno = new Chart(document.getElementById('ch-turno'), {
+      type:'bar',
+      data:{ labels:vd.por_turno.map(r=>r.turno),
+        datasets:[{ label:'Turno', data:vd.por_turno.map(r=>r.n),
+          backgroundColor:['#f59e0b','#6366f1'] }] },
+      options:{...baseOpts, indexAxis:'y', plugins:{legend:{display:false}}}
+    });
+
+    // Agendamentos (bar)
+    const agLabels = Object.keys(vd.agendamentos_por_status);
+    charts.agend = new Chart(document.getElementById('ch-agend'), {
+      type:'bar',
+      data:{ labels:agLabels, datasets:[{ label:'Agendamentos',
+        data:agLabels.map(l=>vd.agendamentos_por_status[l]),
+        backgroundColor:'#10b981' }] },
+      options:{...baseOpts, plugins:{legend:{display:false}}}
+    });
+
+    // Indicações por dia (line)
+    charts.inddia = new Chart(document.getElementById('ch-inddia'), {
+      type:'line',
+      data:{ labels:(ind.por_dia||[]).map(r=>r.data.slice(5)),
+        datasets:[{ label:'Indicações', data:(ind.por_dia||[]).map(r=>r.n),
+          borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.15)', fill:true, tension:.3 }] },
+      options:{...baseOpts, plugins:{legend:{display:false}}}
+    });
+
+    // Indicações por estágio (bar horizontal)
+    charts.indest = new Chart(document.getElementById('ch-indest'), {
+      type:'bar',
+      data:{ labels:(ind.por_estagio||[]).map(r=>r.estagio),
+        datasets:[{ label:'Oportunidades', data:(ind.por_estagio||[]).map(r=>r.n),
+          backgroundColor:'#8b5cf6' }] },
+      options:{...baseOpts, indexAxis:'y', plugins:{legend:{display:false}}}
+    });
+
+    // Automação (doughnut sucesso × falha × dry-run)
+    const ast = au.por_status || {};
+    charts.auto = new Chart(document.getElementById('ch-auto'), {
+      type:'doughnut',
+      data:{ labels:['Sucesso','Falha','Dry-run'],
+        datasets:[{ data:[ast.sucesso||0, ast.falha||0, ast.dry_run||0],
+          backgroundColor:['#10b981','#ef4444','#e5e7eb'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+        plugins:{ legend:{display:false} } }
+    });
+
+    // Tempo médio por estágio (bar horizontal)
+    charts.tempoest = new Chart(document.getElementById('ch-tempoest'), {
+      type:'bar',
+      data:{ labels:(op.tempo_medio_por_estagio||[]).map(r=>r.nome),
+        datasets:[{ label:'Horas', data:(op.tempo_medio_por_estagio||[]).map(r=>r.media_h),
+          backgroundColor:'#06b6d4' }] },
+      options:{...baseOpts, indexAxis:'y', plugins:{legend:{display:false}}}
+    });
+  }
+
+  // Inicializa: últimos 30 dias
+  preset(30);
+</script>
+{% endblock %}

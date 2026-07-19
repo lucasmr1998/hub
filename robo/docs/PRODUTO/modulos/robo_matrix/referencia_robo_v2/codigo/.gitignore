@@ -1,0 +1,63 @@
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# ── Ambientes virtuais ────────────────────────────────────
+venv/
+env/
+.env/
+n_env/
+myenv/
+.venv/
+
+# ── Variáveis de ambiente / segredos ─────────────────────
+.env
+*.env
+!.env.example
+
+# ── Django ───────────────────────────────────────────────
+*.sqlite3
+*.sqlite3.zst
+*.sqlite3.gz
+*.sqlite3.xz
+*.dump
+robovendas_v2_copia.*
+/staticfiles/
+/media/
+
+# ── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Configurações de servidor / deploy ───────────────────
+*.sh
+*.service
+*.conf
+gunicorn*.py
+gunicorn*.conf*
+
+# ── IDEs e editores ───────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Cobertura e testes ────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ── Mídia/runtime gerados (não versionar) ─────────────────
+dashboard_comercial/gerenciador_vendas/media/
+flow.json

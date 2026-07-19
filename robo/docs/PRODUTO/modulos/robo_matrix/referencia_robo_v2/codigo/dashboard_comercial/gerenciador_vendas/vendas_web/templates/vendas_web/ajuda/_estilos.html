@@ -1,0 +1,37 @@
+<style>
+/* Estilos compartilhados da Central de Ajuda (v2) */
+.aj-hero { background:var(--gradient); border-radius:var(--radius); color:#fff; padding:34px 36px; margin-bottom:24px; }
+.aj-hero h1 { font-size:23px; font-weight:800; letter-spacing:-.02em; }
+.aj-hero p { font-size:13.5px; opacity:.9; margin-top:7px; max-width:640px; line-height:1.6; }
+
+.aj-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+.aj-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px; text-decoration:none; color:var(--text); transition:box-shadow .14s, transform .14s; position:relative; }
+.aj-card:hover { box-shadow:var(--shadow); transform:translateY(-2px); }
+.aj-card .ic { width:44px;height:44px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px; }
+.aj-card h3 { font-size:15.5px; font-weight:700; }
+.aj-card p { font-size:12.8px; color:var(--text-2); margin-top:6px; line-height:1.55; }
+.aj-badge { position:absolute; top:14px; right:14px; background:var(--primary-soft); color:var(--primary); font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:10px; }
+
+/* layout do guia */
+.aj-wrap { display:grid; grid-template-columns:230px 1fr; gap:20px; align-items:start; }
+.aj-nav { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:10px; position:sticky; top:80px; }
+.aj-nav a { display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:8px; font-size:13px; color:var(--text-2); text-decoration:none; font-weight:500; }
+.aj-nav a:hover { background:var(--surface-2); color:var(--text); }
+.aj-nav a.on { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+.aj-body { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:30px 34px; }
+.aj-body h2 { font-size:19px; font-weight:800; letter-spacing:-.02em; margin-bottom:4px; }
+.aj-body .lead { font-size:13.5px; color:var(--text-2); margin-bottom:24px; }
+.aj-sec { margin-bottom:26px; }
+.aj-sec h3 { font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:9px; margin-bottom:9px; }
+.aj-sec h3 i { color:var(--primary); width:20px; text-align:center; }
+.aj-sec p, .aj-sec li { font-size:13.2px; color:var(--text-2); line-height:1.65; }
+.aj-sec ul, .aj-sec ol { margin:6px 0 0 22px; }
+.aj-sec li { margin-bottom:5px; }
+.aj-tip { background:var(--primary-soft); border-left:3px solid var(--primary); border-radius:8px; padding:11px 14px; font-size:12.6px; color:var(--text); margin-top:10px; }
+.aj-warn { background:#fff7ed; border-left:3px solid var(--warning); border-radius:8px; padding:11px 14px; font-size:12.6px; margin-top:10px; }
+.aj-kbd { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:1px 7px; font-size:11.5px; font-weight:600; }
+.aj-flow { display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin-top:8px; }
+.aj-step { background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:7px 12px; font-size:12.3px; font-weight:600; }
+.aj-flow i { color:var(--text-3); font-size:11px; }
+@media (max-width:900px){ .aj-wrap { grid-template-columns:1fr; } .aj-nav { position:static; display:flex; overflow-x:auto; } }
+</style>

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentacao CRM - Regras e APIs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; background: #f8f9fa; }
+        .hero { background: linear-gradient(135deg, #1e1b4b, #3730a3); color: #fff; padding: 2.5rem 0; margin-bottom: 2rem; }
+        .hero h1 { font-weight: 800; font-size: 2rem; }
+        .toc { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
+        .toc .nav-link { font-size: .85rem; color: #4b5563; padding: 6px 14px; border-radius: 6px; }
+        .toc .nav-link:hover { background: rgba(102,126,234,.08); color: #1e1b4b; }
+        .toc .nav-link.active { background: #1e1b4b; color: #fff; font-weight: 600; }
+        .toc .nav-section { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: #9ca3af; padding: 12px 14px 4px; letter-spacing: .05em; }
+        section { margin-bottom: 2.5rem; }
+        section h2 { font-size: 1.3rem; font-weight: 700; color: #1e1b4b; border-bottom: 2px solid rgba(102,126,234,.15); padding-bottom: 8px; margin-bottom: 16px; }
+        section h3 { font-size: 1.05rem; font-weight: 700; color: #374151; margin-top: 20px; margin-bottom: 10px; }
+        .endpoint { background: #fff; border-left: 4px solid #0022fa; padding: 16px; margin: 12px 0; border-radius: 0 8px 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+        .endpoint.ep-get { border-left-color: #10b981; }
+        .endpoint.ep-post { border-left-color: #0022fa; }
+        .method { display: inline-block; font-size: .7rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; margin-right: 8px; }
+        .method-get { background: rgba(16,185,129,.12); color: #059669; }
+        .method-post { background: rgba(102,126,234,.12); color: #4f46e5; }
+        .ep-url { font-family: monospace; font-size: .9rem; font-weight: 600; color: #1e1b4b; }
+        .ep-desc { font-size: .85rem; color: #6b7280; margin-top: 6px; }
+        .code { background: #1e1b4b; color: #e2e8f0; padding: 16px; border-radius: 8px; margin: 10px 0; overflow-x: auto; font-size: .82rem; line-height: 1.5; }
+        .code .k { color: #93c5fd; }
+        .code .s { color: #86efac; }
+        .code .c { color: #6b7280; }
+        .tag-pill { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 10px; border-radius: 12px; margin: 2px; }
+        .status-table { font-size: .82rem; }
+        .status-table td, .status-table th { padding: 6px 12px; }
+        .status-table code { background: rgba(102,126,234,.08); padding: 1px 6px; border-radius: 4px; font-size: .8rem; color: #4f46e5; }
+        .example-card { background: #fff; border: 1px solid rgba(102,126,234,.12); border-radius: 10px; padding: 20px; margin: 16px 0; }
+        .example-card h4 { font-size: .95rem; font-weight: 700; color: #1e1b4b; margin-bottom: 12px; }
+        .flow-step { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+        .flow-step-num { background: #0022fa; color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800; flex-shrink: 0; }
+        .flow-step-content { flex: 1; font-size: .85rem; }
+        .flow-step-content strong { color: #1e1b4b; }
+        .alert-info-custom { background: rgba(102,126,234,.06); border: 1px solid rgba(102,126,234,.15); border-radius: 8px; padding: 14px 16px; font-size: .85rem; color: #374151; }
+        .logic-and { background: rgba(102,126,234,.1); color: #0022fa; font-size: .7rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; }
+        .logic-or { background: rgba(245,158,11,.12); color: #d97706; font-size: .7rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; }
+        .back-link { color: rgba(255,255,255,.7); text-decoration: none; font-size: .85rem; }
+        .back-link:hover { color: #fff; }
+    </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <a href="{% url 'crm:configuracoes' %}" class="back-link"><i class="fas fa-arrow-left"></i> Voltar para Configuracoes</a>
+    <h1 class="mt-2"><i class="fas fa-book"></i> Documentacao CRM - Regras e APIs</h1>
+    <p class="mb-0 opacity-75">Sistema de regras configuraveis para movimentacao automatica de leads no pipeline + APIs para integracao com fluxos N8N.</p>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row">
+
+    <!-- Sidebar TOC -->
+    <div class="col-lg-3 col-xl-2">
+      <div class="toc">
+        <nav class="nav flex-column">
+          <div class="nav-section">Conceitos</div>
+          <a class="nav-link active" href="#como-funciona">Como Funciona</a>
+          <a class="nav-link" href="#tipos-condicao">Tipos de Condicao</a>
+          <a class="nav-link" href="#logica-avaliacao">Logica de Avaliacao</a>
+
+          <div class="nav-section">Status Disponiveis</div>
+          <a class="nav-link" href="#status-historico">Status Historico Contato</a>
+          <a class="nav-link" href="#status-lead">Status Lead (API)</a>
+          <a class="nav-link" href="#status-hubsoft">Status Servico Hubsoft</a>
+          <a class="nav-link" href="#tags">Tags CRM</a>
+
+          <div class="nav-section">APIs para N8N</div>
+          <a class="nav-link" href="#api-historico">Registrar Historico</a>
+          <a class="nav-link" href="#api-status-lead">Atualizar Status Lead</a>
+          <a class="nav-link" href="#api-tags">Gerenciar Tags</a>
+          <a class="nav-link" href="#api-atualizar-historico">Atualizar Historico</a>
+
+          <div class="nav-section">Exemplos Reais</div>
+          <a class="nav-link" href="#exemplo-instalacao">Instalacao Agendada</a>
+          <a class="nav-link" href="#exemplo-proposta">Proposta Enviada</a>
+          <a class="nav-link" href="#exemplo-cliente">Cliente Ativo</a>
+          <a class="nav-link" href="#exemplo-fluxo">Fluxo Completo N8N</a>
+
+          <div class="nav-section">Regras Ativas</div>
+          <a class="nav-link" href="#regras-ativas">Regras Configuradas</a>
+          <a class="nav-link" href="#comandos">Comandos Django</a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Conteudo Principal -->
+    <div class="col-lg-9 col-xl-10">
+
+      <!-- ================================================================ -->
+      <section id="como-funciona">
+        <h2><i class="fas fa-cogs text-primary"></i> Como Funciona</h2>
+        <p>O CRM usa um <strong>motor de regras configuraveis</strong> para mover leads automaticamente entre os estagios do pipeline. Em vez de logica hardcoded, voce define regras na pagina de <a href="{% url 'crm:configuracoes' %}">Configuracoes do CRM</a>.</p>
+
+        <div class="alert-info-custom">
+          <strong><i class="fas fa-lightbulb"></i> Conceito chave:</strong> Quando qualquer dado relevante de um lead muda (historico de contato, status, servico Hubsoft, tag), o motor avalia TODAS as regras e move o lead para o estagio correto automaticamente.
+        </div>
+
+        <h3>O que dispara a avaliacao?</h3>
+        <table class="table table-sm status-table">
+          <thead><tr><th>Evento</th><th>Quando</th></tr></thead>
+          <tbody>
+            <tr><td><code>HistoricoContato</code> criado</td><td>API registra novo historico para o lead</td></tr>
+            <tr><td><code>LeadProspecto</code> atualizado</td><td>status_api, documentacao_validada, etc. mudam</td></tr>
+            <tr><td><code>ServicoClienteHubsoft</code> salvo</td><td>Sincronizacao com Hubsoft detecta mudanca</td></tr>
+            <tr><td><code>Tags</code> alteradas</td><td>Tags adicionadas ou removidas da oportunidade</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="tipos-condicao">
+        <h2><i class="fas fa-filter text-primary"></i> Tipos de Condicao</h2>
+        <p>Cada regra e composta por uma ou mais condicoes. Estes sao os tipos disponiveis:</p>
+
+        <table class="table table-sm status-table table-bordered">
+          <thead class="table-light"><tr><th>Tipo</th><th>Descricao</th><th>Exemplo de Uso</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>historico_status</code></td>
+              <td>Lead possui historico de contato com determinado status</td>
+              <td>Status = <code>instalacao_agendada</code></td>
+            </tr>
+            <tr>
+              <td><code>lead_status_api</code></td>
+              <td>LeadProspecto.status_api tem valor especifico</td>
+              <td>Status API = <code>processado</code></td>
+            </tr>
+            <tr>
+              <td><code>lead_campo</code></td>
+              <td>Campo booleano do lead (documentacao_validada, contrato_aceito, etc.)</td>
+              <td>Documentacao Validada = <strong>Sim</strong></td>
+            </tr>
+            <tr>
+              <td><code>servico_status</code></td>
+              <td>Lead tem servico no Hubsoft com status_prefixo especifico</td>
+              <td>Status = <code>servico_habilitado</code></td>
+            </tr>
+            <tr>
+              <td><code>tag</code></td>
+              <td>Oportunidade do lead possui determinada tag</td>
+              <td>Tag = <code>Comercial</code></td>
+            </tr>
+            <tr>
+              <td><code>converteu_venda</code></td>
+              <td>Lead tem historico com converteu_venda=True</td>
+              <td>Converteu Venda = <strong>Sim</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Operadores</h3>
+        <table class="table table-sm status-table">
+          <thead><tr><th>Operador</th><th>Descricao</th></tr></thead>
+          <tbody>
+            <tr><td><code>igual</code></td><td>Valor deve ser exatamente igual</td></tr>
+            <tr><td><code>diferente</code></td><td>Valor deve ser diferente</td></tr>
+            <tr><td><code>existe</code></td><td>Campo/conjunto possui algum valor (verdadeiro)</td></tr>
+            <tr><td><code>nao_existe</code></td><td>Campo/conjunto esta vazio (falso)</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="logica-avaliacao">
+        <h2><i class="fas fa-project-diagram text-primary"></i> Logica de Avaliacao</h2>
+
+        <div class="example-card">
+          <h4>Dentro de uma mesma regra: <span class="logic-and">E (AND)</span></h4>
+          <p>Todas as condicoes devem ser verdadeiras para a regra ser satisfeita.</p>
+          <div class="code">
+<span class="c">// Regra: "Aguardando Instalacao com Doc"</span>
+Condicao 1: servico_status <span class="k">igual</span> <span class="s">"aguardando_instalacao"</span>  <span class="logic-and">E</span>
+Condicao 2: lead_campo documentacao_validada <span class="k">igual</span> <span class="s">true</span>
+<span class="c">// Ambas devem ser verdadeiras para mover o lead</span>
+          </div>
+        </div>
+
+        <div class="example-card">
+          <h4>Entre regras do mesmo estagio: <span class="logic-or">OU (OR)</span></h4>
+          <p>Basta UMA regra ser satisfeita para o lead ser movido para o estagio.</p>
+          <div class="code">
+<span class="c">// Estagio: "Cliente Ativo"</span>
+Regra 1: servico_status <span class="k">igual</span> <span class="s">"servico_habilitado"</span>  <span class="logic-or">OU</span>
+Regra 2: converteu_venda <span class="k">igual</span> <span class="s">true</span>
+<span class="c">// Se qualquer uma bater, o lead vai para Cliente Ativo</span>
+          </div>
+        </div>
+
+        <div class="alert-info-custom">
+          <strong><i class="fas fa-sort-amount-up"></i> Prioridade:</strong> Estagios sao avaliados na ordem do pipeline (campo <code>ordem</code>). O <strong>primeiro estagio</strong> cuja regra bater vence. Estagios finais (Ganho/Perdido) nao sao reavaliados.
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="status-historico">
+        <h2><i class="fas fa-history text-primary"></i> Status do Historico de Contato</h2>
+        <p>Valores aceitos no campo <code>status</code> ao registrar um <code>HistoricoContato</code>:</p>
+        <table class="table table-sm status-table table-bordered">
+          <thead class="table-light"><tr><th>Codigo</th><th>Label</th><th>Categoria</th></tr></thead>
+          <tbody>
+            {% for code, label in status_historico %}
+            <tr>
+              <td><code>{{ code }}</code></td>
+              <td>{{ label }}</td>
+              <td>
+                {% if 'fluxo' in code %}Fluxo
+                {% elif 'venda' in code or 'convertido' in code %}Conversao
+                {% elif code == 'instalacao_agendada' or code == 'contrato_assinado' or code == 'proposta_enviada' or code == 'proposta_aceita' or code == 'em_negociacao' or code == 'documentacao_enviada' or code == 'retorno_agendado' or code == 'cancelamento_solicitado' or code == 'reativacao' %}Pipeline CRM
+                {% elif 'perdida' in code or 'ocupado' in code or 'desligou' in code or 'nao_atendeu' in code or 'abandonou' in code or 'invalido' in code or 'erro' in code %}Problema
+                {% else %}Geral{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="status-lead">
+        <h2><i class="fas fa-user-tag text-primary"></i> Status do Lead (status_api)</h2>
+        <p>Valores aceitos no campo <code>status_api</code> do <code>LeadProspecto</code>:</p>
+        <table class="table table-sm status-table table-bordered">
+          <thead class="table-light"><tr><th>Codigo</th><th>Label</th></tr></thead>
+          <tbody>
+            {% for code, label in status_lead %}
+            <tr><td><code>{{ code }}</code></td><td>{{ label }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="status-hubsoft">
+        <h2><i class="fas fa-server text-primary"></i> Status do Servico Hubsoft</h2>
+        <p>Valores do campo <code>status_prefixo</code> do <code>ServicoClienteHubsoft</code> (preenchidos automaticamente pela sincronizacao):</p>
+        <table class="table table-sm status-table table-bordered">
+          <thead class="table-light"><tr><th>Codigo</th><th>Descricao</th></tr></thead>
+          <tbody>
+            <tr><td><code>servico_habilitado</code></td><td>Servico ativo e funcionando</td></tr>
+            <tr><td><code>aguardando_instalacao</code></td><td>Servico contratado, aguardando instalacao</td></tr>
+            <tr><td><code>servico_suspenso</code></td><td>Servico temporariamente suspenso</td></tr>
+            <tr><td><code>servico_cancelado</code></td><td>Servico cancelado</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="tags">
+        <h2><i class="fas fa-tags text-primary"></i> Tags CRM</h2>
+        <p>Tags disponíveis atualmente:</p>
+        {% for tag in tags %}
+        <span class="tag-pill" style="background:{{ tag.cor_hex }}22;color:{{ tag.cor_hex }};border:1px solid {{ tag.cor_hex }}44">{{ tag.nome }}</span>
+        {% empty %}
+        <p class="text-muted">Nenhuma tag cadastrada. Tags sao criadas automaticamente ao serem atribuidas via API.</p>
+        {% endfor %}
+      </section>
+
+      <!-- ================================================================ -->
+      <!-- APIS PARA N8N -->
+      <!-- ================================================================ -->
+
+      <section id="api-historico">
+        <h2><i class="fas fa-plus-circle text-primary"></i> API: Registrar Historico de Contato</h2>
+        <p>Registra um novo historico de contato para um lead. O motor de regras e <strong>disparado automaticamente</strong> apos o registro.</p>
+
+        <div class="endpoint ep-post">
+          <span class="method method-post">POST</span>
+          <span class="ep-url">/api/historicos/registrar/</span>
+          <div class="ep-desc">Cria um novo HistoricoContato vinculado ao lead.</div>
+        </div>
+
+        <h3>Payload</h3>
+        <div class="code">
+{
+  <span class="k">"telefone"</span>: <span class="s">"5511999990000"</span>,     <span class="c">// obrigatorio</span>
+  <span class="k">"status"</span>: <span class="s">"instalacao_agendada"</span>,   <span class="c">// obrigatorio - qualquer valor da tabela acima</span>
+  <span class="k">"lead_id"</span>: <span class="s">123</span>,                     <span class="c">// opcional - vincula ao lead diretamente</span>
+  <span class="k">"observacoes"</span>: <span class="s">"Instalacao agendada para 05/04"</span>,
+  <span class="k">"origem_contato"</span>: <span class="s">"whatsapp"</span>,
+  <span class="k">"nome_contato"</span>: <span class="s">"Joao Silva"</span>
+}
+        </div>
+
+        <h3>Resposta (sucesso)</h3>
+        <div class="code">
+{
+  <span class="k">"sucesso"</span>: <span class="s">true</span>,
+  <span class="k">"id"</span>: <span class="s">456</span>,
+  <span class="k">"dados"</span>: { ... }
+}
+        </div>
+
+        <div class="alert-info-custom mt-3">
+          <strong><i class="fas fa-bolt"></i> Efeito automatico:</strong> Apos o registro, o signal <code>avaliar_regras_apos_historico</code> dispara o motor de regras. Se alguma regra configurada usar <code>historico_status = instalacao_agendada</code>, o lead sera movido automaticamente.
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="api-status-lead">
+        <h2><i class="fas fa-exchange-alt text-primary"></i> API: Atualizar Status do Lead</h2>
+        <p>Atualiza o <code>status_api</code> de um lead. O motor de regras e disparado automaticamente.</p>
+
+        <div class="endpoint ep-post">
+          <span class="method method-post">POST</span>
+          <span class="ep-url">/api/leads/status/</span>
+          <div class="ep-desc">Atualiza o status_api do LeadProspecto pelo lead_id.</div>
+        </div>
+
+        <h3>Payload</h3>
+        <div class="code">
+{
+  <span class="k">"lead_id"</span>: <span class="s">123</span>,                  <span class="c">// obrigatorio</span>
+  <span class="k">"status_api"</span>: <span class="s">"em_instalacao"</span>      <span class="c">// obrigatorio - qualquer valor da tabela acima</span>
+}
+        </div>
+
+        <h3>Resposta</h3>
+        <div class="code">
+{
+  <span class="k">"sucesso"</span>: <span class="s">true</span>,
+  <span class="k">"lead_id"</span>: <span class="s">123</span>,
+  <span class="k">"status_api"</span>: <span class="s">"em_instalacao"</span>
+}
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="api-tags">
+        <h2><i class="fas fa-tag text-primary"></i> API: Gerenciar Tags</h2>
+        <p>Adiciona e/ou remove tags de um lead. Tags que nao existem sao criadas automaticamente. O motor de regras e disparado.</p>
+
+        <div class="endpoint ep-post">
+          <span class="method method-post">POST</span>
+          <span class="ep-url">/api/leads/tags/</span>
+          <div class="ep-desc">Adiciona e/ou remove tags da OportunidadeVenda pelo lead_id.</div>
+        </div>
+
+        <h3>Payload</h3>
+        <div class="code">
+{
+  <span class="k">"lead_id"</span>: <span class="s">123</span>,                          <span class="c">// obrigatorio</span>
+  <span class="k">"tags_add"</span>: [<span class="s">"Comercial"</span>, <span class="s">"Urgente"</span>],    <span class="c">// tags a adicionar</span>
+  <span class="k">"tags_remove"</span>: [<span class="s">"Endereco"</span>]              <span class="c">// tags a remover</span>
+}
+        </div>
+
+        <h3>Resposta</h3>
+        <div class="code">
+{
+  <span class="k">"sucesso"</span>: <span class="s">true</span>,
+  <span class="k">"lead_id"</span>: <span class="s">123</span>,
+  <span class="k">"oportunidade_id"</span>: <span class="s">78</span>,
+  <span class="k">"tags_adicionadas"</span>: [<span class="s">"Comercial"</span>, <span class="s">"Urgente"</span>],
+  <span class="k">"tags_removidas"</span>: [<span class="s">"Endereco"</span>],
+  <span class="k">"tags_atuais"</span>: [<span class="s">"Comercial"</span>, <span class="s">"Documental"</span>, <span class="s">"Urgente"</span>]
+}
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="api-atualizar-historico">
+        <h2><i class="fas fa-pen text-primary"></i> API: Atualizar Historico Existente</h2>
+
+        <div class="endpoint ep-post">
+          <span class="method method-post">POST</span>
+          <span class="ep-url">/api/historicos/atualizar/</span>
+          <div class="ep-desc">Atualiza um HistoricoContato existente por criterio de busca.</div>
+        </div>
+
+        <h3>Payload</h3>
+        <div class="code">
+{
+  <span class="k">"termo_busca"</span>: <span class="s">"protocolo_atendimento"</span>,    <span class="c">// campo para buscar</span>
+  <span class="k">"busca"</span>: <span class="s">"ATD-2026-001"</span>,                   <span class="c">// valor para buscar</span>
+  <span class="k">"status"</span>: <span class="s">"proposta_aceita"</span>,                <span class="c">// novos dados</span>
+  <span class="k">"observacoes"</span>: <span class="s">"Cliente aceitou proposta de 100Mb"</span>
+}
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <!-- EXEMPLOS REAIS -->
+      <!-- ================================================================ -->
+
+      <section id="exemplo-instalacao">
+        <h2><i class="fas fa-tools text-warning"></i> Exemplo: Instalacao Agendada</h2>
+        <div class="example-card">
+          <h4>Cenario: Lead agenda instalacao durante atendimento</h4>
+
+          <p><strong>Regra configurada no estagio "Aguardando Instalacao":</strong></p>
+          <div class="code">
+Condicao 1: historico_status <span class="k">igual</span> <span class="s">"instalacao_agendada"</span>  <span class="logic-and">E</span>
+Condicao 2: lead_campo documentacao_validada <span class="k">igual</span> <span class="s">true</span>
+          </div>
+
+          <p><strong>O que o fluxo N8N faz:</strong></p>
+          <div class="flow-step">
+            <div class="flow-step-num">1</div>
+            <div class="flow-step-content">
+              <strong>Registra o historico</strong> com status <code>instalacao_agendada</code>
+              <div class="code" style="margin:6px 0">POST /api/historicos/registrar/
+{ "telefone": "5511999990000", "lead_id": 123, "status": "instalacao_agendada", "observacoes": "Instalacao agendada para 10/04 as 14h" }</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">2</div>
+            <div class="flow-step-content">
+              <strong>Motor de regras avalia automaticamente:</strong><br>
+              - Lead tem historico com status <code>instalacao_agendada</code>? <strong style="color:#059669">SIM</strong><br>
+              - Lead tem <code>documentacao_validada = true</code>? <strong style="color:#059669">SIM</strong><br>
+              - Resultado: <strong>Lead movido para "Aguardando Instalacao"</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="exemplo-proposta">
+        <h2><i class="fas fa-file-invoice text-info"></i> Exemplo: Proposta Enviada</h2>
+        <div class="example-card">
+          <h4>Cenario: Lead recebe proposta comercial</h4>
+
+          <p><strong>Regra configurada no estagio "Proposta Enviada":</strong></p>
+          <div class="code">
+Condicao 1: historico_status <span class="k">igual</span> <span class="s">"proposta_enviada"</span>
+          </div>
+
+          <p><strong>Fluxo N8N:</strong></p>
+          <div class="code">
+<span class="c">// Passo 1: Registrar historico</span>
+POST /api/historicos/registrar/
+{ "telefone": "5511999990000", "lead_id": 456, "status": "proposta_enviada" }
+
+<span class="c">// Passo 2 (opcional): Atribuir tag</span>
+POST /api/leads/tags/
+{ "lead_id": 456, "tags_add": ["Comercial"] }
+          </div>
+
+          <p>O lead sera movido automaticamente para o estagio "Proposta Enviada".</p>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="exemplo-cliente">
+        <h2><i class="fas fa-user-check text-success"></i> Exemplo: Cliente Ativo</h2>
+        <div class="example-card">
+          <h4>Cenario: Servico e habilitado no Hubsoft</h4>
+
+          <p><strong>Regra configurada no estagio "Cliente Ativo":</strong></p>
+          <div class="code">
+Regra 1: servico_status <span class="k">igual</span> <span class="s">"servico_habilitado"</span>
+<span class="logic-or">OU</span>
+Regra 2: converteu_venda <span class="k">igual</span> <span class="s">true</span>
+          </div>
+
+          <p>Neste caso, nenhuma chamada de API e necessaria. Quando a sincronizacao do Hubsoft detectar que o <code>status_prefixo</code> mudou para <code>servico_habilitado</code>, o motor de regras move o lead automaticamente para "Cliente Ativo".</p>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="exemplo-fluxo">
+        <h2><i class="fas fa-stream text-primary"></i> Exemplo: Fluxo Completo N8N</h2>
+        <div class="example-card">
+          <h4>Jornada completa de um lead pelo pipeline via API</h4>
+
+          <div class="flow-step">
+            <div class="flow-step-num">1</div>
+            <div class="flow-step-content">
+              <strong>Lead entra (Novo Lead)</strong> - Criado automaticamente pelo sistema.
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num">2</div>
+            <div class="flow-step-content">
+              <strong>Qualificacao - Documentacao enviada</strong>
+              <div class="code" style="margin:6px 0">POST /api/historicos/registrar/
+{ "telefone": "5511999990000", "lead_id": 100, "status": "documentacao_enviada" }</div>
+              <small class="text-muted">Se houver regra com <code>historico_status = documentacao_enviada</code>, move para o estagio configurado.</small>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num">3</div>
+            <div class="flow-step-content">
+              <strong>Negociacao - Proposta aceita + contrato assinado</strong>
+              <div class="code" style="margin:6px 0"><span class="c">// Registrar aceitacao</span>
+POST /api/historicos/registrar/
+{ "telefone": "5511999990000", "lead_id": 100, "status": "proposta_aceita" }
+
+<span class="c">// Atualizar status do lead</span>
+POST /api/leads/status/
+{ "lead_id": 100, "status_api": "processado" }
+
+<span class="c">// Registrar contrato</span>
+POST /api/historicos/registrar/
+{ "telefone": "5511999990000", "lead_id": 100, "status": "contrato_assinado" }</div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num">4</div>
+            <div class="flow-step-content">
+              <strong>Fechamento - Instalacao agendada</strong>
+              <div class="code" style="margin:6px 0">POST /api/historicos/registrar/
+{ "telefone": "5511999990000", "lead_id": 100, "status": "instalacao_agendada" }</div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background:#059669">5</div>
+            <div class="flow-step-content">
+              <strong style="color:#059669">Cliente Ativo</strong> - Automatico quando Hubsoft sincroniza o servico como <code>servico_habilitado</code>.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="regras-ativas">
+        <h2><i class="fas fa-list-check text-primary"></i> Regras Configuradas Atualmente</h2>
+
+        {% if regras %}
+        {% regroup regras by estagio as regras_por_estagio %}
+        {% for grupo in regras_por_estagio %}
+        <div class="example-card">
+          <h4>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:{{ grupo.grouper.cor_hex }};margin-right:6px"></span>
+            {{ grupo.grouper.nome }}
+            <small class="text-muted">({{ grupo.grouper.tipo }})</small>
+          </h4>
+          {% for regra in grupo.list %}
+          {% if not forloop.first %}<div class="logic-separator my-1"><span class="logic-or">OU</span></div>{% endif %}
+          <div style="background:rgba(102,126,234,.03);border:1px solid rgba(102,126,234,.1);border-radius:6px;padding:10px 12px;margin:6px 0">
+            <strong style="font-size:.85rem">{{ regra.nome }}</strong>
+            {% for cond in regra.condicoes %}
+            {% if not forloop.first %}<span class="logic-and mx-1">E</span>{% endif %}
+            <code style="font-size:.78rem">{{ cond.tipo }}{% if cond.campo %}.{{ cond.campo }}{% endif %} {{ cond.operador }} {{ cond.valor }}</code>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="alert-info-custom">
+          <i class="fas fa-info-circle"></i> Nenhuma regra configurada ainda. Acesse <a href="{% url 'crm:configuracoes' %}">Configuracoes do CRM</a>, edite um estagio e adicione regras.
+        </div>
+        {% endif %}
+      </section>
+
+      <!-- ================================================================ -->
+      <section id="comandos">
+        <h2><i class="fas fa-terminal text-primary"></i> Comandos Django</h2>
+
+        <div class="endpoint ep-get">
+          <span class="ep-url">python manage.py revalidar_pipeline</span>
+          <div class="ep-desc">Reavalia todas as oportunidades ativas contra as regras configuradas e move quando necessario.</div>
+        </div>
+        <div class="code">
+<span class="c"># Simular sem gravar</span>
+python manage.py revalidar_pipeline --dry-run
+
+<span class="c"># Filtrar por tipo de estagio</span>
+python manage.py revalidar_pipeline --estagio negociacao
+
+<span class="c"># Limitar quantidade</span>
+python manage.py revalidar_pipeline --limit 50
+        </div>
+
+        <div class="endpoint ep-get" style="margin-top:16px">
+          <span class="ep-url">python manage.py popular_crm</span>
+          <div class="ep-desc">Cria oportunidades para leads existentes e depois reavalia regras automaticamente.</div>
+        </div>
+        <div class="code">
+python manage.py popular_crm --dry-run
+python manage.py popular_crm --limpar    <span class="c"># apaga oportunidades antes</span>
+        </div>
+      </section>
+
+      <!-- Resumo APIs -->
+      <section id="resumo-apis" class="mb-5">
+        <h2><i class="fas fa-list text-primary"></i> Resumo de Todas as APIs</h2>
+        <table class="table table-sm status-table table-bordered">
+          <thead class="table-light">
+            <tr><th>Metodo</th><th>Endpoint</th><th>Descricao</th><th>Dispara Regras?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="method method-post">POST</span></td><td><code>/api/historicos/registrar/</code></td><td>Registrar historico de contato</td><td><strong style="color:#059669">Sim</strong></td></tr>
+            <tr><td><span class="method method-post">POST</span></td><td><code>/api/historicos/atualizar/</code></td><td>Atualizar historico existente</td><td>Nao</td></tr>
+            <tr><td><span class="method method-post">POST</span></td><td><code>/api/leads/status/</code></td><td>Atualizar status_api do lead</td><td><strong style="color:#059669">Sim</strong></td></tr>
+            <tr><td><span class="method method-post">POST</span></td><td><code>/api/leads/tags/</code></td><td>Adicionar/remover tags</td><td><strong style="color:#059669">Sim</strong></td></tr>
+            <tr><td><span class="method method-post">POST</span></td><td><code>/api/leads/registrar/</code></td><td>Registrar novo lead</td><td><strong style="color:#059669">Sim</strong> (cria oportunidade)</td></tr>
+            <tr><td><span class="method method-post">POST</span></td><td><code>/api/leads/atualizar/</code></td><td>Atualizar dados do lead</td><td><strong style="color:#059669">Sim</strong></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div><!-- /col -->
+  </div><!-- /row -->
+</div><!-- /container -->
+
+<!-- Scroll spy -->
+<script>
+document.querySelectorAll('.toc .nav-link').forEach(link => {
+  link.addEventListener('click', function(e) {
+    document.querySelectorAll('.toc .nav-link').forEach(l => l.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+window.addEventListener('scroll', () => {
+  const sections = document.querySelectorAll('section[id]');
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) current = s.id;
+  });
+  document.querySelectorAll('.toc .nav-link').forEach(l => {
+    l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>

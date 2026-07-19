@@ -17,10 +17,11 @@ a venda automatica passa a ser configuravel por empresa sem fork de codigo.
 ## Arquivos
 - `PLANO.md` plano de construcao em fases (Fase 0 a 7).
 - `execution-log.md` trilha do que foi executado.
-- `referencia_robo_v2/` documentacao de referencia do robo_v2 (origem do porte).
-  Contrato da API, arquitetura e integracao Matrix. Copias limpas: contem apenas
-  exemplos sinteticos (CPF de teste, telefones placeholder), sem PII real nem
-  segredos.
+- `referencia_robo_v2/` material de referencia do robo_v2 (origem do porte):
+  - docs: contrato da API, arquitetura e integracao Matrix.
+  - `codigo/`: snapshot do codigo-fonte do robo_v2 (nao executavel, so consulta).
+    Ver `codigo/NOTA_REFERENCIA.md` para o que foi removido (PII, segredos, sqlite).
+  Copias limpas: apenas exemplos sinteticos, sem PII real nem segredos.
 
 ## Estado
 Fase 0 concluida: app criado, resolucao de tenant por token na URL, endpoint de

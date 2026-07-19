@@ -1,0 +1,140 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Guia do Administrador — Megalink One{% endblock %}
+{% block custom_css %}{% include 'vendas_web/ajuda/_estilos.html' %}{% endblock %}
+
+{% block content %}
+<div class="aj-wrap">
+    {% include 'vendas_web/ajuda/_nav.html' %}
+
+    <div class="aj-body">
+        <h2><i class="fas fa-user-shield" style="color:var(--primary);margin-right:9px;"></i>Guia do Administrador</h2>
+        <p class="lead">Você enxerga e opera <b>tudo</b>. Este guia foca no que só o Administrador faz:
+           decidir quem vê o quê, e configurar o comportamento do sistema.</p>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-user-shield"></i> Perfis de Acesso (Administração → Perfis de Acesso)</h3>
+            <p>É aqui que você controla <b>quem pode ver e operar o quê</b> na ferramenta — sem precisar de
+               deploy. Cada perfil é uma linha na lista à esquerda; ao clicar, você edita:</p>
+            <ul>
+                <li><b>Capacidades "Ver"</b> — quais páginas e pipelines aparecem no menu daquele perfil
+                    (Dashboard, Leads, cada um dos 5 pipelines, Tarefas, Desempenho, Retenção, Metas,
+                    Segmentos, Configurações, Admin).</li>
+                <li><b>Capacidades "Operar"</b> — quais ações o perfil pode executar (mover card no kanban,
+                    editar lead, operar indicações, atribuir responsável, criar tarefas, gerenciar
+                    usuários/perfis/configurações).</li>
+                <li><b>Escopo de dados</b> — <i>Todos os registros</i> (vê tudo), <i>Registros dos pipelines
+                    que pode ver</i> (vê tudo dentro do que está liberado) ou <i>Apenas os atribuídos a ele</i>
+                    (só os próprios).</li>
+                <li><b>Usuários</b> — marque quem pertence a este perfil. Uma pessoa pode ter mais de um
+                    perfil ao mesmo tempo (as permissões se somam).</li>
+            </ul>
+            <div class="aj-tip"><b>Como funciona por trás:</b> a cada página carregada, o sistema calcula o
+            conjunto de capacidades do usuário (união de todos os perfis dele) e usa isso para decidir o
+            menu, as abas de pipeline visíveis e se cada botão de ação aparece habilitado. Tentar uma ação
+            sem permissão (mesmo por URL direta) é bloqueado com erro 403.</div>
+            <div class="aj-warn"><b>Usuário sem perfil não tem acesso.</b> Quem entra pelo portal sem um
+            perfil atribuído vê a página <i>"Seu acesso ainda não foi liberado"</i> em qualquer tela.
+            O acesso é liberado na hora em que você atribui um perfil (veja <b>Gestão de Usuários</b>
+            abaixo). Administradores do portal continuam com acesso total.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-users-gear"></i> Gestão de Usuários (Administração → Usuários)</h3>
+            <p>Os usuários da ferramenta são <b>os mesmos do Portal TecHub</b> — ninguém cria senha aqui;
+               o login acontece pelo portal (SSO). Nesta tela você:</p>
+            <ul>
+                <li><b>Sincroniza os usuários do portal</b> — o botão roxo importa/atualiza todas as contas
+                    do TecHub, para você poder liberar o acesso <i>antes</i> do primeiro login da pessoa.</li>
+                <li><b>Filtra por situação</b> — <i>Pendentes</i> (sem perfil, bloqueados), <i>Com acesso</i>
+                    e <i>Admins</i> — e busca por nome, usuário ou e-mail.</li>
+                <li><b>Libera o acesso em um clique</b> — botão <i>"+ Liberar acesso"</i> na linha do usuário
+                    → escolha o perfil. O <b>×</b> no chip remove o perfil (e o acesso, se for o único).</li>
+            </ul>
+            <div class="aj-tip">Fluxo recomendado: <b>Sincronizar</b> → filtro <b>Pendentes</b> → localizar a
+            pessoa → <b>+ Liberar acesso</b> → escolher o perfil. A mudança vale imediatamente, sem deploy
+            e sem a pessoa precisar deslogar.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-robot"></i> Mensagens do Robô (Administração → Mensagens do Robô)</h3>
+            <p>Tudo que o robô <b>escreve para o cliente no WhatsApp</b> é personalizável aqui, sem deploy:
+               perguntas da coleta (CPF, nome, endereço, fotos…), <b>confirmações</b> ("CPF validado!",
+               "Anotado!"), mensagens de <b>erro</b>, as 3 mensagens de <b>recontato</b> (quando o cliente
+               some) e a pergunta de <b>retomada</b> (continuar / recomeçar / outro CPF).</p>
+            <ul>
+                <li>As alterações valem <b>na hora</b> — o robô recarrega os textos automaticamente.</li>
+                <li><b>Campo em branco</b> = o robô volta ao texto padrão; nas <b>confirmações</b>, em branco
+                    significa <b>não enviar nada</b> (o robô segue direto para a próxima pergunta).</li>
+                <li>Não use emojis (podem virar "?" no WhatsApp do atendimento) — use <code>*negrito*</code>.</li>
+                <li>Mensagens com opções numeradas precisam manter os números (1, 2, 3…) — é assim que o
+                    robô entende a resposta do cliente.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-chart-line"></i> Análises (Visão geral → Análises)</h3>
+            <p>Hub único de métricas com filtro de período: funil de conversão, canal de <b>Indicações</b>
+               (com ranking de indicadores), saúde da <b>automação HubSoft</b> (sucesso × falha, últimas
+               falhas para investigar), <b>operação do CRM</b> (tempo por estágio, oportunidades paradas,
+               carga por responsável) e o <b>atrito do robô</b> — em qual pergunta os clientes mais erram
+               a resposta (ótimo insumo para melhorar os textos na aba Mensagens do Robô).</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fab fa-whatsapp"></i> Mensagens de WhatsApp (Administração → Mensagens WhatsApp)</h3>
+            <p>Cada um dos 5 pipelines tem uma <b>mensagem inicial</b> configurável. Ao clicar no botão verde
+               de WhatsApp dentro de uma oportunidade, o app já abre com esse texto preenchido — o operador
+               só confere e envia.</p>
+            <ul>
+                <li>Use <code>{primeiro_nome}</code> e <code>{nome}</code> — são substituídos pelos dados
+                    reais do lead na hora de montar o link.</li>
+                <li>O campo <b>ativa</b> liga/desliga a mensagem sem apagar o texto salvo.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-sliders"></i> Config. CRM</h3>
+            <p>Estágios de cada pipeline (nome, cor, ícone, ordem, se é estágio de ganho/perda), regras de
+               movimentação automática do funil de Aquisição, tags e outras opções gerais do CRM ficam
+               aqui. Mexer nos estágios de um pipeline atualiza automaticamente as abas do kanban e os
+               relatórios — não precisa mexer em código.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-screwdriver-wrench"></i> Admin Django</h3>
+            <p>Visão técnica/bruta de todos os dados: leads, prospectos convertidos, upgrades, novos
+               serviços, execuções de automação no HubSoft (com status e erro de cada tentativa),
+               atendimentos e questões do robô. Use para investigar um caso específico até o detalhe.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-file-signature"></i> Contratos — o que o Administrador precisa saber</h3>
+            <p>Nenhum operador (nem você) aceita contrato pelo cliente. O aceite acontece no <b>app da
+               Megalink</b>, pelo próprio cliente. O CRM só <b>monitora</b> esse status (lido direto do
+               HubSoft) e usa isso como trava: <b>o atendimento e a O.S. de instalação só podem ser abertos
+               depois do contrato aceito</b>. Isso vale para todos os perfis, inclusive você.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-bell"></i> Notificações personalizadas</h3>
+            <p>O sino de cada usuário mostra só o que é relevante para <b>o perfil dele</b>: uma nova
+               indicação avisa quem opera o pipeline de Indicações; uma falha de conversão ou de
+               agendamento avisa quem tem acesso a Desempenho (gerentes/administradores); quando alguém
+               atribui uma oportunidade a uma pessoa, só ela é avisada. Isso é automático — não exige
+               configuração por evento, só depende dos perfis estarem corretos.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-compass"></i> Por onde começar</h3>
+            <ol>
+                <li>Confira os 5 perfis padrão em <b>Perfis de Acesso</b> e ajuste capacidades se necessário.</li>
+                <li>Atribua cada usuário da equipe ao(s) perfil(is) certo(s).</li>
+                <li>Revise as <b>Mensagens de WhatsApp</b> de cada pipeline.</li>
+                <li>Leia os guias dos demais perfis (menu ao lado) para saber exatamente o que cada
+                    pessoa vai ver.</li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endblock %}

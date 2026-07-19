@@ -1,0 +1,778 @@
+{
+  "flow": [
+    {
+      "parent": 1,
+      "id": 0,
+      "edge": false,
+      "cod_componente": "",
+      "data": false
+    },
+    {
+      "parent": 0,
+      "id": 1,
+      "edge": false,
+      "cod_componente": "",
+      "data": {
+        "name": "aurora_dinamico",
+        "account": 2,
+        "bot_stt": 0,
+        "bot_tts": 0,
+        "error_handling": 1,
+        "service_check_hour": 0,
+        "integrate_genesys": 0,
+        "finish_message": "",
+        "service_hour_message": "",
+        "nom_msg_rodape": "",
+        "active": 1
+      }
+    },
+    {
+      "collapsed": 0,
+      "parent": 1,
+      "id": 100,
+      "edge": false,
+      "cod_componente": 18,
+      "height": 200,
+      "width": 800,
+      "x": 10,
+      "y": 10,
+      "relative": false,
+      "value": "INICIO",
+      "data": false
+    },
+    {
+      "parent": 100,
+      "id": 101,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 15,
+      "height": 85,
+      "width": 85,
+      "x": 20,
+      "y": 60,
+      "relative": false,
+      "data": {
+        "bot_stt": ""
+      }
+    },
+    {
+      "parent": 100,
+      "id": 102,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 13,
+      "height": 50,
+      "width": 50,
+      "x": 200,
+      "y": 80,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "var_url_ia",
+        "variables": [
+          9100001,
+          9100007
+        ],
+        "values": [
+          "https://robovendas.megalinkpiaui.com.br/ia/conversar",
+          ""
+        ]
+      }
+    },
+    {
+      "parent": 100,
+      "id": 104,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 17,
+      "height": 50,
+      "width": 50,
+      "x": 400,
+      "y": 80,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "red_para_loop",
+        "type": 1,
+        "component": 201,
+        "flow": "",
+        "component_identifier": ""
+      }
+    },
+    {
+      "parent": 100,
+      "id": 110,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 101,
+      "target": 102,
+      "data": false
+    },
+    {
+      "parent": 100,
+      "id": 112,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 102,
+      "target": 104,
+      "data": false
+    },
+    {
+      "collapsed": 0,
+      "parent": 1,
+      "id": 200,
+      "edge": false,
+      "cod_componente": 18,
+      "height": 480,
+      "width": 1100,
+      "x": 10,
+      "y": 220,
+      "relative": false,
+      "value": "CONVERSA (loop)",
+      "data": false
+    },
+    {
+      "parent": 200,
+      "id": 201,
+      "quantityCon": 3,
+      "edge": false,
+      "cod_componente": 2,
+      "height": 50,
+      "width": 50,
+      "x": 50,
+      "y": 60,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "sol_loop",
+        "variable": 0,
+        "validation": 0,
+        "validation_regex": "",
+        "timeout": "{#tempo_de_inatividade}",
+        "update_db": 0,
+        "allow_upload": 1,
+        "mask": 0,
+        "bot_stt": 0
+      }
+    },
+    {
+      "parent": 200,
+      "id": 202,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 9,
+      "height": 50,
+      "width": 50,
+      "x": 230,
+      "y": 60,
+      "relative": false,
+      "value": "",
+      "data": {
+        "api": {
+          "identifier": "api_conversar",
+          "url": "https://robovendas.megalinkpiaui.com.br/ia/conversar",
+          "method": 1,
+          "async": 0,
+          "async_condition": "",
+          "timeout": 30
+        },
+        "auth": {
+          "auth_type": 0,
+          "access_key": "",
+          "secret_key": "",
+          "aws_region": "",
+          "service_name": "",
+          "username": "",
+          "password": "",
+          "username_ntlm": "",
+          "password_ntlm": ""
+        },
+        "headers": {
+          "key": [
+            "Content-Type"
+          ],
+          "value": [
+            "application/json"
+          ]
+        },
+        "body": {
+          "body": "{\n  \"telefone\": \"{#CONTATO.TELEFONE}\",\n  \"mensagem\": \"{#MENSAGEM}\",\n  \"url_imagem\": \"{#imagem_url}\"\n}"
+        },
+        "store": {
+          "filter": 1,
+          "variable": [
+            9100002,
+            9100003,
+            9100004,
+            9100005,
+            9100006
+          ],
+          "returned": [
+            "mensagem_bot",
+            "fim_fluxo",
+            "transbordo_humano",
+            "intencao",
+            "tipo_acao"
+          ]
+        }
+      }
+    },
+    {
+      "parent": 200,
+      "id": 203,
+      "edge": false,
+      "cod_componente": 8,
+      "height": 50,
+      "width": 50,
+      "x": 410,
+      "y": 60,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "dec_destino"
+      }
+    },
+    {
+      "parent": 200,
+      "id": 204,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 1,
+      "height": 50,
+      "width": 50,
+      "x": 590,
+      "y": 60,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "msg_bot",
+        "retention": 0,
+        "bot_tts": 0,
+        "bot_tts_type_send": 1,
+        "hsm": 0,
+        "force_hsm": 0,
+        "num_delay": 0,
+        "tipo_mensagem": 0,
+        "msg_interativa": 0,
+        "messages": [
+          "{#mensagem_bot_var}"
+        ]
+      }
+    },
+    {
+      "parent": 200,
+      "id": 240,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 13,
+      "height": 50,
+      "width": 50,
+      "x": 730,
+      "y": 60,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "var_zera_imagem",
+        "variables": [
+          9100007
+        ],
+        "values": [
+          ""
+        ]
+      }
+    },
+    {
+      "parent": 200,
+      "id": 205,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 17,
+      "height": 50,
+      "width": 50,
+      "x": 870,
+      "y": 60,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "red_voltar_loop",
+        "type": 1,
+        "component": 201,
+        "flow": "",
+        "component_identifier": ""
+      }
+    },
+    {
+      "parent": 200,
+      "id": 206,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 17,
+      "height": 50,
+      "width": 50,
+      "x": 410,
+      "y": 380,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "red_fim",
+        "type": 1,
+        "component": 301,
+        "flow": "",
+        "component_identifier": ""
+      }
+    },
+    {
+      "parent": 200,
+      "id": 207,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 17,
+      "height": 50,
+      "width": 50,
+      "x": 590,
+      "y": 380,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "red_transbordo",
+        "type": 1,
+        "component": 401,
+        "flow": "",
+        "component_identifier": ""
+      }
+    },
+    {
+      "parent": 200,
+      "id": 208,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 17,
+      "height": 50,
+      "width": 50,
+      "x": 50,
+      "y": 380,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "red_timeout",
+        "type": 1,
+        "component": 301,
+        "flow": "",
+        "component_identifier": ""
+      }
+    },
+    {
+      "parent": 200,
+      "id": 209,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 17,
+      "height": 50,
+      "width": 50,
+      "x": 230,
+      "y": 380,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "red_invalido",
+        "type": 1,
+        "component": 401,
+        "flow": "",
+        "component_identifier": ""
+      }
+    },
+    {
+      "parent": 200,
+      "id": 230,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 26,
+      "height": 50,
+      "width": 50,
+      "x": 410,
+      "y": 200,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "wait_hubsoft",
+        "num_wait": 20
+      }
+    },
+    {
+      "parent": 200,
+      "id": 231,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 13,
+      "height": 50,
+      "width": 50,
+      "x": 590,
+      "y": 200,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "var_mensagem_poll",
+        "variables": [
+          9100007
+        ],
+        "values": [
+          ""
+        ]
+      }
+    },
+    {
+      "parent": 200,
+      "id": 232,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 17,
+      "height": 50,
+      "width": 50,
+      "x": 770,
+      "y": 200,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "red_poll_hubsoft",
+        "type": 1,
+        "component": 202,
+        "flow": "",
+        "component_identifier": ""
+      }
+    },
+    {
+      "parent": 200,
+      "id": 220,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 201,
+      "target": 202,
+      "value": "Validado",
+      "data": {
+        "validation_condition": 1
+      }
+    },
+    {
+      "parent": 200,
+      "id": 226,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#FF8C00;strokeColor=#FF8C00;",
+      "source": 201,
+      "target": 209,
+      "value": "Inválido",
+      "data": {
+        "validation_condition": 2
+      }
+    },
+    {
+      "parent": 200,
+      "id": 227,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#778899;strokeColor=#778899;",
+      "source": 201,
+      "target": 208,
+      "value": "Tempo de espera",
+      "data": {
+        "validation_condition": 3
+      }
+    },
+    {
+      "parent": 200,
+      "id": 221,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 202,
+      "target": 203,
+      "data": {
+        "condition": 1
+      }
+    },
+    {
+      "parent": 200,
+      "id": 222,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 203,
+      "target": 206,
+      "value": "fim_fluxo == true",
+      "data": {
+        "cnt": {
+          "type": "option"
+        },
+        "opt": {
+          "type": 1,
+          "variable": 9100003,
+          "operator": 1,
+          "value": "true",
+          "field_compare": ""
+        }
+      }
+    },
+    {
+      "parent": 200,
+      "id": 223,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 203,
+      "target": 207,
+      "value": "transbordo == true",
+      "data": {
+        "cnt": {
+          "type": "option"
+        },
+        "opt": {
+          "type": 1,
+          "variable": 9100004,
+          "operator": 1,
+          "value": "true",
+          "field_compare": ""
+        }
+      }
+    },
+    {
+      "parent": 200,
+      "id": 228,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#0066CC;strokeColor=#0066CC;",
+      "source": 203,
+      "target": 204,
+      "value": "tipo_acao == aguarda_hubsoft",
+      "data": {
+        "cnt": {
+          "type": "option"
+        },
+        "opt": {
+          "type": 1,
+          "variable": 9100006,
+          "operator": 1,
+          "value": "aguarda_hubsoft",
+          "field_compare": ""
+        }
+      }
+    },
+    {
+      "parent": 200,
+      "id": 224,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#008000;strokeColor=#008000;",
+      "source": 203,
+      "target": 204,
+      "value": "Padrão",
+      "data": {
+        "cnt": {
+          "type": "default"
+        },
+        "opt": []
+      }
+    },
+    {
+      "parent": 200,
+      "id": 225,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 204,
+      "target": 240,
+      "data": false
+    },
+    {
+      "parent": 200,
+      "id": 241,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 240,
+      "target": 205,
+      "data": false
+    },
+    {
+      "collapsed": 0,
+      "parent": 1,
+      "id": 300,
+      "edge": false,
+      "cod_componente": 18,
+      "height": 200,
+      "width": 350,
+      "x": 10,
+      "y": 720,
+      "relative": false,
+      "value": "FINALIZACAO",
+      "data": false
+    },
+    {
+      "parent": 300,
+      "id": 301,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 1,
+      "height": 50,
+      "width": 50,
+      "x": 30,
+      "y": 50,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "msg_fim",
+        "retention": 0,
+        "bot_tts": 0,
+        "bot_tts_type_send": 1,
+        "hsm": 0,
+        "force_hsm": 0,
+        "num_delay": 0,
+        "tipo_mensagem": 0,
+        "msg_interativa": 0,
+        "messages": [
+          "{#mensagem_bot_var}"
+        ]
+      }
+    },
+    {
+      "parent": 300,
+      "id": 302,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 4,
+      "height": 50,
+      "width": 50,
+      "x": 200,
+      "y": 50,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "fin_fluxo",
+        "type": 1,
+        "categorization": 0,
+        "research": -1,
+        "research_text": "",
+        "tags": []
+      }
+    },
+    {
+      "parent": 300,
+      "id": 310,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 301,
+      "target": 302,
+      "data": false
+    },
+    {
+      "collapsed": 0,
+      "parent": 1,
+      "id": 400,
+      "edge": false,
+      "cod_componente": 18,
+      "height": 200,
+      "width": 350,
+      "x": 400,
+      "y": 720,
+      "relative": false,
+      "value": "TRANSBORDO HUMANO",
+      "data": false
+    },
+    {
+      "parent": 400,
+      "id": 401,
+      "quantityCon": 1,
+      "edge": false,
+      "cod_componente": 1,
+      "height": 50,
+      "width": 50,
+      "x": 30,
+      "y": 50,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "msg_transbordo",
+        "retention": 0,
+        "bot_tts": 0,
+        "bot_tts_type_send": 1,
+        "hsm": 0,
+        "force_hsm": 0,
+        "num_delay": 0,
+        "tipo_mensagem": 0,
+        "msg_interativa": 0,
+        "messages": [
+          "{#mensagem_bot_var}"
+        ]
+      }
+    },
+    {
+      "parent": 400,
+      "id": 402,
+      "quantityCon": 0,
+      "edge": false,
+      "cod_componente": 7,
+      "height": 50,
+      "width": 50,
+      "x": 200,
+      "y": 50,
+      "relative": false,
+      "value": "",
+      "data": {
+        "identifier": "ser_humano",
+        "service": 5,
+        "priority": 1,
+        "transbordo": 0,
+        "pesquisa": 0
+      }
+    },
+    {
+      "parent": 400,
+      "id": 410,
+      "edge": true,
+      "cod_componente": "",
+      "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontColor=#000000;strokeColor=#000000;",
+      "source": 401,
+      "target": 402,
+      "data": false
+    }
+  ],
+  "variaveis": {
+    "3470002": {
+      "name": "tempo_de_inatividade",
+      "value": "10"
+    },
+    "9100001": {
+      "name": "url_ia",
+      "value": "https://robovendas.megalinkpiaui.com.br/ia/conversar"
+    },
+    "9100002": {
+      "name": "mensagem_bot_var",
+      "value": ""
+    },
+    "9100003": {
+      "name": "fim_fluxo",
+      "value": ""
+    },
+    "9100004": {
+      "name": "transbordo_humano",
+      "value": ""
+    },
+    "9100005": {
+      "name": "intencao",
+      "value": ""
+    },
+    "9100006": {
+      "name": "tipo_acao",
+      "value": ""
+    },
+    "9100007": {
+      "name": "imagem_url",
+      "value": ""
+    }
+  },
+  "atalhos": [],
+  "bot": []
+}

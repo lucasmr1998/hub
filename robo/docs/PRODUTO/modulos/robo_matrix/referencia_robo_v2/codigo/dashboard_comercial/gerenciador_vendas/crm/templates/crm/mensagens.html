@@ -1,0 +1,72 @@
+{% extends 'vendas_web/base.html' %}
+{% block page_title %}Mensagens de WhatsApp{% endblock %}
+
+{% block extra_css %}
+<style>
+  .msg-wrap { max-width:820px; }
+  .msg-card { background:#fff; border:1px solid #eef0f4; border-radius:14px; padding:18px; margin-bottom:14px; }
+  .msg-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .msg-head .nm { font-weight:800; color:#0b2a4a; font-size:15px; display:flex; align-items:center; gap:8px; }
+  .msg-card textarea { width:100%; min-height:90px; padding:11px 13px; border:1px solid #d1d5db; border-radius:10px; font-size:13px; font-family:inherit; box-sizing:border-box; resize:vertical; }
+  .msg-card textarea:focus { border-color:#25d366; outline:none; box-shadow:0 0 0 3px #25d36622; }
+  .msg-foot { display:flex; align-items:center; gap:12px; margin-top:10px; }
+  .msg-btn { background:#25d366; color:#fff; border:none; border-radius:9px; padding:9px 16px; font-weight:700; font-size:13px; cursor:pointer; }
+  .msg-btn:hover { opacity:.92; }
+  .msg-status { font-size:13px; font-weight:600; }
+  .msg-tag { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:#f3f4f6; color:#6b7280; }
+  .msg-toggle { display:flex; align-items:center; gap:6px; font-size:12px; color:#6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="padding:20px 24px;" class="msg-wrap">
+  <h2 style="margin:0 0 4px;color:#0b2a4a;"><i class="fab fa-whatsapp" style="color:#25d366"></i> Mensagens de WhatsApp por pipeline</h2>
+  <p style="margin:0 0 6px;color:#6b7280;font-size:13px;">Ao clicar no botão de WhatsApp dentro de uma oportunidade, o app já abre com esta mensagem inicial preenchida — de acordo com o pipeline.</p>
+  <p style="margin:0 0 18px;color:#9ca3af;font-size:12px;">Placeholders disponíveis: <code>{primeiro_nome}</code> (primeiro nome do lead) e <code>{nome}</code> (nome completo).</p>
+
+  {% for it in itens %}
+  <div class="msg-card" data-tipo="{{ it.tipo }}">
+    <div class="msg-head">
+      <span class="nm"><i class="fas fa-table-columns" style="color:#0022fa"></i> {{ it.rotulo }}</span>
+      <span class="msg-tag">{{ it.tipo }}</span>
+    </div>
+    <textarea id="ta_{{ it.tipo }}" {% if 'gerenciar_config' not in cap %}readonly{% endif %} placeholder="Ex.: Olá {primeiro_nome}! Aqui é da Megalink…">{{ it.mensagem }}</textarea>
+    <div class="msg-foot">
+      {% if 'gerenciar_config' in cap %}
+      <button class="msg-btn" onclick="salvarMsg('{{ it.tipo }}')"><i class="fas fa-save"></i> Salvar</button>
+      <label class="msg-toggle"><input type="checkbox" id="at_{{ it.tipo }}" {% if it.ativo %}checked{% endif %}> ativa</label>
+      {% else %}
+      <span class="msg-tag">somente leitura</span>
+      {% endif %}
+      <span class="msg-status" id="st_{{ it.tipo }}"></span>
+    </div>
+  </div>
+  {% endfor %}
+
+  <p style="margin:20px 0 0;color:#6b7280;font-size:13px;">
+    <i class="fas fa-robot" style="color:#6d28d9"></i>
+    Para editar as mensagens que o <b>robô</b> envia no atendimento (perguntas, recontato, retomada…),
+    use a aba <a href="{% url 'crm:mensagens_robo' %}" style="color:#6d28d9;font-weight:700;">Mensagens do Robô</a>.
+  </p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+async function salvarMsg(tipo){
+  const st = document.getElementById('st_'+tipo);
+  const msg = document.getElementById('ta_'+tipo).value;
+  const ativo = document.getElementById('at_'+tipo).checked;
+  st.style.color='#6b7280'; st.textContent='Salvando…';
+  try {
+    const r = await fetch("{% url 'crm:api_mensagem_salvar' %}", {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify({pipeline_tipo: tipo, mensagem: msg, ativo})});
+    const d = await r.json().catch(()=>({ok:false,erro:'Erro no servidor.'}));
+    if(d.ok){ st.style.color='#059669'; st.textContent='✓ Salvo'; setTimeout(()=>st.textContent='',2500); }
+    else { st.style.color='#dc3545'; st.textContent=d.erro||'Erro ao salvar.'; }
+  } catch(e){ st.style.color='#dc3545'; st.textContent='Erro de conexão.'; }
+}
+</script>
+{% endblock %}

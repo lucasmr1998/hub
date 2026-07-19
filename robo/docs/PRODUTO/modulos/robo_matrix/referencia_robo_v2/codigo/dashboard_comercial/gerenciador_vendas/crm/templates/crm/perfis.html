@@ -1,0 +1,165 @@
+{% extends 'vendas_web/base.html' %}
+{% block page_title %}Perfis de Acesso{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pf-wrap { display:grid; grid-template-columns:280px 1fr; gap:18px; align-items:start; }
+  .pf-card { background:#fff; border:1px solid #eef0f4; border-radius:14px; padding:16px; }
+  .pf-list-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; cursor:pointer; margin-bottom:6px; border:1px solid transparent; }
+  .pf-list-item:hover { background:#f6f9fc; }
+  .pf-list-item.active { background:#eef2ff; border-color:#c7d2fe; }
+  .pf-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .pf-list-item .nm { font-weight:700; font-size:14px; color:#1e1b4b; }
+  .pf-list-item .sub { font-size:11px; color:#9ca3af; }
+  .pf-btn { border:none; border-radius:9px; padding:9px 14px; font-weight:700; font-size:13px; cursor:pointer; }
+  .pf-btn-primary { background:linear-gradient(135deg,#0022fa,#0018b0); color:#fff; }
+  .pf-btn-ghost { background:#f3f4f6; color:#374151; width:100%; margin-bottom:12px; }
+  .pf-field { margin-bottom:12px; }
+  .pf-field label { display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:4px; }
+  .pf-field input[type=text], .pf-field select { width:100%; padding:9px 11px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; box-sizing:border-box; }
+  .pf-row { display:flex; gap:12px; flex-wrap:wrap; }
+  .pf-row .pf-field { flex:1; min-width:160px; }
+  .cap-grupo { border:1px solid #eef0f4; border-radius:10px; padding:10px 12px; margin-bottom:10px; }
+  .cap-grupo-title { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:800; color:#0b2a4a; text-transform:uppercase; letter-spacing:.02em; margin-bottom:8px; }
+  .cap-grupo-title button { background:none; border:1px solid #d1d5db; border-radius:6px; font-size:11px; padding:2px 8px; cursor:pointer; color:#374151; }
+  .cap-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:6px 14px; }
+  .cap-item { display:flex; align-items:center; gap:8px; font-size:13px; color:#374151; cursor:pointer; }
+  .usuarios-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:4px 12px; max-height:200px; overflow:auto; border:1px solid #eef0f4; border-radius:8px; padding:10px; }
+  .usuarios-grid label { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
+  .pf-msg { font-size:13px; font-weight:600; margin-left:12px; }
+  .pf-sec-title { font-size:13px; font-weight:800; color:#1e1b4b; margin:18px 0 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="padding:20px 24px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+    <div>
+      <h2 style="margin:0 0 4px;color:#0b2a4a;"><i class="fas fa-user-shield" style="color:#0022fa"></i> Perfis de Acesso</h2>
+      <p style="margin:0 0 18px;color:#6b7280;font-size:13px;">Defina o que cada perfil pode <strong>ver</strong> e <strong>operar</strong>, o escopo de dados e quais usuários pertencem a ele.<br>
+      <span style="color:#9ca3af;font-size:12px;">Os usuários são os do <b>Portal TecHub</b> — sincronize para trazer contas novas; o acesso só é liberado ao atribuir um perfil.</span></p>
+    </div>
+    <div style="text-align:right;">
+      <button class="pf-btn pf-btn-primary" onclick="sincronizarPortal(this)">
+        <i class="fas fa-rotate"></i> Sincronizar usuários do portal
+      </button>
+      <div id="syncStatus" style="font-size:12px;color:#6b7280;margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div class="pf-wrap">
+    <div class="pf-card">
+      <button class="pf-btn pf-btn-ghost" onclick="novoPerfil()"><i class="fas fa-plus"></i> Novo perfil</button>
+      <div id="listaPerfis"></div>
+    </div>
+
+    <div class="pf-card" id="editor" style="display:none;">
+      <div class="pf-row">
+        <div class="pf-field" style="flex:2;"><label>Nome do perfil</label><input type="text" id="pf_nome"></div>
+        <div class="pf-field" style="max-width:90px;flex:0 0 90px;"><label>Cor</label><input type="color" id="pf_cor" style="width:100%;height:38px;border:1px solid #d1d5db;border-radius:8px;"></div>
+      </div>
+      <div class="pf-field"><label>Descrição</label><input type="text" id="pf_desc"></div>
+      <div class="pf-field"><label>Escopo de dados (o que enxerga)</label>
+        <select id="pf_escopo">{% for v, l in escopo_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+      </div>
+
+      <div class="pf-sec-title">Permissões (Ver / Operar)</div>
+      {% for grupo, itens in catalogo %}
+      <div class="cap-grupo">
+        <div class="cap-grupo-title"><span>{{ grupo }}</span><button type="button" onclick="toggleGrupo(this)">marcar todos</button></div>
+        <div class="cap-grid">
+          {% for cod, rot in itens %}
+          <label class="cap-item"><input type="checkbox" class="cap-chk" value="{{ cod }}"> {{ rot }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="pf-sec-title">Usuários deste perfil</div>
+      <div class="usuarios-grid" id="usuariosBox"></div>
+
+      <div style="margin-top:18px;display:flex;align-items:center;">
+        <button class="pf-btn pf-btn-primary" onclick="salvarPerfil()"><i class="fas fa-save"></i> Salvar perfil</button>
+        <span class="pf-msg" id="pf_msg"></span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PERFIS = {{ perfis_json|safe }};
+const USUARIOS = {{ usuarios_json|safe }};
+const CSRF = '{{ csrf_token }}';
+async function sincronizarPortal(btn){
+  const st = document.getElementById('syncStatus');
+  btn.disabled = true; st.textContent = 'Sincronizando com o portal…';
+  try {
+    const r = await fetch("{% url 'crm:api_usuarios_sincronizar' %}", {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body:'{}'});
+    const d = await r.json();
+    if (d.ok) {
+      st.style.color = '#059669';
+      st.textContent = `✓ ${d.total_portal} usuários no portal — ${d.criados} novos, ${d.atualizados} atualizados. Recarregando…`;
+      setTimeout(() => location.reload(), 1400);
+    } else {
+      st.style.color = '#dc3545'; st.textContent = d.erro || 'Erro ao sincronizar.'; btn.disabled = false;
+    }
+  } catch(e) { st.style.color = '#dc3545'; st.textContent = 'Erro de conexão.'; btn.disabled = false; }
+}
+let atual = null;   // perfil em edição (objeto ou null p/ novo)
+
+function renderLista(){
+  const box = document.getElementById('listaPerfis');
+  box.innerHTML = PERFIS.map(p => `
+    <div class="pf-list-item ${atual && atual.id===p.id ? 'active':''}" onclick="editar(${p.id})">
+      <span class="pf-dot" style="background:${p.cor_hex}"></span>
+      <div><div class="nm">${p.nome}</div><div class="sub">${p.qtd_usuarios} usuário(s) · ${p.escopo_dados}</div></div>
+    </div>`).join('') || '<p style="color:#9ca3af;font-size:13px;">Nenhum perfil.</p>';
+}
+function renderUsuarios(sel){
+  const set = new Set(sel||[]);
+  document.getElementById('usuariosBox').innerHTML = USUARIOS.map(u => `
+    <label><input type="checkbox" class="usr-chk" value="${u.id}" ${set.has(u.id)?'checked':''}> ${u.nome} <span style="color:#9ca3af;font-size:11px;">(${u.username})</span></label>`).join('');
+}
+function preencher(p){
+  document.getElementById('editor').style.display='block';
+  document.getElementById('pf_nome').value = p.nome||'';
+  document.getElementById('pf_desc').value = p.descricao||'';
+  document.getElementById('pf_cor').value = p.cor_hex||'#0022fa';
+  document.getElementById('pf_escopo').value = p.escopo_dados||'proprios';
+  const caps = new Set(p.capacidades||[]);
+  document.querySelectorAll('.cap-chk').forEach(c => c.checked = caps.has(c.value));
+  renderUsuarios(p.usuarios);
+  document.getElementById('pf_msg').textContent='';
+}
+function editar(id){ atual = PERFIS.find(p=>p.id===id); renderLista(); preencher(atual); }
+function novoPerfil(){ atual = null; renderLista(); preencher({escopo_dados:'proprios', cor_hex:'#0022fa', capacidades:[], usuarios:[]}); document.getElementById('pf_nome').focus(); }
+function toggleGrupo(btn){
+  const grid = btn.closest('.cap-grupo').querySelectorAll('.cap-chk');
+  const todos = [...grid].every(c=>c.checked);
+  grid.forEach(c=>c.checked=!todos);
+}
+async function salvarPerfil(){
+  const msg = document.getElementById('pf_msg');
+  const nome = document.getElementById('pf_nome').value.trim();
+  if(!nome){ msg.style.color='#dc3545'; msg.textContent='Informe o nome.'; return; }
+  const caps = [...document.querySelectorAll('.cap-chk:checked')].map(c=>c.value);
+  const usuarios = [...document.querySelectorAll('.usr-chk:checked')].map(c=>parseInt(c.value));
+  const payload = { id: atual?atual.id:null, nome, descricao: document.getElementById('pf_desc').value.trim(),
+    cor_hex: document.getElementById('pf_cor').value, escopo_dados: document.getElementById('pf_escopo').value,
+    capacidades: caps };
+  msg.style.color='#6b7280'; msg.textContent='Salvando…';
+  try {
+    let r = await fetch("{% url 'crm:api_perfil_salvar' %}", {method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},body:JSON.stringify(payload)});
+    let d = await r.json();
+    if(!d.ok){ msg.style.color='#dc3545'; msg.textContent=d.erro||'Erro ao salvar.'; return; }
+    await fetch("{% url 'crm:api_perfil_usuarios' %}", {method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},body:JSON.stringify({id:d.id, usuarios})});
+    msg.style.color='#059669'; msg.textContent='Salvo! Recarregando…';
+    setTimeout(()=>location.reload(), 800);
+  } catch(e){ msg.style.color='#dc3545'; msg.textContent='Erro de conexão.'; }
+}
+renderLista();
+</script>
+{% endblock %}

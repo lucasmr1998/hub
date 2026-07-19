@@ -1,0 +1,1879 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Vendas - Clientes Hubsoft - Megalink{% endblock %}
+
+{% block custom_css %}
+<style>
+  /* ===== PAGE ===== */
+  body { background: linear-gradient(135deg, #f0f2ff 0%, #f8f0ff 100%); min-height: 100vh; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(102,126,234,0.13);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(102,126,234,0.07);
+  }
+  .card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(102,126,234,0.1);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-header strong { font-size: .95rem; color: #1e1b4b; display: flex; align-items: center; gap: 8px; }
+
+  /* ===== STATS ===== */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 16px; }
+  .stat {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(102,126,234,0.1);
+    border-radius: 12px; padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    transition: box-shadow .2s;
+  }
+  .stat:hover { box-shadow: 0 4px 16px rgba(102,126,234,0.15); }
+  .stat .icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; font-size: 1.1rem; }
+  .stat h4 { color: #9ca3af; font-weight: 600; font-size: .73rem; margin-bottom: 2px; text-transform: uppercase; letter-spacing: .4px; }
+  .stat .value { font-size: 1.6rem; font-weight: 800; color: #1e1b4b; line-height: 1; }
+
+  /* ===== FILTROS ===== */
+  .filters-content { max-height: 800px; overflow: hidden; transition: max-height .3s ease-in-out; }
+  .filters-content.collapsed { max-height: 0; }
+  .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 16px 20px; }
+  .filters-grid .field label { display: block; color: #6b7280; font-weight: 600; font-size: .73rem; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; }
+  .filters-grid .field select,
+  .filters-grid .field input { width: 100%; padding: 8px 12px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: .88rem; height: 40px; font-family: inherit; outline: none; transition: border-color .2s; box-sizing: border-box; }
+  .filters-grid .field select:focus,
+  .filters-grid .field input:focus { border-color: #0022fa; box-shadow: 0 0 0 3px rgba(102,126,234,.1); }
+  .filters-actions { display: flex; gap: 8px; padding: 0 20px 16px; }
+  .btn-filter { background: linear-gradient(135deg,#0022fa,#0018b0); color: #fff; border: none; padding: 8px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: .85rem; }
+  .btn-filter:hover { opacity: .9; }
+  .btn-clear { background: #f3f4f6; color: #374151; border: none; padding: 8px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: .85rem; }
+  .btn-clear:hover { background: #e5e7eb; }
+
+  /* ===== TABELA ===== */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; min-width: 1080px; border-collapse: collapse; table-layout: auto; }
+  thead th {
+    background: rgba(102,126,234,0.04);
+    color: #9ca3af; padding: 10px 14px;
+    text-align: left; font-weight: 700; font-size: .7rem;
+    text-transform: uppercase; letter-spacing: .5px;
+    border-bottom: 1.5px solid rgba(102,126,234,0.1);
+    white-space: nowrap;
+  }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid rgba(102,126,234,0.06); font-size: .85rem; vertical-align: middle; }
+  tbody tr { cursor: pointer; transition: background .15s; }
+  tbody tr:hover { background: rgba(102,126,234,0.04); }
+
+  /* Larguras mínimas por coluna para não comprimir */
+  #clientesTable th:nth-child(1), #clientesTable td:nth-child(1) { min-width: 200px; }
+  #clientesTable th:nth-child(2), #clientesTable td:nth-child(2) { min-width: 120px; white-space: nowrap; }
+  #clientesTable th:nth-child(3), #clientesTable td:nth-child(3) { min-width: 140px; }
+  #clientesTable th:nth-child(4), #clientesTable td:nth-child(4) { min-width: 150px; }
+  #clientesTable th:nth-child(5), #clientesTable td:nth-child(5) { min-width: 150px; white-space: nowrap; }
+  #clientesTable th:nth-child(6), #clientesTable td:nth-child(6) { min-width: 90px;  white-space: nowrap; }
+  #clientesTable th:nth-child(7), #clientesTable td:nth-child(7) { min-width: 100px; white-space: nowrap; }
+  #clientesTable th:nth-child(8), #clientesTable td:nth-child(8) { min-width: 130px; }
+  #clientesTable th:nth-child(9), #clientesTable td:nth-child(9) { width: 52px; min-width: 52px; text-align: center; }
+
+  .chip { background: rgba(102,126,234,0.1); color: #0022fa; border-radius: 20px; padding: 4px 12px; font-size: .78rem; font-weight: 700; }
+
+  /* Badges */
+  .badge { padding: 4px 10px; border-radius: 20px; font-size: .73rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .badge-green  { background: #d1fae5; color: #065f46; }
+  .badge-yellow { background: #fef3c7; color: #92400e; }
+  .badge-red    { background: #fee2e2; color: #991b1b; }
+  .badge-blue   { background: #dbeafe; color: #1e40af; }
+  .badge-gray   { background: #f3f4f6; color: #374151; }
+
+  .name-cell { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0022fa, #0018b0); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; flex-shrink: 0; }
+  .avatar.inactive { background: linear-gradient(135deg, #9ca3af, #6b7280); }
+
+  .servico-tag { display: inline-flex; align-items: center; gap: 5px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 4px 9px; border-radius: 8px; font-size: .75rem; font-weight: 600; color: #166534; }
+  .servico-tag.aguardando { background: #fefce8; border-color: #fde68a; color: #854d0e; }
+  .servico-tag.cancelado  { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+  .servico-tag.suspenso   { background: #fdf4ff; border-color: #e9d5ff; color: #7e22ce; }
+
+  /* ===== BOTÃO DE AÇÃO — dropdown ===== */
+  .acao-wrap { position: relative; display: flex; justify-content: center; }
+  .btn-acao-menu {
+    width: 32px; height: 32px;
+    border: 1.5px solid rgba(102,126,234,0.25);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.9);
+    color: #0022fa;
+    font-size: 1.1rem; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .2s; line-height: 1;
+  }
+  .btn-acao-menu:hover { background: #0022fa; color: #fff; border-color: #0022fa; }
+
+  .acao-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: #fff;
+    border: 1px solid rgba(102,126,234,0.15);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 160px;
+    z-index: 200;
+    overflow: hidden;
+  }
+  .acao-dropdown.open { display: block; }
+  .acao-dropdown-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    font-size: .82rem; font-weight: 600; color: #374151;
+    cursor: pointer; border: none; background: none;
+    width: 100%; text-align: left;
+    transition: background .15s;
+  }
+  .acao-dropdown-item:hover { background: #f5f3ff; color: #0022fa; }
+  .acao-dropdown-item i { width: 16px; text-align: center; color: #0022fa; }
+  .acao-dropdown-item.disabled { color: #9ca3af; cursor: default; }
+  .acao-dropdown-item.disabled:hover { background: none; color: #9ca3af; }
+  .acao-dropdown-item.disabled i { color: #d1d5db; }
+  .acao-dropdown-sep { height: 1px; background: #f3f4f6; margin: 2px 0; }
+
+  /* ===== PAGINAÇÃO ===== */
+  .pagination { display: flex; gap: 6px; justify-content: center; padding: 14px; }
+  .pagination button { padding: 6px 12px; border: 1.5px solid #e0e0e0; background: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .82rem; transition: all .2s; }
+  .pagination button.active,
+  .pagination button:hover { border-color: #0022fa; background: #0022fa; color: #fff; }
+  .pagination button:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ===== MODAL ===== */
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.45); z-index: 1000; }
+  .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 16px; width: 95vw; max-width: 1100px; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25); }
+  .modal-header-bar { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #f0f0f0; }
+  .modal-header-bar h3 { margin: 0; font-size: 1.1rem; color: #1e1b4b; display: flex; align-items: center; gap: 8px; }
+  .modal-close { background: none; border: 1px solid #e5e7eb; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #6b7280; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+  .modal-close:hover { background: #f3f4f6; color: #1f2937; }
+  .modal-scroll { overflow-y: auto; flex: 1; padding: 24px; }
+  .modal-footer-bar { display: flex; gap: 8px; justify-content: flex-end; padding: 14px 24px; border-top: 1px solid #f0f0f0; background: #fafbfc; }
+
+  /* Seções modal detalhe */
+  .detail-section { margin-bottom: 24px; }
+  .detail-section:last-child { margin-bottom: 0; }
+  .section-title { font-size: .75rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; padding-bottom: 8px; border-bottom: 2px solid #f3f4f6; }
+  .section-title i { color: #0022fa; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .detail-item { background: #f9fafb; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #0022fa; }
+  .detail-label { font-size: .62rem; color: #9ca3af; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 3px; }
+  .detail-value { font-size: .88rem; color: #1f2937; font-weight: 600; word-break: break-word; }
+  .detail-value.destaque { color: #059669; font-size: 1rem; }
+
+  /* Serviço card modal */
+  .servico-card { background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 10px; transition: all .2s; }
+  .servico-card:hover { border-color: #0022fa; box-shadow: 0 4px 12px rgba(102,126,234,.1); }
+  .servico-card:last-child { margin-bottom: 0; }
+  .servico-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 14px; flex-wrap: wrap; }
+  .servico-nome { font-weight: 700; font-size: 1rem; color: #1e1b4b; display: flex; align-items: center; gap: 8px; }
+  .servico-valor { font-weight: 800; font-size: 1.1rem; color: #059669; white-space: nowrap; }
+
+  /* Histórico */
+  .alteracao-item { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+  .alteracao-item:last-child { margin-bottom: 0; }
+  .alteracao-data  { font-size: .68rem; color: #92400e; font-weight: 700; margin-bottom: 4px; }
+  .alteracao-campo { font-size: .8rem; color: #374151; margin-bottom: 2px; }
+  .alteracao-campo .label { color: #6b7280; }
+  .alteracao-de    { color: #dc2626; text-decoration: line-through; font-weight: 500; }
+  .alteracao-para  { color: #059669; font-weight: 600; }
+
+  /* Alerta */
+  .alerta-banner { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #92400e; font-weight: 600; font-size: .85rem; }
+
+  /* ===== MODAL DOCUMENTOS ===== */
+  .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+
+  .doc-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+  }
+  .doc-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+  .doc-card.valido   { border-color: #10b981; }
+  .doc-card.rejeitado { border-color: #ef4444; }
+
+  .doc-card-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+    cursor: zoom-in;
+    background: #f3f4f6;
+  }
+  .doc-card-img-placeholder {
+    width: 100%;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    color: #9ca3af;
+    font-size: 2rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .doc-card-body { padding: .65rem .75rem; flex: 1; }
+  .doc-card-desc { font-size: .78rem; font-weight: 600; color: #374151; margin-bottom: .35rem; word-break: break-word; }
+  .doc-card-date { font-size: .68rem; color: #9ca3af; margin-bottom: .5rem; }
+  .doc-card-status {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .2rem .6rem; border-radius: 20px;
+    font-size: .68rem; font-weight: 700;
+  }
+  .doc-card-status.pendente   { background: #fef3c7; color: #92400e; }
+  .doc-card-status.valido     { background: #d1fae5; color: #065f46; }
+  .doc-card-status.rejeitado  { background: #fee2e2; color: #991b1b; }
+
+  .doc-card-obs { font-size: .7rem; color: #6b7280; margin-top: .3rem; font-style: italic; }
+
+  .doc-card-actions { display: flex; gap: .4rem; padding: .65rem .75rem; border-top: 1px solid #f3f4f6; }
+  .btn-aprovar  { flex: 1; background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; border-radius: 8px; padding: .4rem; font-size: .75rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .btn-aprovar:hover  { background: #059669; color: #fff; }
+  .btn-rejeitar { flex: 1; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; border-radius: 8px; padding: .4rem; font-size: .75rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .btn-rejeitar:hover { background: #ef4444; color: #fff; }
+
+  /* Botão de validação da aprovação IA — destacado em azul/roxo */
+  .btn-validar-ia  {
+    flex: 2; background: linear-gradient(135deg,#8b5cf6,#6366f1); color: #fff;
+    border: 1px solid #6366f1; border-radius: 8px; padding: .5rem;
+    font-size: .8rem; font-weight: 700; cursor: pointer; transition: all .2s;
+    box-shadow: 0 2px 4px rgba(139,92,246,.3);
+  }
+  .btn-validar-ia:hover { background: linear-gradient(135deg,#7c3aed,#4f46e5); transform: translateY(-1px); }
+
+  /* Status visual pro aprovado_ia */
+  .doc-card.aprovado_ia { border-color: #c4b5fd; box-shadow: 0 0 0 2px #ddd6fe; }
+  .doc-card-status.aprovado_ia { background: #ede9fe; color: #5b21b6; }
+
+  .doc-resumo {
+    display: flex; gap: .75rem; flex-wrap: wrap;
+    padding: .75rem 1rem; background: #f9fafb;
+    border-radius: 10px; margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+  }
+  .doc-resumo-item { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; }
+
+  /* Lightbox overlay */
+  #lightboxOverlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.85); z-index: 2000;
+    align-items: center; justify-content: center;
+  }
+  #lightboxOverlay.active { display: flex; }
+  #lightboxOverlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  #lightboxClose {
+    position: absolute; top: 1rem; right: 1.5rem;
+    color: #fff; font-size: 2rem; cursor: pointer;
+    background: none; border: none; line-height: 1;
+  }
+
+  /* Obs modal */
+  #obsModal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 2100;
+    align-items: center; justify-content: center;
+  }
+  #obsModal.active { display: flex; }
+  #obsModal .obs-box {
+    background: #fff; border-radius: 14px; padding: 1.5rem;
+    width: 380px; max-width: 95vw;
+    box-shadow: 0 20px 40px rgba(0,0,0,.2);
+  }
+  #obsModal h4 { margin: 0 0 .75rem; font-size: 1rem; color: #1F3D59; }
+  #obsModal textarea { width: 100%; border: 2px solid #e0e0e0; border-radius: 8px; padding: .65rem; font-size: .88rem; resize: vertical; min-height: 80px; font-family: inherit; box-sizing: border-box; }
+  #obsModal textarea:focus { outline: none; border-color: #0022fa; }
+  #obsModal .obs-actions { display: flex; gap: .5rem; margin-top: .75rem; justify-content: flex-end; }
+
+  .btn { padding: .6rem 1.25rem; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; }
+  .btn-primary { background: linear-gradient(135deg, #0022fa, #0018b0); color: #fff; }
+  .btn-secondary { background: #f3f4f6; color: #374151; }
+  .btn-secondary:hover { background: #e5e7eb; }
+
+  /* Loading */
+  .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+  .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0022fa; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  /* Status de documentos na tabela */
+  .doc-status-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .doc-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+  .doc-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 20px; font-size: .68rem; font-weight: 700; white-space: nowrap; }
+  .doc-pill-ok       { background: #d1fae5; color: #065f46; }
+  .doc-pill-rej      { background: #fee2e2; color: #991b1b; }
+  .doc-pill-pend     { background: #fef3c7; color: #92400e; }
+  .doc-pill-none     { background: #f3f4f6; color: #6b7280; }
+  .doc-pill-validado { background: #dbeafe; color: #1e40af; }
+
+  .doc-timer { display: inline-flex; align-items: center; gap: 4px; font-size: .68rem; font-weight: 700; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 2px 8px; }
+  .doc-timer i { font-size: .62rem; }
+  .doc-timer.urgente { color: #991b1b; background: #fef2f2; border-color: #fecaca; animation: pulse-urgente 1.2s infinite; }
+  @keyframes pulse-urgente { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+  /* Modal Conversa */
+  #modalConversa .modal-content { max-width: 1100px; }
+  .conversa-iframe { width: 100%; height: 65vh; border: none; border-radius: 8px; background: #fff; }
+  .conversa-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
+  .conversa-tab { padding: .45rem 1rem; border: 2px solid #e5e7eb; border-radius: 8px; background: #fff; font-size: .82rem; font-weight: 700; cursor: pointer; color: #6b7280; transition: all .2s; }
+  .conversa-tab.active { border-color: #0ea5e9; background: #e0f2fe; color: #0284c7; }
+  .conversa-panel { display: none; }
+  .conversa-panel.active { display: block; }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 768px) {
+    .container { padding: 12px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .modal-content { width: 100vw; max-height: 100vh; border-radius: 0; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .filters-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <!-- Filtros -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header" style="cursor:pointer;" onclick="toggleFiltros()">
+      <strong>
+        <i class="fas fa-filter" style="color:#0022fa"></i> Filtros
+        <i class="fas fa-chevron-down" id="filtrosChevron" style="transition:transform .3s; transform:rotate(-90deg); font-size:11px; margin-left:4px;"></i>
+      </strong>
+    </div>
+    <div id="filtrosContent" class="filters-content collapsed">
+      <div class="filters-grid">
+        <div class="field">
+          <label>Pesquisar</label>
+          <input type="text" id="searchInput" placeholder="Nome, CPF, telefone, login..." />
+        </div>
+        <div class="field">
+          <label>Status do Serviço</label>
+          <select id="statusServicoFilter">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Cliente Ativo</label>
+          <select id="ativoFilter">
+            <option value="">Todos</option>
+            <option value="true">Ativo</option>
+            <option value="false">Inativo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Documentação</label>
+          <select id="docStatusFilter">
+            <option value="">Todos</option>
+            <option value="pendente">Com pendentes</option>
+            <option value="validado">Totalmente validada</option>
+            <option value="rejeitado">Com rejeitados</option>
+            <option value="sem_docs">Sem documentos</option>
+          </select>
+        </div>
+      </div>
+      <div class="filters-actions">
+        <button class="btn-filter" id="btnFiltrar"><i class="fas fa-search"></i> Filtrar</button>
+        <button class="btn-clear" id="btnLimpar"><i class="fas fa-times"></i> Limpar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <strong><i class="fas fa-chart-bar" style="color:#0022fa"></i> Resumo de Vendas</strong>
+    </div>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="icon" style="background:linear-gradient(135deg,#1F3D59,#2a4f73)"><i class="fas fa-users"></i></div>
+        <div>
+          <h4>Total Clientes</h4>
+          <div class="value" id="statTotal">0</div>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="icon" style="background:linear-gradient(135deg,#059669,#10b981)"><i class="fas fa-check-circle"></i></div>
+        <div>
+          <h4>Clientes Ativos</h4>
+          <div class="value" id="statAtivos">0</div>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="icon" style="background:linear-gradient(135deg,#0022fa,#0018b0)"><i class="fas fa-wifi"></i></div>
+        <div>
+          <h4>Total Serviços</h4>
+          <div class="value" id="statServicos">0</div>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-sync-alt"></i></div>
+        <div>
+          <h4>Com Alterações</h4>
+          <div class="value" id="statAlteracoes">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de Clientes -->
+  <div class="card">
+    <div class="card-header">
+      <strong><i class="fas fa-table" style="color:#0022fa"></i> Clientes &amp; Serviços</strong>
+      <div class="chip" id="contadorChip">0 cliente(s)</div>
+    </div>
+    <div class="table-wrap">
+      <table id="clientesTable">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>CPF/CNPJ</th>
+            <th>Contato</th>
+            <th>Serviço / Plano</th>
+            <th>Status</th>
+            <th>Valor</th>
+            <th>Data da Venda</th>
+            <th>Documentação</th>
+            <th style="text-align:center;">Ação</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- Modal Detalhes do Cliente -->
+<div id="modalDetalhe" class="modal">
+  <div class="modal-content">
+    <div class="modal-header-bar">
+      <h3><i class="fas fa-user-circle"></i> <span id="modalTitulo">Detalhes do Cliente</span></h3>
+      <button class="modal-close" onclick="fecharModal()">&times;</button>
+    </div>
+    <div class="modal-scroll" id="modalBody">
+    </div>
+    <div class="modal-footer-bar">
+      <button class="btn btn-secondary" onclick="fecharModal()"><i class="fas fa-times"></i> Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+  <div class="spinner"></div>
+</div>
+
+<!-- Modal Atendimentos & O.S -->
+<style>
+  /* Header gradiente */
+  .aos-hero { background:linear-gradient(135deg,#0022fa 0%,#0018b0 100%); color:#fff; padding:22px 26px 18px; border-radius:16px 16px 0 0; position:relative; overflow:hidden; }
+  .aos-hero::before { content:''; position:absolute; right:-40px; top:-40px; width:180px; height:180px; background:rgba(255,255,255,.08); border-radius:50%; }
+  .aos-hero::after { content:''; position:absolute; right:40px; bottom:-60px; width:120px; height:120px; background:rgba(255,255,255,.05); border-radius:50%; }
+  .aos-hero-top { display:flex; align-items:center; justify-content:space-between; position:relative; z-index:1; }
+  .aos-hero h2 { font-size:17px; font-weight:800; margin:0 0 4px; display:flex; align-items:center; gap:10px; }
+  .aos-hero h2 .hero-ic { width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; font-size:16px; backdrop-filter:blur(8px); }
+  .aos-hero-sub { font-size:12px; opacity:.85; margin-left:46px; }
+
+  /* Stats pills no hero */
+  .aos-stats { display:flex; gap:10px; margin-top:14px; position:relative; z-index:1; flex-wrap:wrap; }
+  .aos-stat { background:rgba(255,255,255,.14); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.18); padding:8px 14px; border-radius:10px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:8px; transition:all .2s; }
+  .aos-stat i { font-size:14px; opacity:.85; }
+  .aos-stat-val { font-size:16px; font-weight:800; }
+
+  /* Tabs estilizadas */
+  .aos-tabs-wrap { background:#fff; padding:16px 20px 0; border-bottom:1px solid #f1f5f9; }
+  .aos-tabs { display:flex; gap:0; border-bottom:2px solid transparent; }
+  .aos-tab { flex:1; padding:11px 16px; font-size:13px; font-weight:700; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:3px solid transparent; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; position:relative; }
+  .aos-tab:hover { color:#475569; }
+  .aos-tab.on { color:#0022fa; border-bottom-color:#0022fa; }
+  .aos-tab .tab-badge { background:#e0e7ff; color:#0022fa; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:800; }
+  .aos-tab.on .tab-badge { background:#0022fa; color:#fff; }
+
+  /* Sync button */
+  .aos-sync { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; background:rgba(255,255,255,.15); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.25); color:#fff; font-size:12px; font-weight:700; cursor:pointer; transition:all .2s; }
+  .aos-sync:hover { background:rgba(255,255,255,.25); transform:translateY(-1px); }
+  .aos-sync:disabled { opacity:.6; cursor:wait; }
+
+  /* Cards */
+  .aos-card { background:#fff; border:1px solid #e5e7eb; border-left:4px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:12px; transition:all .2s; position:relative; }
+  .aos-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.06); transform:translateY(-1px); }
+  .aos-card.done { border-left-color:#10b981; }
+  .aos-card.pending { border-left-color:#f59e0b; }
+  .aos-card.cancel { border-left-color:#ef4444; }
+  .aos-card.running { border-left-color:#3b82f6; }
+  .aos-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:10px; }
+  .aos-card-title { font-size:14px; font-weight:800; color:#1e1b4b; display:flex; align-items:center; gap:8px; }
+  .aos-card-title .card-ic { width:30px; height:30px; border-radius:8px; background:rgba(102,126,234,.1); color:#0022fa; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .aos-card-title.done .card-ic { background:rgba(16,185,129,.1); color:#10b981; }
+  .aos-card-title.pending .card-ic { background:rgba(245,158,11,.12); color:#d97706; }
+  .aos-card-title.cancel .card-ic { background:rgba(239,68,68,.1); color:#dc2626; }
+  .aos-card-title.running .card-ic { background:rgba(59,130,246,.1); color:#3b82f6; }
+  .aos-card-proto { font-size:10px; color:#94a3b8; font-family:'SFMono-Regular',Consolas,monospace; margin-top:3px; font-weight:500; }
+
+  /* Status badge aprimorado */
+  .aos-status { display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:800; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+  .aos-status::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .aos-status.done { background:#d1fae5; color:#059669; }
+  .aos-status.pending { background:#fef3c7; color:#d97706; }
+  .aos-status.cancel { background:#fee2e2; color:#dc2626; }
+  .aos-status.running { background:#dbeafe; color:#2563eb; }
+  .aos-status.neutral { background:#f1f5f9; color:#64748b; }
+
+  /* Descrição */
+  .aos-desc { font-size:12px; color:#475569; line-height:1.55; background:#f8fafc; padding:10px 12px; border-radius:8px; margin-bottom:10px; white-space:pre-line; max-height:80px; overflow:hidden; position:relative; }
+  .aos-desc.expanded { max-height:none; }
+  .aos-desc-fade { position:absolute; bottom:0; left:0; right:0; height:24px; background:linear-gradient(to bottom, transparent, #f8fafc); pointer-events:none; }
+  .aos-desc-toggle { font-size:11px; color:#0022fa; font-weight:700; cursor:pointer; padding:4px 0; background:none; border:none; }
+
+  /* Meta info */
+  .aos-meta { display:flex; flex-wrap:wrap; gap:0; font-size:11px; color:#64748b; padding-top:10px; border-top:1px dashed #e5e7eb; }
+  .aos-meta-item { display:flex; align-items:center; gap:5px; padding:3px 10px 3px 0; border-right:1px solid #f1f5f9; margin-right:10px; }
+  .aos-meta-item:last-child { border:none; margin:0; }
+  .aos-meta-item i { color:#94a3b8; font-size:11px; }
+  .aos-meta-item strong { color:#334155; font-weight:600; }
+
+  /* Timeline de datas (OS) */
+  .aos-timeline { display:flex; align-items:center; gap:8px; padding:10px 12px; background:linear-gradient(to right,#f8fafc,#f1f5f9); border-radius:8px; margin-bottom:10px; font-size:11px; }
+  .aos-tl-step { display:flex; align-items:center; gap:5px; flex:1; min-width:0; }
+  .aos-tl-step i { width:24px; height:24px; border-radius:50%; background:#cbd5e1; color:#fff; display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; }
+  .aos-tl-step.active i { background:#3b82f6; }
+  .aos-tl-step.done i { background:#10b981; }
+  .aos-tl-step .tl-lbl { color:#64748b; font-weight:600; font-size:10px; }
+  .aos-tl-step .tl-date { color:#334155; font-weight:700; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aos-tl-arrow { color:#cbd5e1; font-size:10px; }
+
+  /* Empty state */
+  .aos-empty { text-align:center; padding:50px 20px; color:#94a3b8; }
+  .aos-empty i { font-size:48px; opacity:.3; display:block; margin-bottom:14px; }
+  .aos-empty p { font-size:14px; font-weight:600; color:#64748b; margin:0 0 4px; }
+  .aos-empty small { font-size:12px; opacity:.75; }
+
+  /* Loading state */
+  .aos-loading { text-align:center; padding:60px 20px; color:#0022fa; }
+  .aos-loading i { font-size:32px; display:block; margin-bottom:12px; }
+  .aos-loading p { font-size:13px; font-weight:600; margin:0; color:#64748b; }
+
+  /* Tecnico chips */
+  .aos-tecs { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 10px; }
+  .aos-tec { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; background:#e0e7ff; color:#4f46e5; border-radius:12px; font-size:10px; font-weight:700; }
+  .aos-tec i { font-size:9px; }
+</style>
+
+<div id="modalAtendimentosOS" class="modal">
+  <div class="modal-content" style="max-width:920px; padding:0; overflow:hidden;">
+
+    <!-- Hero Header -->
+    <div class="aos-hero">
+      <div class="aos-hero-top">
+        <div>
+          <h2>
+            <span class="hero-ic"><i class="fas fa-tools"></i></span>
+            <span id="aosTitulo">Atendimentos &amp; O.S</span>
+          </h2>
+          <div class="aos-hero-sub">Histórico de atendimentos e ordens de serviço do cliente</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="aosSyncBtn" onclick="sincronizarAOS()" class="aos-sync" title="Buscar dados atualizados do Hubsoft">
+            <i class="fas fa-sync-alt"></i> Sincronizar
+          </button>
+          <button class="modal-close" onclick="fecharAOS()" style="background:rgba(255,255,255,.15); color:#fff; position:relative; top:0; right:0;">&times;</button>
+        </div>
+      </div>
+      <!-- Stats pills -->
+      <div class="aos-stats" id="aosStats">
+        <div class="aos-stat"><i class="fas fa-headset"></i> <span class="aos-stat-val" id="aosStatAtend">0</span> Atendimentos</div>
+        <div class="aos-stat"><i class="fas fa-tools"></i> <span class="aos-stat-val" id="aosStatOS">0</span> Ordens de Serviço</div>
+        <div class="aos-stat" style="background:rgba(16,185,129,.22)"><i class="fas fa-check-circle"></i> <span class="aos-stat-val" id="aosStatDone">0</span> Concluídos</div>
+        <div class="aos-stat" style="background:rgba(245,158,11,.22)"><i class="fas fa-clock"></i> <span class="aos-stat-val" id="aosStatPend">0</span> Pendentes</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="aos-tabs-wrap">
+      <div class="aos-tabs">
+        <button class="aos-tab on" onclick="mostrarTabAOS('atend',this)">
+          <i class="fas fa-headset"></i> Atendimentos
+          <span class="tab-badge" id="aosBadgeAtend">0</span>
+        </button>
+        <button class="aos-tab" onclick="mostrarTabAOS('os',this)">
+          <i class="fas fa-tools"></i> Ordens de Serviço
+          <span class="tab-badge" id="aosBadgeOS">0</span>
+        </button>
+        <button class="aos-tab" onclick="mostrarTabAOS('novos',this)">
+          <i class="fas fa-rocket"></i> Novos Serviços
+          <span class="tab-badge" id="aosBadgeNovos">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-scroll" style="padding:18px 22px 22px; max-height:58vh; background:#fafbff;">
+      <div id="aosAtendBox"></div>
+      <div id="aosOsBox" style="display:none"></div>
+      <div id="aosNovosBox" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Documentos / Validação -->
+<div id="modalDocumentos" class="modal">
+  <div class="modal-content" style="max-width:1000px;">
+    <div class="modal-header-bar">
+      <h3><i class="fas fa-file-image" style="color:#0022fa;"></i> <span id="docModalTitulo">Documentos do Lead</span></h3>
+      <button class="modal-close" onclick="fecharModalDoc()">&times;</button>
+    </div>
+    <div class="modal-scroll" id="docModalBody" style="min-height:200px;">
+      <div style="text-align:center;padding:3rem;color:#9ca3af;">
+        <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
+        <div style="margin-top:.75rem;">Carregando documentos...</div>
+      </div>
+    </div>
+    <div class="modal-footer-bar">
+      <button class="btn btn-secondary" onclick="fecharModalDoc()"><i class="fas fa-times"></i> Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Conversa -->
+<div id="modalConversa" class="modal">
+  <div class="modal-content">
+    <div class="modal-header-bar">
+      <h3><i class="fas fa-comments" style="color:#0ea5e9;"></i> <span id="conversaTitulo">Conversa do Atendimento</span></h3>
+      <button class="modal-close" onclick="fecharModalConversa()">&times;</button>
+    </div>
+    <div class="modal-scroll" id="conversaBody" style="padding:1.25rem;">
+      <div class="conversa-tabs" id="conversaTabs"></div>
+      <div id="conversaPanels"></div>
+    </div>
+    <div class="modal-footer-bar">
+      <a id="conversaPdfLink" href="#" target="_blank" class="btn btn-primary" style="display:none;">
+        <i class="fas fa-file-pdf"></i> Abrir PDF
+      </a>
+      <button class="btn btn-secondary" onclick="fecharModalConversa()"><i class="fas fa-times"></i> Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightboxOverlay" onclick="fecharLightbox()">
+  <button id="lightboxClose" onclick="fecharLightbox()">&times;</button>
+  <img id="lightboxImg" src="" alt="Documento">
+</div>
+
+<!-- Modal observação para rejeição -->
+<div id="obsModal">
+  <div class="obs-box">
+    <h4><i class="fas fa-comment-alt" style="color:#ef4444;"></i> Motivo da Rejeição</h4>
+    <textarea id="obsTextarea" placeholder="Descreva o motivo da rejeição (opcional)..."></textarea>
+    <div class="obs-actions">
+      <button class="btn btn-secondary" id="obsCancelar">Cancelar</button>
+      <button class="btn" style="background:#ef4444;color:#fff;" id="obsConfirmar">
+        <i class="fas fa-times-circle"></i> Confirmar Rejeição
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const API_CLIENTES = '{% url "integracoes:api_clientes_hubsoft" %}';
+  const URL_LEADS = '{% url "vendas_web:leads" %}';
+  let page = 1;
+  let search = '';
+  let filtros = { status_servico: '', ativo: '' };
+
+  function toggleFiltros() {
+    const c = document.getElementById('filtrosContent');
+    const ch = document.getElementById('filtrosChevron');
+    c.classList.toggle('collapsed');
+    ch.style.transform = c.classList.contains('collapsed') ? 'rotate(-90deg)' : 'rotate(0deg)';
+  }
+
+  function mostrarLoading(v) { document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
+
+  function formatarCpfCnpj(v) {
+    if (!v) return '-';
+    v = v.replace(/\D/g, '');
+    if (v.length === 11) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    if (v.length === 14) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    return v;
+  }
+
+  function formatarTelefone(v) {
+    if (!v) return '-';
+    v = v.replace(/\D/g, '');
+    if (v.length === 11) return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    if (v.length === 10) return v.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    return v;
+  }
+
+  function formatarMoeda(v) {
+    if (!v && v !== 0) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+  }
+
+  function formatarData(d) {
+    if (!d) return '-';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } catch { return d; }
+  }
+
+  function formatarDataCurta(d) {
+    if (!d) return '-';
+    try {
+      // Datas no formato YYYY-MM-DD são tratadas como UTC pelo Date(),
+      // causando deslocamento de fuso. Parseamos manualmente para evitar isso.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        const [ano, mes, dia] = d.split('-');
+        return `${dia}/${mes}/${ano}`;
+      }
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString('pt-BR');
+    } catch { return d; }
+  }
+
+  function getServicoClass(statusPrefixo) {
+    if (!statusPrefixo) return '';
+    const s = statusPrefixo.toLowerCase();
+    if (s.includes('cancel')) return 'cancelado';
+    if (s.includes('suspen')) return 'suspenso';
+    if (s.includes('aguard') || s.includes('pend')) return 'aguardando';
+    return '';
+  }
+
+  function getBadgeClass(statusPrefixo) {
+    if (!statusPrefixo) return 'badge-gray';
+    const s = statusPrefixo.toLowerCase();
+    if (s.includes('habilit') || s.includes('ativ')) return 'badge-green';
+    if (s.includes('aguard') || s.includes('pend')) return 'badge-yellow';
+    if (s.includes('cancel') || s.includes('bloq')) return 'badge-red';
+    if (s.includes('suspen')) return 'badge-blue';
+    return 'badge-gray';
+  }
+
+  async function carregarClientes() {
+    mostrarLoading(true);
+    try {
+      const params = new URLSearchParams({ page, search, ...filtros });
+      const resp = await fetch(`${API_CLIENTES}?${params}`);
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+
+      window._ultimosClientes = data;
+      renderizarTabela(data.clientes || []);
+      renderPaginacao(data.page || 1, data.pages || 0);
+      atualizarStats(data.stats || {});
+      document.getElementById('contadorChip').textContent = `${data.total || 0} cliente(s)`;
+
+      popularFiltroStatus(data.stats?.status_servicos || {});
+    } catch (e) {
+      console.error('Erro:', e);
+      alert('Erro ao carregar clientes: ' + e.message);
+    } finally {
+      mostrarLoading(false);
+    }
+  }
+
+  function popularFiltroStatus(statusMap) {
+    const sel = document.getElementById('statusServicoFilter');
+    const atual = sel.value;
+    if (sel.options.length > 1) return;
+    Object.entries(statusMap).forEach(([key, info]) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `${info.label} (${info.count})`;
+      sel.appendChild(opt);
+    });
+    if (atual) sel.value = atual;
+  }
+
+  function atualizarStats(s) {
+    document.getElementById('statTotal').textContent = s.total_clientes || 0;
+    document.getElementById('statAtivos').textContent = s.total_ativos || 0;
+    document.getElementById('statServicos').textContent = s.total_servicos || 0;
+    document.getElementById('statAlteracoes').textContent = s.total_com_alteracao || 0;
+  }
+
+  // Guarda timers ativos para limpeza ao re-renderizar
+  let _timersAtivos = [];
+
+  function _renderDocStatus(lead, clienteId, nomeCliente) {
+    if (!lead) {
+      return `<div class="doc-pills"><span class="doc-pill doc-pill-none"><i class="fas fa-unlink"></i> Sem lead</span></div>`;
+    }
+    const docs = lead.docs || {};
+    const total = docs.total || 0;
+
+    if (total === 0) {
+      return `<div class="doc-pills"><span class="doc-pill doc-pill-none"><i class="fas fa-folder-open"></i> Sem docs</span></div>`;
+    }
+
+    if (lead.documentacao_validada) {
+      return `<div class="doc-pills">
+        <span class="doc-pill doc-pill-validado"><i class="fas fa-shield-alt"></i> Validada</span>
+        <span class="doc-pill doc-pill-ok"><i class="fas fa-check"></i> ${docs.aprovados}</span>
+      </div>`;
+    }
+
+    let pills = '';
+    if (docs.aprovados > 0)  pills += `<span class="doc-pill doc-pill-ok"><i class="fas fa-check-circle"></i> ${docs.aprovados} ok</span>`;
+    if (docs.rejeitados > 0) pills += `<span class="doc-pill doc-pill-rej"><i class="fas fa-times-circle"></i> ${docs.rejeitados} rej.</span>`;
+    if (docs.pendentes > 0)  pills += `<span class="doc-pill doc-pill-pend"><i class="fas fa-clock"></i> ${docs.pendentes} pend.</span>`;
+
+    let timerHtml = '';
+    if (docs.pendentes > 0 && docs.data_pendente_mais_antiga) {
+      const uid = `timer-${clienteId}`;
+      timerHtml = `<div class="doc-timer" id="${uid}" data-desde="${docs.data_pendente_mais_antiga}">
+        <i class="fas fa-hourglass-half"></i> <span class="timer-val">...</span>
+      </div>`;
+    }
+
+    return `<div class="doc-status-wrap"><div class="doc-pills">${pills}</div>${timerHtml}</div>`;
+  }
+
+  function _iniciarTimers() {
+    _timersAtivos.forEach(id => clearInterval(id));
+    _timersAtivos = [];
+
+    document.querySelectorAll('.doc-timer[data-desde]').forEach(el => {
+      const desde = new Date(el.getAttribute('data-desde'));
+      const span = el.querySelector('.timer-val');
+
+      function atualizar() {
+        const diff = Math.floor((Date.now() - desde) / 1000);
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
+        const txt = h > 0
+          ? `${h}h ${String(m).padStart(2,'0')}m`
+          : `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+        if (span) span.textContent = txt;
+        // Urgente se > 2 horas
+        if (diff > 7200) el.classList.add('urgente');
+        else el.classList.remove('urgente');
+      }
+
+      atualizar();
+      _timersAtivos.push(setInterval(atualizar, 1000));
+    });
+  }
+
+  function renderizarTabela(clientes) {
+    const tbody = document.querySelector('#clientesTable tbody');
+    tbody.innerHTML = '';
+    if (!clientes.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2.5rem;color:#9ca3af;"><i class="fas fa-inbox" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Nenhum cliente encontrado</td></tr>';
+      return;
+    }
+
+    // Filtro local por status de documentação
+    const docFiltro = document.getElementById('docStatusFilter').value;
+    const clientesFiltrados = docFiltro ? clientes.filter(c => {
+      const docs = c.lead?.docs;
+      if (docFiltro === 'sem_docs') return !c.lead || !docs || docs.total === 0;
+      if (docFiltro === 'validado')  return c.lead?.documentacao_validada;
+      if (docFiltro === 'pendente')  return docs && docs.pendentes > 0;
+      if (docFiltro === 'rejeitado') return docs && docs.rejeitados > 0;
+      return true;
+    }) : clientes;
+
+    if (!clientesFiltrados.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2.5rem;color:#9ca3af;"><i class="fas fa-filter" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Nenhum cliente para o filtro selecionado</td></tr>';
+      return;
+    }
+
+    clientesFiltrados.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.onclick = () => abrirDetalhe(c);
+      const iniciais = (c.nome_razaosocial || '?').split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+      const servico = c.servicos && c.servicos.length > 0 ? c.servicos[0] : null;
+      const sClass = servico ? getServicoClass(servico.status_prefixo) : '';
+      const badgeClass = servico ? getBadgeClass(servico.status_prefixo) : 'badge-gray';
+      const nomeEsc = (c.nome_razaosocial || '').replace(/'/g, "\\'");
+
+      tr.innerHTML = `
+        <td>
+          <div class="name-cell">
+            <div class="avatar ${c.ativo ? '' : 'inactive'}">${iniciais}</div>
+            <div>
+              <div style="font-weight:700;color:#1f2937;">${c.nome_razaosocial}</div>
+              <div style="font-size:.78rem;color:#9ca3af;">Cód: ${c.codigo_cliente || '-'} | ID: ${c.id_cliente}</div>
+            </div>
+          </div>
+        </td>
+        <td style="white-space:nowrap;">${formatarCpfCnpj(c.cpf_cnpj)}</td>
+        <td>
+          <div style="font-size:.85rem;white-space:nowrap;">${formatarTelefone(c.telefone_primario)}</div>
+          <div style="font-size:.75rem;color:#9ca3af;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+               title="${c.email_principal || ''}">${c.email_principal || '-'}</div>
+        </td>
+        <td>
+          ${servico
+            ? `<div class="servico-tag ${sClass}"><i class="fas fa-wifi"></i> ${servico.nome}</div>
+               ${c.servicos.length > 1 ? `<span style="font-size:.7rem;color:#6b7280;margin-left:.4rem;">+${c.servicos.length - 1}</span>` : ''}`
+            : '<span style="color:#9ca3af;font-size:.85rem;">Sem serviço</span>'
+          }
+        </td>
+        <td>
+          ${servico
+            ? `<span class="badge ${badgeClass}">${servico.status}</span>`
+            : '<span class="badge badge-gray">-</span>'
+          }
+        </td>
+        <td style="font-weight:700;color:#059669;white-space:nowrap;">
+          ${servico ? formatarMoeda(servico.valor) : '-'}
+        </td>
+        <td style="white-space:nowrap;font-size:.85rem;color:#374151;">
+          ${servico && servico.data_venda ? servico.data_venda : '-'}
+        </td>
+        <td onclick="event.stopPropagation();">
+          ${_renderDocStatus(c.lead, c.id, nomeEsc)}
+        </td>
+        <td onclick="event.stopPropagation();">
+          <div class="acao-wrap">
+            <button class="btn-acao-menu" onclick="toggleDropdown(this)" title="Ações">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="acao-dropdown">
+              <button class="acao-dropdown-item" onclick="abrirDocumentos(${c.id}, '${nomeEsc}')">
+                <i class="fas fa-file-image"></i> Documentos
+              </button>
+              ${c.lead
+                ? `<button class="acao-dropdown-item"
+                    onclick="abrirConversa(${c.lead.id},'${nomeEsc}','${(c.lead.url_pdf_conversa||'').replace(/'/g,"\\'")}','${(c.lead.html_conversa_path||'').replace(/'/g,"\\'")}')">
+                    <i class="fas fa-comments"></i> Conversa
+                  </button>`
+                : `<button class="acao-dropdown-item disabled" disabled>
+                    <i class="fas fa-comments"></i> Sem conversa
+                  </button>`
+              }
+              <button class="acao-dropdown-item" onclick="abrirAtendimentosOS(${c.id}, '${nomeEsc}')">
+                <i class="fas fa-tools"></i> Atendimentos & O.S
+              </button>
+              <div class="acao-dropdown-sep"></div>
+              <button class="acao-dropdown-item" onclick="abrirDetalhe(window._ultimosClientes.clientes.find(x=>x.id===${c.id}))">
+                <i class="fas fa-user-circle"></i> Ver detalhes
+              </button>
+            </div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    _iniciarTimers();
+  }
+
+  // ---- DROPDOWN DE AÇÕES ----
+  function toggleDropdown(btn) {
+    const drop = btn.nextElementSibling;
+    const isOpen = drop.classList.contains('open');
+    // Fecha todos os outros abertos
+    document.querySelectorAll('.acao-dropdown.open').forEach(d => d.classList.remove('open'));
+    if (!isOpen) drop.classList.add('open');
+  }
+
+  // Fecha dropdown ao clicar fora
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.acao-wrap')) {
+      document.querySelectorAll('.acao-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+  });
+
+  function renderPaginacao(current, total) {
+    const div = document.getElementById('pagination');
+    div.innerHTML = '';
+    if (total <= 1) return;
+
+    const prev = document.createElement('button');
+    prev.innerHTML = '&lsaquo; Anterior';
+    prev.disabled = current === 1;
+    prev.onclick = () => { page = current - 1; carregarClientes(); };
+    div.appendChild(prev);
+
+    const s = Math.max(1, current - 2);
+    const e = Math.min(total, current + 2);
+    for (let i = s; i <= e; i++) {
+      const b = document.createElement('button');
+      b.textContent = i;
+      if (i === current) b.classList.add('active');
+      b.onclick = () => { page = i; carregarClientes(); };
+      div.appendChild(b);
+    }
+
+    const next = document.createElement('button');
+    next.innerHTML = 'Próximo &rsaquo;';
+    next.disabled = current === total;
+    next.onclick = () => { page = current + 1; carregarClientes(); };
+    div.appendChild(next);
+  }
+
+  function abrirDetalhe(c) {
+    document.getElementById('modalTitulo').textContent = c.nome_razaosocial;
+    const body = document.getElementById('modalBody');
+
+    let alertaHtml = '';
+    if (c.alerta && c.alerta_mensagens && c.alerta_mensagens.length > 0) {
+      alertaHtml = `<div class="alerta-banner"><i class="fas fa-exclamation-triangle"></i> ${c.alerta_mensagens.join(' | ')}</div>`;
+    }
+
+    let dadosPessoais = `
+      <div class="detail-section">
+        <div class="section-title"><i class="fas fa-user"></i> Dados Pessoais</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-label">Nome / Razão Social</div><div class="detail-value">${c.nome_razaosocial}</div></div>
+          ${c.nome_fantasia ? `<div class="detail-item"><div class="detail-label">Nome Fantasia</div><div class="detail-value">${c.nome_fantasia}</div></div>` : ''}
+          <div class="detail-item"><div class="detail-label">CPF/CNPJ</div><div class="detail-value">${formatarCpfCnpj(c.cpf_cnpj)}</div></div>
+          <div class="detail-item"><div class="detail-label">Tipo Pessoa</div><div class="detail-value">${c.tipo_pessoa === 'pj' ? 'Pessoa Jurídica' : 'Pessoa Física'}</div></div>
+          <div class="detail-item"><div class="detail-label">RG</div><div class="detail-value">${c.rg || '-'}</div></div>
+          ${c.data_nascimento ? `<div class="detail-item"><div class="detail-label">Data Nascimento</div><div class="detail-value">${formatarDataCurta(c.data_nascimento)}</div></div>` : ''}
+          ${c.genero ? `<div class="detail-item"><div class="detail-label">Gênero</div><div class="detail-value">${c.genero}</div></div>` : ''}
+          ${c.estado_civil ? `<div class="detail-item"><div class="detail-label">Estado Civil</div><div class="detail-value">${c.estado_civil}</div></div>` : ''}
+          ${c.nacionalidade ? `<div class="detail-item"><div class="detail-label">Nacionalidade</div><div class="detail-value">${c.nacionalidade}</div></div>` : ''}
+          ${c.profissao ? `<div class="detail-item"><div class="detail-label">Profissão</div><div class="detail-value">${c.profissao}</div></div>` : ''}
+          ${c.nome_pai ? `<div class="detail-item"><div class="detail-label">Nome do Pai</div><div class="detail-value">${c.nome_pai}</div></div>` : ''}
+          ${c.nome_mae ? `<div class="detail-item"><div class="detail-label">Nome da Mãe</div><div class="detail-value">${c.nome_mae}</div></div>` : ''}
+        </div>
+      </div>`;
+
+    let contato = `
+      <div class="detail-section">
+        <div class="section-title"><i class="fas fa-phone-alt"></i> Contato</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-label">Telefone Principal</div><div class="detail-value">${formatarTelefone(c.telefone_primario)}</div></div>
+          ${c.telefone_secundario ? `<div class="detail-item"><div class="detail-label">Telefone Secundário</div><div class="detail-value">${formatarTelefone(c.telefone_secundario)}</div></div>` : ''}
+          ${c.telefone_terciario ? `<div class="detail-item"><div class="detail-label">Telefone Terciário</div><div class="detail-value">${formatarTelefone(c.telefone_terciario)}</div></div>` : ''}
+          <div class="detail-item"><div class="detail-label">E-mail Principal</div><div class="detail-value">${c.email_principal || '-'}</div></div>
+          ${c.email_secundario ? `<div class="detail-item"><div class="detail-label">E-mail Secundário</div><div class="detail-value">${c.email_secundario}</div></div>` : ''}
+        </div>
+      </div>`;
+
+    let ids = `
+      <div class="detail-section">
+        <div class="section-title"><i class="fas fa-fingerprint"></i> Identificação Hubsoft</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-label">ID Cliente</div><div class="detail-value">${c.id_cliente}</div></div>
+          <div class="detail-item"><div class="detail-label">Código</div><div class="detail-value">${c.codigo_cliente || '-'}</div></div>
+          <div class="detail-item"><div class="detail-label">UUID</div><div class="detail-value" style="font-size:.75rem;">${c.uuid_cliente || '-'}</div></div>
+          <div class="detail-item"><div class="detail-label">ID Externo</div><div class="detail-value">${c.id_externo || '-'}</div></div>
+          <div class="detail-item"><div class="detail-label">Origem</div><div class="detail-value">${c.origem_cliente || '-'}</div></div>
+          <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="badge ${c.ativo ? 'badge-green' : 'badge-red'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></div></div>
+          <div class="detail-item"><div class="detail-label">Cadastro Hubsoft</div><div class="detail-value">${formatarData(c.data_cadastro_hubsoft)}</div></div>
+          <div class="detail-item"><div class="detail-label">Última Sincronização</div><div class="detail-value">${formatarData(c.data_sync)}</div></div>
+        </div>
+      </div>`;
+
+    let servicosHtml = '';
+    if (c.servicos && c.servicos.length > 0) {
+      const servicosCards = c.servicos.map(s => {
+        const sClass = getServicoClass(s.status_prefixo);
+        const badgeClass = getBadgeClass(s.status_prefixo);
+        return `
+          <div class="servico-card">
+            <div class="servico-header">
+              <div class="servico-nome"><i class="fas fa-wifi"></i> ${s.nome}</div>
+              <div class="servico-valor">${formatarMoeda(s.valor)}</div>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="badge ${badgeClass}">${s.status}</span></div></div>
+              <div class="detail-item"><div class="detail-label">Download / Upload</div><div class="detail-value">${s.velocidade_download || '-'} / ${s.velocidade_upload || '-'}</div></div>
+              <div class="detail-item"><div class="detail-label">Tecnologia</div><div class="detail-value">${s.tecnologia || '-'}</div></div>
+              <div class="detail-item"><div class="detail-label">Login PPPoE</div><div class="detail-value">${s.login || '-'}</div></div>
+              ${s.senha ? `<div class="detail-item"><div class="detail-label">Senha PPPoE</div><div class="detail-value">${s.senha}</div></div>` : ''}
+              ${s.mac_addr ? `<div class="detail-item"><div class="detail-label">MAC Address</div><div class="detail-value">${s.mac_addr}</div></div>` : ''}
+              ${s.ipv4 ? `<div class="detail-item"><div class="detail-label">IPv4</div><div class="detail-value">${s.ipv4}</div></div>` : ''}
+              <div class="detail-item"><div class="detail-label">Data Venda</div><div class="detail-value">${s.data_venda || '-'}</div></div>
+              <div class="detail-item"><div class="detail-label">Habilitação</div><div class="detail-value">${formatarData(s.data_habilitacao)}</div></div>
+              <div class="detail-item"><div class="detail-label">Contrato</div><div class="detail-value">${s.data_inicio_contrato || '-'} a ${s.data_fim_contrato || '-'} (${s.vigencia_meses || '-'} meses)</div></div>
+              <div class="detail-item"><div class="detail-label">Vendedor</div><div class="detail-value">${s.vendedor_nome || '-'}</div></div>
+              ${s.vendedor_email ? `<div class="detail-item"><div class="detail-label">E-mail Vendedor</div><div class="detail-value">${s.vendedor_email}</div></div>` : ''}
+              ${s.data_cancelamento ? `<div class="detail-item" style="border-left-color:#dc2626;"><div class="detail-label">Cancelamento</div><div class="detail-value" style="color:#dc2626;">${formatarData(s.data_cancelamento)} - ${s.motivo_cancelamento || 'Sem motivo'}</div></div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+
+      servicosHtml = `
+        <div class="detail-section">
+          <div class="section-title"><i class="fas fa-cubes"></i> Serviços Contratados (${c.servicos.length})</div>
+          ${servicosCards}
+        </div>`;
+    }
+
+    let leadHtml = '';
+    if (c.lead) {
+      const docs = c.lead.docs || {};
+      let docResumoHtml = '';
+      if (docs.total > 0) {
+        const docItems = [];
+        if (docs.aprovados  > 0) docItems.push(`<span class="doc-pill doc-pill-ok"><i class="fas fa-check-circle"></i> ${docs.aprovados} aprovado(s)</span>`);
+        if (docs.rejeitados > 0) docItems.push(`<span class="doc-pill doc-pill-rej"><i class="fas fa-times-circle"></i> ${docs.rejeitados} rejeitado(s)</span>`);
+        if (docs.pendentes  > 0) docItems.push(`<span class="doc-pill doc-pill-pend"><i class="fas fa-clock"></i> ${docs.pendentes} pendente(s)</span>`);
+        if (c.lead.documentacao_validada) docItems.push(`<span class="doc-pill doc-pill-validado"><i class="fas fa-shield-alt"></i> Documentação Validada</span>`);
+        docResumoHtml = `<div class="doc-pills" style="margin-top:.5rem;">${docItems.join('')}</div>`;
+      } else {
+        docResumoHtml = `<div style="margin-top:.5rem;font-size:.8rem;color:#9ca3af;">Nenhum documento anexado</div>`;
+      }
+
+      leadHtml = `
+        <div class="detail-section">
+          <div class="section-title"><i class="fas fa-link"></i> Lead de Origem</div>
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-label">ID Lead</div><div class="detail-value">#${c.lead.id}</div></div>
+            <div class="detail-item"><div class="detail-label">Nome</div><div class="detail-value">${c.lead.nome_razaosocial || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Telefone</div><div class="detail-value">${formatarTelefone(c.lead.telefone)}</div></div>
+            <div class="detail-item"><div class="detail-label">E-mail</div><div class="detail-value">${c.lead.email || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Status API</div><div class="detail-value">${c.lead.status_api || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">ID Hubsoft</div><div class="detail-value">${c.lead.id_hubsoft || '-'}</div></div>
+          </div>
+          <div style="margin-top:.75rem;">
+            <div class="section-title" style="margin-top:.75rem;"><i class="fas fa-file-image"></i> Documentação</div>
+            ${docResumoHtml}
+            <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+              <a href="${URL_LEADS}?lead_id=${c.lead.id}" class="btn btn-primary" target="_blank" onclick="event.stopPropagation();">
+                <i class="fas fa-external-link-alt"></i> Ver Lead Completo
+              </a>
+              <button class="btn btn-secondary" onclick="event.stopPropagation();fecharModal();abrirDocumentos(${c.id},'${(c.nome_razaosocial||'').replace(/'/g,"\\'")}')">
+                <i class="fas fa-file-image"></i> Ver Documentos
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    let alteracoesHtml = '';
+    if (c.historico_alteracoes && c.historico_alteracoes.length > 0) {
+      const maxShow = 10;
+      const items = c.historico_alteracoes.slice(-maxShow).reverse();
+      const altCards = items.map(alt => {
+        let campos = '';
+        if (alt.alteracoes && Array.isArray(alt.alteracoes)) {
+          campos = alt.alteracoes.map(a => {
+            const de = a.valor_anterior ?? a.anterior ?? '';
+            const para = a.valor_novo ?? a.novo ?? '';
+            return `<div class="alteracao-campo"><span class="label">${a.campo}:</span> <span class="alteracao-de">${de || '(vazio)'}</span> &rarr; <span class="alteracao-para">${para || '(vazio)'}</span></div>`;
+          }).join('');
+        }
+        return `<div class="alteracao-item"><div class="alteracao-data"><i class="fas fa-clock"></i> ${formatarData(alt.data)}</div>${campos}</div>`;
+      }).join('');
+
+      alteracoesHtml = `
+        <div class="detail-section">
+          <div class="section-title"><i class="fas fa-history"></i> Histórico de Alterações (${c.historico_alteracoes.length})</div>
+          ${altCards}
+          ${c.historico_alteracoes.length > maxShow ? `<div style="text-align:center;padding:.5rem;color:#6b7280;font-size:.8rem;">Exibindo últimas ${maxShow} de ${c.historico_alteracoes.length} alterações</div>` : ''}
+        </div>`;
+    }
+
+    body.innerHTML = alertaHtml + dadosPessoais + contato + ids + servicosHtml + leadHtml + alteracoesHtml;
+    document.getElementById('modalDetalhe').style.display = 'block';
+  }
+
+  function fecharModal() {
+    document.getElementById('modalDetalhe').style.display = 'none';
+  }
+
+  // Event listeners
+  document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('searchInput');
+    let timeout;
+    searchInput.addEventListener('input', e => {
+      search = e.target.value;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => { page = 1; carregarClientes(); }, 400);
+    });
+
+    document.getElementById('statusServicoFilter').addEventListener('change', e => {
+      filtros.status_servico = e.target.value;
+      page = 1;
+      carregarClientes();
+    });
+
+    document.getElementById('ativoFilter').addEventListener('change', e => {
+      filtros.ativo = e.target.value;
+      page = 1;
+      carregarClientes();
+    });
+
+    // Filtro local de documentação — não vai ao servidor, re-renderiza os dados já carregados
+    document.getElementById('docStatusFilter').addEventListener('change', () => {
+      const data = window._ultimosClientes;
+      if (data) renderizarTabela(data.clientes || []);
+    });
+
+    document.getElementById('btnFiltrar').addEventListener('click', () => { page = 1; carregarClientes(); });
+
+    document.getElementById('btnLimpar').addEventListener('click', () => {
+      search = '';
+      filtros = { status_servico: '', ativo: '' };
+      searchInput.value = '';
+      document.getElementById('statusServicoFilter').value = '';
+      document.getElementById('ativoFilter').value = '';
+      document.getElementById('docStatusFilter').value = '';
+      page = 1;
+      carregarClientes();
+    });
+
+    window.addEventListener('click', e => {
+      if (e.target.classList.contains('modal')) fecharModal();
+      if (e.target.id === 'modalDocumentos') fecharModalDoc();
+      if (e.target.id === 'modalConversa') fecharModalConversa();
+      if (e.target.id === 'modalAtendimentosOS') fecharAOS();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { fecharModal(); fecharModalDoc(); fecharModalConversa(); fecharLightbox(); fecharAOS(); } });
+
+    carregarClientes();
+  });
+
+  // ════════════════════════════════════════════════════════
+  //  MÓDULO DE DOCUMENTOS / VALIDAÇÃO
+  // ════════════════════════════════════════════════════════
+  const API_IMAGENS_POR_CLIENTE = '{% url "vendas_web:imagens_por_cliente" %}';
+  const API_VALIDAR_IMAGEM      = '{% url "vendas_web:validar_imagem" %}';
+
+  let _docClienteId   = null;
+  let _obsImagemId    = null;
+  let _obsAcao        = null;
+
+  // ============================================================
+  // ATENDIMENTOS E ORDENS DE SERVIÇO (Hubsoft)
+  // ============================================================
+  async function abrirAtendimentosOS(clienteId, nomeCliente) {
+    window._aosClienteIdAtual = clienteId;
+    const modal = document.getElementById('modalAtendimentosOS');
+    modal.style.display = 'flex';
+    document.getElementById('aosTitulo').textContent = nomeCliente;
+    document.getElementById('aosAtendBox').innerHTML = _loadingHTML('Buscando atendimentos e O.S...');
+    document.getElementById('aosOsBox').innerHTML = '';
+    document.getElementById('aosNovosBox').innerHTML = '';
+    document.getElementById('aosAtendBox').style.display = 'block';
+    document.getElementById('aosOsBox').style.display = 'none';
+    document.getElementById('aosNovosBox').style.display = 'none';
+    const tabs = document.querySelectorAll('.aos-tab');
+    tabs.forEach((t, i) => t.classList.toggle('on', i === 0));
+    ['aosStatAtend','aosStatOS','aosStatDone','aosStatPend','aosBadgeAtend','aosBadgeOS','aosBadgeNovos'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.textContent = '0';
+    });
+    await _carregarAtendimentosOS(clienteId, false);
+  }
+
+  function _loadingHTML(msg) {
+    return `<div class="aos-loading"><i class="fas fa-circle-notch fa-spin"></i><p>${msg}</p></div>`;
+  }
+
+  async function _carregarAtendimentosOS(clienteId, forceSync) {
+    const qs = forceSync ? '&sync=1' : '';
+    try {
+      const [respA, respO, respN] = await Promise.all([
+        fetch(`/integracoes/api/cliente/atendimentos/?cliente_id=${clienteId}${qs}`).then(r => r.json()),
+        fetch(`/integracoes/api/cliente/ordens-servico/?cliente_id=${clienteId}${qs}`).then(r => r.json()),
+        fetch(`/integracoes/api/cliente/novos-servicos/?cliente_id=${clienteId}`).then(r => r.json()),
+      ]);
+      const atends = respA.success ? respA.atendimentos || [] : [];
+      const ordens = respO.success ? respO.ordens_servico || [] : [];
+      const novos  = respN.success ? respN.novos_servicos || [] : [];
+
+      if (!forceSync && atends.length === 0 && ordens.length === 0) {
+        return _carregarAtendimentosOS(clienteId, true);
+      }
+
+      const done = [...atends, ...ordens].filter(x => _classeStatus(x.status) === 'done').length;
+      const pend = [...atends, ...ordens].filter(x => ['pending','running'].includes(_classeStatus(x.status))).length;
+      document.getElementById('aosStatAtend').textContent = atends.length;
+      document.getElementById('aosStatOS').textContent = ordens.length;
+      document.getElementById('aosStatDone').textContent = done;
+      document.getElementById('aosStatPend').textContent = pend;
+      document.getElementById('aosBadgeAtend').textContent = atends.length;
+      document.getElementById('aosBadgeOS').textContent = ordens.length;
+      document.getElementById('aosBadgeNovos').textContent = novos.length;
+
+      _renderAtendimentos(atends);
+      _renderOrdensServico(ordens);
+      _renderNovosServicos(novos);
+    } catch (err) {
+      document.getElementById('aosAtendBox').innerHTML =
+        `<div class="aos-empty"><i class="fas fa-exclamation-triangle" style="color:#dc2626"></i><p>Erro ao carregar</p><small>${err.message || 'Tente novamente'}</small></div>`;
+    }
+  }
+
+  function _classeStatus(status) {
+    const s = (status || '').toLowerCase();
+    if (s.includes('resolvido') || s.includes('finaliz') || s.includes('concluid')) return 'done';
+    if (s.includes('cancel')) return 'cancel';
+    if (s.includes('andamento') || s.includes('execu')) return 'running';
+    if (s.includes('pendente') || s.includes('aberto')) return 'pending';
+    return 'neutral';
+  }
+
+  function _escapeHTML(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  function _truncarDesc(txt, max) {
+    if (!txt) return '';
+    const clean = txt.replace(/\s+/g, ' ').trim();
+    if (clean.length <= max) return _escapeHTML(clean);
+    return _escapeHTML(clean.substring(0, max)) + '...';
+  }
+
+  function _renderAtendimentos(lista) {
+    const el = document.getElementById('aosAtendBox');
+    if (!lista.length) {
+      el.innerHTML = `<div class="aos-empty"><i class="fas fa-inbox"></i><p>Nenhum atendimento encontrado</p><small>Este cliente ainda não possui registros de atendimento</small></div>`;
+      return;
+    }
+    el.innerHTML = lista.map(a => {
+      const cls = _classeStatus(a.status);
+      const desc = _truncarDesc(a.descricao_abertura, 280);
+      return `
+        <div class="aos-card ${cls}">
+          <div class="aos-card-head">
+            <div class="aos-card-title ${cls}">
+              <span class="card-ic"><i class="fas fa-headset"></i></span>
+              <div>
+                <div>${_escapeHTML(a.tipo_atendimento || 'Atendimento')}</div>
+                <div class="aos-card-proto">Protocolo ${_escapeHTML(a.protocolo || '—')}</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+              <span class="aos-status ${cls}">${_escapeHTML(a.status || '—')}</span>
+              ${a.qtd_ordens_servico > 0 ? `<span style="font-size:10px; color:#4f46e5; font-weight:700;"><i class="fas fa-link"></i> ${a.qtd_ordens_servico} O.S vinculada${a.qtd_ordens_servico > 1 ? 's' : ''}</span>` : ''}
+            </div>
+          </div>
+          ${desc ? `<div class="aos-desc">${desc}</div>` : ''}
+          <div class="aos-meta">
+            ${a.data_cadastro ? `<span class="aos-meta-item"><i class="fas fa-calendar-plus"></i> Aberto <strong>${_escapeHTML(a.data_cadastro)}</strong></span>` : ''}
+            ${a.data_fechamento ? `<span class="aos-meta-item"><i class="fas fa-calendar-check"></i> Fechado <strong>${_escapeHTML(a.data_fechamento)}</strong></span>` : ''}
+            ${a.usuario_abertura ? `<span class="aos-meta-item"><i class="fas fa-user-plus"></i> <strong>${_escapeHTML(a.usuario_abertura)}</strong></span>` : ''}
+            ${a.motivo_fechamento ? `<span class="aos-meta-item"><i class="fas fa-flag-checkered"></i> <strong>${_escapeHTML(a.motivo_fechamento)}</strong></span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function _renderOrdensServico(lista) {
+    const el = document.getElementById('aosOsBox');
+    if (!lista.length) {
+      el.innerHTML = `<div class="aos-empty"><i class="fas fa-tools"></i><p>Nenhuma ordem de serviço</p><small>Não há OS registradas para este cliente</small></div>`;
+      return;
+    }
+    el.innerHTML = lista.map(o => {
+      const cls = _classeStatus(o.status);
+      const desc = _truncarDesc(o.descricao_servico || o.descricao_abertura, 240);
+      const tecs = (o.tecnicos || []).map(t => {
+        const nome = (typeof t === 'string') ? t : (t.nome || '');
+        return nome ? `<span class="aos-tec"><i class="fas fa-hard-hat"></i> ${_escapeHTML(nome)}</span>` : '';
+      }).filter(Boolean).join('');
+
+      const temProg = o.data_inicio_programado;
+      const temExec = o.data_inicio_executado;
+      const temFim  = o.data_termino_executado;
+      const timeline = temProg ? `
+        <div class="aos-timeline">
+          <div class="aos-tl-step done">
+            <i class="fas fa-calendar-alt"></i>
+            <div><div class="tl-lbl">Programado</div><div class="tl-date">${_escapeHTML(temProg)}</div></div>
+          </div>
+          <i class="fas fa-chevron-right aos-tl-arrow"></i>
+          <div class="aos-tl-step ${temExec ? (temFim ? 'done' : 'active') : ''}">
+            <i class="fas fa-play"></i>
+            <div><div class="tl-lbl">Iniciado</div><div class="tl-date">${_escapeHTML(temExec || 'Aguardando')}</div></div>
+          </div>
+          <i class="fas fa-chevron-right aos-tl-arrow"></i>
+          <div class="aos-tl-step ${temFim ? 'done' : ''}">
+            <i class="fas fa-flag-checkered"></i>
+            <div><div class="tl-lbl">Concluído</div><div class="tl-date">${_escapeHTML(temFim || '—')}</div></div>
+          </div>
+        </div>` : '';
+
+      return `
+        <div class="aos-card ${cls}">
+          <div class="aos-card-head">
+            <div class="aos-card-title ${cls}">
+              <span class="card-ic"><i class="fas fa-tools"></i></span>
+              <div>
+                <div>${_escapeHTML(o.tipo || 'Ordem de Serviço')}</div>
+                <div class="aos-card-proto">O.S n° ${_escapeHTML(o.numero_ordem_servico || o.id_ordem_servico || '—')}</div>
+              </div>
+            </div>
+            <span class="aos-status ${cls}">${_escapeHTML(o.status || '—')}</span>
+          </div>
+          ${timeline}
+          ${tecs ? `<div class="aos-tecs">${tecs}</div>` : ''}
+          ${desc ? `<div class="aos-desc">${desc}</div>` : ''}
+          <div class="aos-meta">
+            ${o.data_cadastro ? `<span class="aos-meta-item"><i class="fas fa-calendar-plus"></i> Aberta <strong>${_escapeHTML(o.data_cadastro)}</strong></span>` : ''}
+            ${o.usuario_abertura ? `<span class="aos-meta-item"><i class="fas fa-user-plus"></i> <strong>${_escapeHTML(o.usuario_abertura)}</strong></span>` : ''}
+            ${o.usuario_fechamento ? `<span class="aos-meta-item"><i class="fas fa-user-check"></i> <strong>${_escapeHTML(o.usuario_fechamento)}</strong></span>` : ''}
+            ${o.qtd_anexos > 0 ? `<span class="aos-meta-item" style="color:#4f46e5"><i class="fas fa-paperclip"></i> <strong>${o.qtd_anexos}</strong> anexo${o.qtd_anexos > 1 ? 's' : ''}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function mostrarTabAOS(tipo, btn) {
+    document.querySelectorAll('.aos-tab').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById('aosAtendBox').style.display  = tipo === 'atend' ? 'block' : 'none';
+    document.getElementById('aosOsBox').style.display     = tipo === 'os'    ? 'block' : 'none';
+    document.getElementById('aosNovosBox').style.display  = tipo === 'novos' ? 'block' : 'none';
+  }
+
+  // ── Render Novos Serviços (NewService contratados via WhatsApp) ─────
+  function _classeStatusNS(status) {
+    const s = (status || '').toLowerCase();
+    if (s === 'finalizado') return 'done';
+    if (s === 'cancelado')  return 'cancel';
+    if (s === 'em_coleta')  return 'running';
+    if (s.indexOf('aguard') !== -1 || s.indexOf('validos') !== -1) return 'pending';
+    return 'neutral';
+  }
+
+  function _classeSyncNS(status) {
+    const s = (status || '').toLowerCase();
+    if (s === 'sincronizado') return 'done';
+    if (s === 'processando')  return 'running';
+    if (s === 'erro')         return 'cancel';
+    return 'pending';
+  }
+
+  function _fmtDataISO(iso) {
+    if (!iso) return '—';
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+        const [a, m, d] = iso.split('-');
+        return `${d}/${m}/${a}`;
+      }
+      const dt = new Date(iso);
+      if (isNaN(dt.getTime())) return iso;
+      return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    } catch { return iso; }
+  }
+
+  function _renderNovosServicos(lista) {
+    const el = document.getElementById('aosNovosBox');
+    if (!lista || !lista.length) {
+      el.innerHTML = `<div class="aos-empty">
+        <i class="fas fa-rocket"></i>
+        <p>Nenhum Novo Serviço encontrado</p>
+        <small>Este cliente ainda não contratou serviço adicional pelo WhatsApp.</small>
+      </div>`;
+      return;
+    }
+    el.innerHTML = lista.map(ns => {
+      const cls = _classeStatusNS(ns.status);
+      const syncCls = _classeSyncNS(ns.matrix_sync_status);
+      const turnoLabel = ns.turno_instalacao === 'manha' ? 'Manhã'
+                       : (ns.turno_instalacao === 'tarde' ? 'Tarde' : '—');
+      const docsCount = [ns.doc_selfie_recebida, ns.doc_frente_recebida, ns.doc_verso_recebida]
+                          .filter(v => v === true).length;
+      const valor = ns.valor ? formatarMoeda(ns.valor) : '—';
+      const venc = ns.dia_vencimento ? `Dia ${ns.dia_vencimento}` : '—';
+
+      return `
+        <div class="aos-card ${cls}">
+          <div class="aos-card-head">
+            <div class="aos-card-title ${cls}">
+              <span class="card-ic"><i class="fas fa-rocket"></i></span>
+              <div>
+                <div>${_escapeHTML(ns.plano_label || 'Plano não selecionado')}</div>
+                <div class="aos-card-proto">NewService #${ns.id} · criado ${_fmtDataISO(ns.criado_em)}</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+              <span class="aos-status ${cls}">${_escapeHTML(ns.status_display || ns.status)}</span>
+              <span class="aos-status ${syncCls}" title="Sync Atendimento+OS no Matrix">
+                <i class="fas fa-sync"></i> Matrix: ${_escapeHTML(ns.matrix_sync_status_display || ns.matrix_sync_status)}
+              </span>
+            </div>
+          </div>
+
+          <div class="aos-meta">
+            <span class="aos-meta-item"><i class="fas fa-money-bill-wave"></i> <strong>${valor}</strong></span>
+            <span class="aos-meta-item"><i class="fas fa-calendar-day"></i> Venc: <strong>${venc}</strong></span>
+            <span class="aos-meta-item"><i class="fas fa-home"></i> <strong>${_escapeHTML(ns.tipo_imovel || '—')}</strong>${ns.tipo_residencia ? ` (${_escapeHTML(ns.tipo_residencia)})` : ''}</span>
+            <span class="aos-meta-item"><i class="fas fa-file-image"></i> Docs: <strong>${docsCount}/3</strong></span>
+          </div>
+
+          <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #e5e7eb; font-size:12px; color:#475569;">
+            <div style="margin-bottom:6px;"><i class="fas fa-map-marker-alt" style="color:#94a3b8;width:14px;"></i> <strong>Endereço:</strong> ${_escapeHTML(ns.endereco_completo || '—')}</div>
+            ${ns.ponto_referencia ? `<div style="margin-bottom:6px;"><i class="fas fa-map-signs" style="color:#94a3b8;width:14px;"></i> <strong>Ref:</strong> ${_escapeHTML(ns.ponto_referencia)}</div>` : ''}
+            <div style="margin-bottom:6px;"><i class="fas fa-calendar-check" style="color:#94a3b8;width:14px;"></i> <strong>Instalação:</strong> ${_fmtDataISO(ns.data_instalacao)} — ${turnoLabel}</div>
+            ${ns.id_atendimento_matrix ? `<div style="margin-bottom:6px;color:#059669;"><i class="fas fa-headset" style="width:14px;"></i> <strong>Atendimento Matrix:</strong> #${ns.id_atendimento_matrix}</div>` : ''}
+            ${ns.id_os_matrix ? `<div style="margin-bottom:6px;color:#059669;"><i class="fas fa-tools" style="width:14px;"></i> <strong>OS Matrix:</strong> #${ns.id_os_matrix}</div>` : ''}
+            ${ns.data_sync_matrix ? `<div style="margin-bottom:6px;color:#059669;"><i class="fas fa-check-circle" style="width:14px;"></i> <strong>Sincronizado em:</strong> ${_fmtDataISO(ns.data_sync_matrix)}</div>` : ''}
+            ${ns.ultimo_erro_sync_matrix ? `<div style="margin-top:6px;padding:6px 10px;background:#fef2f2;border-left:3px solid #ef4444;border-radius:6px;color:#991b1b;"><i class="fas fa-exclamation-triangle"></i> ${_escapeHTML(ns.ultimo_erro_sync_matrix.substring(0, 240))}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function fecharAOS() {
+    document.getElementById('modalAtendimentosOS').style.display = 'none';
+  }
+
+  async function sincronizarAOS() {
+    const btn = document.getElementById('aosSyncBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+    const titulo = document.getElementById('aosTitulo').textContent;
+    // Extrair cliente_id do modal — guardar referência
+    const clienteId = window._aosClienteIdAtual;
+    if (clienteId) {
+      await _carregarAtendimentosOS(clienteId, true);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sincronizar';
+  }
+
+  async function abrirDocumentos(clienteId, nomeCliente) {
+    _docClienteId = clienteId;
+    document.getElementById('docModalTitulo').textContent = `Documentos — ${nomeCliente}`;
+    document.getElementById('docModalBody').innerHTML = `
+      <div style="text-align:center;padding:3rem;color:#9ca3af;">
+        <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
+        <div style="margin-top:.75rem;">Carregando documentos...</div>
+      </div>`;
+    document.getElementById('modalDocumentos').style.display = 'block';
+    await _carregarDocumentos();
+  }
+
+  async function _carregarDocumentos() {
+    try {
+      const resp = await fetch(`${API_IMAGENS_POR_CLIENTE}?cliente_hubsoft_id=${_docClienteId}`);
+      const data = await resp.json();
+
+      if (!data.success) throw new Error(data.error || 'Erro ao carregar');
+
+      _renderizarDocumentos(data);
+    } catch (e) {
+      document.getElementById('docModalBody').innerHTML = `
+        <div style="text-align:center;padding:2rem;color:#ef4444;">
+          <i class="fas fa-exclamation-circle" style="font-size:1.5rem;"></i>
+          <div style="margin-top:.5rem;">Erro: ${e.message}</div>
+        </div>`;
+    }
+  }
+
+  function _renderizarDocumentos(data) {
+    const body   = document.getElementById('docModalBody');
+    const imagens = data.imagens || [];
+    const lead   = data.lead;
+
+    if (!lead) {
+      body.innerHTML = `
+        <div style="text-align:center;padding:2rem;color:#9ca3af;">
+          <i class="fas fa-unlink" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>
+          <div>Este cliente não possui lead relacionado.</div>
+          <div style="font-size:.8rem;margin-top:.4rem;">Vincule um lead ao cliente para visualizar documentos.</div>
+        </div>`;
+      return;
+    }
+
+    const total    = imagens.length;
+    const validos  = imagens.filter(i => i.status_validacao === 'documentos_validos').length;
+    const rejeit   = imagens.filter(i => i.status_validacao === 'documentos_rejeitados').length;
+    const pend     = imagens.filter(i => i.status_validacao === 'pendente').length;
+    const aprovIA  = imagens.filter(i => i.status_validacao === 'aprovado_ia').length;
+
+    const resumoHtml = `
+      <div class="doc-resumo">
+        <div class="doc-resumo-item">
+          <i class="fas fa-user" style="color:#0022fa;"></i>
+          <span>Lead: <strong>#${lead.id} — ${lead.nome}</strong></span>
+        </div>
+        <div class="doc-resumo-item">
+          <i class="fas fa-images" style="color:#6b7280;"></i>
+          <span>${total} documento(s)</span>
+        </div>
+        <div class="doc-resumo-item">
+          <i class="fas fa-check-circle" style="color:#10b981;"></i>
+          <span style="color:#065f46;">${validos} aprovado(s)</span>
+        </div>
+        <div class="doc-resumo-item">
+          <i class="fas fa-times-circle" style="color:#ef4444;"></i>
+          <span style="color:#991b1b;">${rejeit} rejeitado(s)</span>
+        </div>
+        <div class="doc-resumo-item">
+          <i class="fas fa-clock" style="color:#f59e0b;"></i>
+          <span style="color:#92400e;">${pend} pendente(s)</span>
+        </div>
+        ${aprovIA > 0 ? `
+        <div class="doc-resumo-item">
+          <i class="fas fa-robot" style="color:#8b5cf6;"></i>
+          <span style="color:#5b21b6;">${aprovIA} aprovado(s) pela IA — aguardando validação</span>
+        </div>` : ''}
+        ${lead.documentacao_validada
+          ? '<div class="doc-resumo-item"><span style="background:#d1fae5;color:#065f46;padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:700;"><i class="fas fa-shield-alt"></i> Documentação Validada</span></div>'
+          : ''}
+      </div>`;
+
+    if (total === 0) {
+      body.innerHTML = resumoHtml + `
+        <div style="text-align:center;padding:2rem;color:#9ca3af;">
+          <i class="fas fa-folder-open" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
+          <div>Nenhum documento anexado a este lead.</div>
+        </div>`;
+      return;
+    }
+
+    const cardsHtml = imagens.map(img => {
+      const statusKey  = img.status_validacao === 'documentos_validos'    ? 'valido'
+                       : img.status_validacao === 'documentos_rejeitados' ? 'rejeitado'
+                       : img.status_validacao === 'aprovado_ia'           ? 'aprovado_ia'
+                       : 'pendente';
+      const statusLabel = {
+        valido:       'Aprovado',
+        rejeitado:    'Rejeitado',
+        pendente:     'Pendente',
+        aprovado_ia:  'Aprovado pela IA — aguarda validação',
+      }[statusKey];
+      const statusIcon  = {
+        valido:       'fa-check-circle',
+        rejeitado:    'fa-times-circle',
+        pendente:     'fa-clock',
+        aprovado_ia:  'fa-robot',
+      }[statusKey];
+
+      const isImagem = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(img.link_url);
+      const imgTag   = isImagem
+        ? `<img class="doc-card-img" src="${img.link_url}" alt="${img.descricao || 'Documento'}"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+              onclick="abrirLightbox('${img.link_url}')">`
+        : '';
+      const placeholder = `
+        <a href="${img.link_url}" target="_blank" class="doc-card-img-placeholder"
+           style="${isImagem ? 'display:none;' : ''}">
+          <i class="fas fa-file-alt"></i>
+        </a>`;
+
+      const dataVal = img.data_validacao
+        ? new Date(img.data_validacao).toLocaleString('pt-BR')
+        : '';
+
+      return `
+        <div class="doc-card ${statusKey}" id="doc-card-${img.id}">
+          ${imgTag}${placeholder}
+          <div class="doc-card-body">
+            <div class="doc-card-desc">${img.descricao || 'Documento'}</div>
+            <div class="doc-card-date">
+              <i class="fas fa-calendar-alt"></i>
+              ${new Date(img.data_criacao).toLocaleString('pt-BR')}
+            </div>
+            <span class="doc-card-status ${statusKey}">
+              <i class="fas ${statusIcon}"></i> ${statusLabel}
+            </span>
+            ${img.observacao_validacao
+              ? `<div class="doc-card-obs"><i class="fas fa-comment"></i> ${img.observacao_validacao}</div>`
+              : ''}
+            ${img.validado_por && dataVal
+              ? `<div class="doc-card-obs">${img.validado_por} · ${dataVal}</div>`
+              : ''}
+          </div>
+          <div class="doc-card-actions">
+            ${statusKey === 'aprovado_ia' ? `
+              <button class="btn-validar-ia" onclick="_validarImagem(${img.id}, 'aprovar')">
+                <i class="fas fa-shield-check"></i> Validar Aprovação IA
+              </button>
+              <button class="btn-rejeitar" onclick="_pedirObs(${img.id})">
+                <i class="fas fa-times"></i> Rejeitar
+              </button>
+            ` : `
+              <button class="btn-aprovar" onclick="_validarImagem(${img.id}, 'aprovar')">
+                <i class="fas fa-check"></i> Aprovar
+              </button>
+              <button class="btn-rejeitar" onclick="_pedirObs(${img.id})">
+                <i class="fas fa-times"></i> Rejeitar
+              </button>
+            `}
+          </div>
+        </div>`;
+    }).join('');
+
+    body.innerHTML = resumoHtml + `<div class="doc-grid">${cardsHtml}</div>`;
+  }
+
+  async function _validarImagem(imagemId, acao, observacao = '') {
+    try {
+      const resp = await fetch(API_VALIDAR_IMAGEM, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _getCsrf() },
+        body: JSON.stringify({ imagem_id: imagemId, acao, observacao }),
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.error || 'Erro na validação');
+
+      // Recarregar os documentos para refletir o novo estado
+      await _carregarDocumentos();
+    } catch (e) {
+      alert('Erro ao validar: ' + e.message);
+    }
+  }
+
+  function _pedirObs(imagemId) {
+    _obsImagemId = imagemId;
+    _obsAcao     = 'rejeitar';
+    document.getElementById('obsTextarea').value = '';
+    document.getElementById('obsModal').classList.add('active');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('obsCancelar').addEventListener('click', () => {
+      document.getElementById('obsModal').classList.remove('active');
+      _obsImagemId = null;
+    });
+    document.getElementById('obsConfirmar').addEventListener('click', async () => {
+      const obs = document.getElementById('obsTextarea').value.trim();
+      document.getElementById('obsModal').classList.remove('active');
+      if (_obsImagemId) await _validarImagem(_obsImagemId, _obsAcao, obs);
+      _obsImagemId = null;
+    });
+  });
+
+  function abrirLightbox(url) {
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightboxOverlay').classList.add('active');
+  }
+
+  function fecharLightbox() {
+    document.getElementById('lightboxOverlay').classList.remove('active');
+    document.getElementById('lightboxImg').src = '';
+  }
+
+  function fecharModalDoc() {
+    document.getElementById('modalDocumentos').style.display = 'none';
+    _docClienteId = null;
+  }
+
+  // ════════════════════════════════════════════════════════
+  //  MÓDULO DE CONVERSA DO LEAD
+  // ════════════════════════════════════════════════════════
+  const URL_CONVERSA_HTML_TPL = '{% url "vendas_web:visualizar_conversa_lead" 0 %}'.replace('/0/', '/{id}/');
+  const _urlConversa = (leadId) => URL_CONVERSA_HTML_TPL.replace('{id}', leadId);
+
+  function abrirConversa(leadId, nomeCliente, urlPdf, htmlPath) {
+    document.getElementById('conversaTitulo').textContent = `Conversa — ${nomeCliente}`;
+
+    const tabs   = document.getElementById('conversaTabs');
+    const panels = document.getElementById('conversaPanels');
+    const pdfLink = document.getElementById('conversaPdfLink');
+
+    tabs.innerHTML = '';
+    panels.innerHTML = '';
+    pdfLink.style.display = 'none';
+
+    // Aba HTML do atendimento (iframe via URL do servidor)
+    const temHtml = !!htmlPath;
+    const temPdf  = !!urlPdf;
+
+    if (!temHtml && !temPdf) {
+      panels.innerHTML = `
+        <div style="text-align:center;padding:3rem;color:#9ca3af;">
+          <i class="fas fa-comments" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
+          <div style="font-weight:600;">Nenhuma conversa disponível</div>
+          <div style="font-size:.82rem;margin-top:.4rem;">Este lead ainda não possui HTML ou PDF de atendimento gerado.</div>
+        </div>`;
+      document.getElementById('modalConversa').style.display = 'block';
+      return;
+    }
+
+    let primeiraAba = null;
+
+    if (temHtml) {
+      const tabId = 'tab-html';
+      const panelId = 'panel-html';
+      const tab = document.createElement('button');
+      tab.className = 'conversa-tab active';
+      tab.id = tabId;
+      tab.innerHTML = '<i class="fas fa-code"></i> Conversa HTML';
+      tab.onclick = () => _ativarAba(tabId, panelId);
+      tabs.appendChild(tab);
+
+      const panel = document.createElement('div');
+      panel.className = 'conversa-panel active';
+      panel.id = panelId;
+      panel.innerHTML = `<iframe class="conversa-iframe" src="${_urlConversa(leadId)}"
+        title="Conversa do atendimento"></iframe>`;
+      panels.appendChild(panel);
+      primeiraAba = tabId;
+    }
+
+    if (temPdf) {
+      const tabId = 'tab-pdf';
+      const panelId = 'panel-pdf';
+      const tab = document.createElement('button');
+      tab.className = `conversa-tab${!primeiraAba ? ' active' : ''}`;
+      tab.id = tabId;
+      tab.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+      tab.onclick = () => _ativarAba(tabId, panelId);
+      tabs.appendChild(tab);
+
+      const panel = document.createElement('div');
+      panel.className = `conversa-panel${!primeiraAba ? ' active' : ''}`;
+      panel.id = panelId;
+      panel.innerHTML = `
+        <div style="text-align:center;padding:2rem;">
+          <i class="fas fa-file-pdf" style="font-size:3rem;color:#ef4444;display:block;margin-bottom:1rem;"></i>
+          <div style="font-size:.95rem;color:#374151;margin-bottom:1.25rem;">PDF da conversa disponível</div>
+          <a href="${urlPdf}" target="_blank" class="btn btn-primary">
+            <i class="fas fa-external-link-alt"></i> Abrir PDF no Visualizador
+          </a>
+        </div>`;
+      panels.appendChild(panel);
+
+      pdfLink.href = urlPdf;
+      pdfLink.style.display = 'inline-flex';
+      if (!primeiraAba) primeiraAba = tabId;
+    }
+
+    // Esconde tabs se só existe uma
+    if (tabs.children.length <= 1) tabs.style.display = 'none';
+    else tabs.style.display = 'flex';
+
+    document.getElementById('modalConversa').style.display = 'block';
+  }
+
+  function _ativarAba(tabId, panelId) {
+    document.querySelectorAll('.conversa-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.conversa-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.getElementById(panelId).classList.add('active');
+  }
+
+  function fecharModalConversa() {
+    document.getElementById('modalConversa').style.display = 'none';
+    // Destruir iframe para parar carregamento
+    document.getElementById('conversaPanels').innerHTML = '';
+  }
+
+  function _getCsrf() {
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (el) return el.value;
+    const match = document.cookie.match(/csrftoken=([^;]+)/);
+    return match ? match[1] : '';
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,2209 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Dashboard - Métricas de Vendas{% endblock %}
+
+{% block extra_head %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block custom_css %}
+    <style>
+        .dashboard-container {
+            min-height: calc(100vh - 64px);
+            background: #f8f9fa;
+            position: relative;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #1F3D59, #2a4f73);
+            color: white;
+            box-shadow: 0 4px 15px rgba(31, 61, 89, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(31, 61, 89, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 87, 108, 0.4);
+        }
+
+        /* Loading Styles */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000b4a 0%, #0022fa 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading p {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Dashboard Controls */
+        .dashboard-controls {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 1rem 0;
+        }
+
+        .controls-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .period-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .period-label {
+            color: #666;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .period-selector {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .period-selector:hover {
+            border-color: #1F3D59;
+        }
+
+        .period-text {
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .period-icon {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .period-selector input[type="date"] {
+            border: none;
+            background: transparent;
+            color: #333;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .period-selector .date-sep {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .last-update {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .controls-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-icon:hover {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+            background: #f8f9fa;
+            min-height: calc(100vh - 140px);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .section-header i {
+            font-size: 1.5rem;
+            color: #2a4f73;
+        }
+
+        .section-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            margin-bottom: 3rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            padding: 0 1rem;
+            align-items: center;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid #e8ecf0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: visible;
+            width: 100%;
+            cursor: pointer;
+            min-height: 140px;
+            justify-content: center;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+            border-color: #d1d9e0;
+        }
+
+        .stat-card.highlighted {
+            background: linear-gradient(135deg, #1F3D59, #2a4f73);
+            color: white;
+            border-color: #1F3D59;
+            box-shadow: 0 8px 24px rgba(31, 61, 89, 0.3);
+        }
+
+        .stat-card.highlighted:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 32px rgba(31, 61, 89, 0.4);
+        }
+
+        .stat-card.highlighted .stat-title,
+        .stat-card.highlighted .stat-value,
+        .stat-card.highlighted .stat-change {
+            color: white;
+        }
+
+        .stat-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+            line-height: 1;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-change {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-change.positive {
+            color: #059669;
+            background: rgba(5, 150, 105, 0.1);
+        }
+
+        .stat-change.negative {
+            color: #dc2626;
+            background: rgba(220, 38, 38, 0.1);
+        }
+
+        .stat-change.neutral {
+            color: #6b7280;
+            background: rgba(107, 114, 128, 0.1);
+        }
+
+        .change-arrow {
+            font-size: 0.7rem;
+        }
+
+        /* Conversion arrows between cards - Improved Design */
+        .conversion-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3.5rem;
+            height: 1.8rem;
+            background: linear-gradient(135deg, #0022fa, #0018b0);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            z-index: 10;
+            flex-shrink: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .conversion-arrow:hover {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .conversion-arrow:nth-child(5) {
+            left: calc(25% - 1.75rem);
+        }
+
+        .conversion-arrow:nth-child(6) {
+            left: calc(50% - 1.75rem);
+        }
+
+        .conversion-arrow:nth-child(7) {
+            left: calc(75% - 1.75rem);
+        }
+
+        /* Charts Section */
+        .charts-section {
+            margin-bottom: 3rem;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-header {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .chart-header h3 {
+            color: #333;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-header i {
+            color: #0022fa;
+        }
+
+        .chart-container {
+            position: relative;
+            height: min(60vh, 520px);
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100%;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        .chart-status {
+            margin-left: auto;
+            color: #888;
+            cursor: default;
+        }
+
+        .chart-status.error {
+            color: #c53030;
+        }
+
+        .chart-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.95rem;
+            text-align: center;
+            padding: 0 1rem;
+            pointer-events: none;
+        }
+
+
+        /* Latest Conversions Section */
+        .latest-conversions-section {
+            margin-bottom: 2rem;
+        }
+
+        .conversions-container {
+            margin-top: 1.5rem;
+        }
+
+        .conversions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .conversion-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+            width: 100%;
+            min-width: 0;
+            word-wrap: break-word;
+        }
+
+        .conversion-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .conversion-name {
+            color: #2a4f73;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .conversion-separator {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 0.75rem 0;
+        }
+
+        .conversion-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .conversion-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .field-label {
+            color: #666;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        .field-value {
+            color: #333;
+            font-weight: 400;
+            text-align: right;
+        }
+
+        .conversions-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .conversions-info {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .conversions-navigation {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .view-all-link {
+            color: #1F3D59;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .view-all-link:hover {
+            color: #1F3D59;
+        }
+
+        .navigation-arrows {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .nav-arrow {
+            background: none;
+            border: none;
+            color: #1F3D59;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-arrow:hover {
+            background: #eef3f7;
+            color: #1F3D59;
+        }
+
+        .nav-arrow:disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .nav-arrow:disabled:hover {
+            background: none;
+        }
+
+        /* Ocultar setas de conversão no mobile */
+        @media (max-width: 768px) {
+            .conversion-arrow {
+                display: none !important;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                min-height: calc(100vh - 60px);
+            }
+
+            .main-content {
+                padding: 1rem 0.75rem;
+                min-height: calc(100vh - 120px);
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+                padding: 0 0.5rem;
+            }
+
+            .stat-card {
+                padding: 1rem 0.75rem;
+                min-height: 120px;
+                border-radius: 12px;
+            }
+
+            .stat-title {
+                font-size: 0.7rem;
+                margin-bottom: 0.5rem;
+                letter-spacing: 0.6px;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .stat-change {
+                font-size: 0.65rem;
+                gap: 0.2rem;
+                padding: 0.2rem 0.4rem;
+            }
+
+            .change-arrow {
+                font-size: 0.6rem;
+            }
+
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .chart-card {
+                padding: 1rem;
+                border-radius: 16px;
+            }
+
+            .chart-header h3 {
+                font-size: 1.1rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+
+            .chart-header i {
+                font-size: 1.2rem;
+            }
+
+            .chart-container {
+                height: min(50vh, 300px);
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                padding: 0;
+                margin: 0;
+            }
+
+            .chart-container canvas {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .conversions-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .conversion-card {
+                padding: 1rem;
+                border-radius: 12px;
+            }
+
+            .conversion-name {
+                font-size: 0.95rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .conversion-field {
+                font-size: 0.8rem;
+                margin-bottom: 0.2rem;
+            }
+
+            .conversions-footer {
+                flex-direction: column;
+                gap: 0.75rem;
+                text-align: center;
+                padding: 0.75rem 0;
+            }
+
+            .conversions-info {
+                font-size: 0.8rem;
+            }
+
+            .view-all-link {
+                font-size: 0.85rem;
+            }
+
+            .navigation-arrows {
+                gap: 0.25rem;
+            }
+
+            .nav-arrow {
+                padding: 0.4rem;
+                font-size: 0.9rem;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.2rem;
+            }
+
+            .section-header i {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+                padding: 0;
+            }
+
+            .stat-card {
+                padding: 0.75rem;
+                min-height: 100px;
+                border-radius: 10px;
+            }
+
+            .stat-title {
+                font-size: 0.65rem;
+                letter-spacing: 0.5px;
+            }
+
+            .stat-value {
+                font-size: 1.8rem;
+            }
+
+            .stat-change {
+                font-size: 0.6rem;
+                padding: 0.15rem 0.3rem;
+            }
+
+
+            .chart-card {
+                padding: 0.75rem;
+            }
+
+            .chart-header h3 {
+                font-size: 1rem;
+            }
+
+            .chart-container {
+                height: min(45vh, 250px);
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                padding: 0;
+                margin: 0;
+            }
+
+            .chart-container canvas {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .conversion-card {
+                padding: 0.75rem;
+            }
+
+            .conversion-name {
+                font-size: 0.9rem;
+            }
+
+            .conversion-field {
+                font-size: 0.75rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.1rem;
+            }
+
+            .btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.8rem;
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .main-content {
+                padding: 0.5rem 0.25rem;
+            }
+
+            .stat-card {
+                padding: 0.5rem;
+            }
+
+            .stat-value {
+                font-size: 1.4rem;
+            }
+
+            .chart-card {
+                padding: 0.5rem;
+            }
+
+            .conversion-card {
+                padding: 0.5rem;
+            }
+        }
+
+        /* Landscape orientation adjustments */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 0.5rem;
+            }
+
+            .stat-card {
+                padding: 0.5rem;
+            }
+
+            .stat-value {
+                font-size: 1.4rem;
+            }
+
+            .chart-container {
+                height: min(40vh, 200px);
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                padding: 0;
+                margin: 0;
+            }
+
+            .chart-container canvas {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .stat-card {
+                width: 100%;
+            }
+
+            .conversion-arrow {
+                position: relative;
+                top: 0;
+                left: 0 !important;
+                transform: translateY(-50%);
+                margin: 0.5rem auto;
+                clip-path: polygon(0 50%, 15% 0, 85% 0, 100% 50%, 85% 100%, 15% 100%);
+            }
+
+            .conversions-grid {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 1rem;
+            }
+        }
+
+        /* Animation Classes */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.6s ease-out;
+        }
+
+        /* Additional Enhancements */
+        .stat-card:nth-child(1) .stat-icon {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+
+        .stat-card:nth-child(2) .stat-icon {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        .stat-card:nth-child(3) .stat-icon {
+            background: linear-gradient(135deg, #56ab2f, #a8e6cf);
+        }
+
+        .stat-card:nth-child(4) .stat-icon {
+            background: linear-gradient(135deg, #0022fa, #0018b0);
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Touch-friendly improvements */
+        .stat-card {
+            min-height: 44px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .conversion-card {
+            min-height: 44px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-arrow {
+            min-height: 44px;
+            min-width: 44px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Prevent zoom on input focus (iOS) */
+        input[type="date"] {
+            font-size: 16px;
+        }
+
+        /* Better touch targets */
+        .btn {
+            min-height: 44px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Improved scrolling on mobile */
+        .main-content {
+            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+        }
+
+        /* Better text selection on mobile */
+        .stat-value, .conversion-name {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Prevent chart overflow on mobile */
+        .chart-card {
+            overflow: hidden;
+            max-width: 100%;
+        }
+
+        .chart-container {
+            overflow: hidden !important;
+            max-width: 100% !important;
+        }
+
+        .chart-container canvas {
+            max-width: 100% !important;
+            overflow: hidden !important;
+        }
+
+        /* Force chart to respect container bounds */
+        @media (max-width: 768px) {
+            .chart-card {
+                padding: 0.75rem !important;
+                margin: 0 !important;
+            }
+            
+            .chart-container {
+                margin: 0 !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                overflow: hidden !important;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #0022fa, #0018b0);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+        }
+
+        /* Error message styles */
+        .error-message {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: relative;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 90vw;
+            max-height: 90vh;
+            width: 1200px;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #1F3D59, #2a4f73);
+            color: white;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-title i {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-body {
+            padding: 2rem;
+            flex: 1;
+            overflow-y: auto;
+            max-height: calc(90vh - 140px);
+        }
+
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="dashboard-container">
+
+        <!-- Dashboard Controls - Comentados temporariamente -->
+        <!--
+        <div class="dashboard-controls">
+            <div class="controls-content">
+                <div class="period-section">
+                    <span class="period-label">Período</span>
+                    <div class="period-selector" id="periodSelector">
+                        <input type="date" id="startDate" aria-label="Data inicial">
+                        <span class="date-sep">—</span>
+                        <input type="date" id="endDate" aria-label="Data final">
+                        <i class="fas fa-calendar period-icon"></i>
+                    </div> 
+                    <span class="last-update">Última atualização em: 07/08/2025</span>
+                </div>
+                
+                <div class="controls-actions"> 
+                </div>
+            </div>
+        </div>
+        -->
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent" style="display: none;">
+            <!-- Statistics Cards -->
+            <section class="stats-section fade-in-up">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">ATENDIMENTOS</div>
+                        <div class="stat-value" id="fluxosInicializados">0</div>
+                        <div class="stat-change neutral">
+                            <i class="fas fa-minus change-arrow"></i>
+                            <span id="fluxosChange">0.0% (0)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card highlighted">
+                        <div class="stat-title">LEADS</div>
+                        <div class="stat-value" id="leadsCadastrados">0</div>
+                        <div class="stat-change neutral">
+                            <i class="fas fa-minus change-arrow"></i>
+                            <span id="leadsChange">0.0% (0)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">PROSPECTOS HUBSOFT</div>
+                        <div class="stat-value" id="totalProspectos">0</div>
+                        <div class="stat-change neutral">
+                            <i class="fas fa-minus change-arrow"></i>
+                            <span id="prospectosChange">0.0% (0)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">CLIENTES HUBSOFT</div>
+                        <div class="stat-value" id="vendasValidadas">0</div>
+                        <div class="stat-change neutral">
+                            <i class="fas fa-minus change-arrow"></i>
+                            <span id="vendasChange">0.0% (0)</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Setas de conversão posicionadas absolutamente -->
+                    <div class="conversion-arrow">53.17%</div>
+                    <div class="conversion-arrow">95.52%</div>
+                    <div class="conversion-arrow">85.94%</div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section slide-in-right">
+                <div class="section-header">
+                </div>
+                <div class="charts-grid">
+                    <!-- Trends Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-line"></i> Evolução dos Últimos 7 Dias</h3>
+                            <i id="trendsStatus" class="fas fa-info-circle chart-status" title=""></i>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="trendsChart"></canvas>
+                            <div id="trendsOverlay" class="chart-overlay" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Latest Conversions Section -->
+            <section class="latest-conversions-section fade-in-up">
+                <div class="section-header">
+                    <i class="fas fa-handshake"></i>
+                    <h2>Últimas conversões — Leads que viraram Clientes Hubsoft</h2>
+                </div>
+                <div class="conversions-container">
+                    <div class="conversions-grid" id="conversoesGrid">
+                        <!-- Preenchido dinamicamente via JS -->
+                    </div>
+                    <div class="conversions-footer">
+                        <div class="conversions-info" id="conversoesInfo">
+                            <span>Carregando...</span>
+                        </div>
+                        <div class="conversions-navigation">
+                            <a href="{% url 'vendas_web:vendas' %}" class="view-all-link">Ver página de vendas</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+
+            
+
+            <!-- Error message placeholder -->
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+        </main>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // URLs das APIs usando Django URL reverse
+        const API_URLS = {
+            data: '{% url "vendas_web:dashboard_data" %}',
+            charts: '{% url "vendas_web:dashboard_charts" %}',
+            tables: '{% url "vendas_web:dashboard_tables" %}',
+            leads: '{% url "vendas_web:dashboard_leads" %}',
+            prospectos: '{% url "vendas_web:dashboard_prospectos" %}',
+            historico: '{% url "vendas_web:dashboard_historico" %}',
+            realtimeContatos: '{% url "vendas_web:dashboard_contatos_realtime" %}',
+            ultimasConversoes: '{% url "vendas_web:dashboard_ultimas_conversoes" %}'
+        };
+
+        // Renderização nativa de gráficos em Canvas (sem dependências externas)
+        function drawLineChartOnCanvas(canvas, labels, values, options = {}) {
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const parent = canvas.parentElement;
+            
+            // Aguardar um frame para garantir que o layout esteja completo
+            requestAnimationFrame(() => {
+                // Calcular dimensões mais precisas
+                let width, height;
+                
+                if (parent) {
+                    const parentRect = parent.getBoundingClientRect();
+                    width = Math.max(280, Math.min(parentRect.width || parent.clientWidth || 600, window.innerWidth - 40));
+                    height = Math.max(200, parentRect.height || parent.clientHeight || 360);
+                } else {
+                    width = Math.max(280, Math.min(canvas.clientWidth || 600, window.innerWidth - 40));
+                    height = Math.max(200, canvas.clientHeight || 360);
+                }
+                
+                // Garantir que o canvas tenha dimensões válidas e não estoure a tela
+                if (width <= 0 || height <= 0) {
+                    console.warn('Canvas dimensions invalid, using defaults');
+                    width = Math.min(600, window.innerWidth - 40);
+                    height = 360;
+                }
+
+                // Limitar largura máxima para mobile
+                if (window.innerWidth <= 768) {
+                    width = Math.min(width, window.innerWidth - 20);
+                }
+
+            // Ajusta tamanho físico e CSS para nitidez em alta densidade
+            canvas.width = Math.floor(width * dpr);
+            canvas.height = Math.floor(height * dpr);
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Estilos
+            const padding = { top: 24, right: 16, bottom: 32, left: 40 };
+            const gridColor = '#e9ecef';
+            const axisColor = '#adb5bd';
+            const lineColor = options.lineColor || '#0022fa';
+            const fillColor = options.fillColor || 'rgba(102, 126, 234, 0.12)';
+            const textColor = '#6c757d';
+            const font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
+            // Limpa
+            ctx.clearRect(0, 0, width, height);
+
+            const innerW = width - padding.left - padding.right;
+            const innerH = height - padding.top - padding.bottom;
+            if (innerW <= 0 || innerH <= 0 || !values || values.length === 0) return;
+
+            // Escalas
+            const minVal = Math.min(0, Math.min(...values));
+            const maxVal = Math.max(1, Math.max(...values));
+            const pad = (maxVal - minVal) * 0.1;
+            const yMin = minVal - pad;
+            const yMax = maxVal + pad;
+            const yRange = yMax - yMin || 1;
+
+            const xStep = values.length > 1 ? innerW / (values.length - 1) : innerW;
+            const yToPix = v => padding.top + innerH - ((v - yMin) / yRange) * innerH;
+
+            // Grid horizontal (5 linhas)
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 1;
+            ctx.font = font;
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const gridLines = 5;
+            for (let i = 0; i <= gridLines; i++) {
+                const t = i / gridLines;
+                const yVal = yMin + (1 - t) * yRange;
+                const yPix = padding.top + t * innerH;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, yPix);
+                ctx.lineTo(padding.left + innerW, yPix);
+                ctx.stroke();
+                const label = Math.round(yVal * 100) / 100;
+                ctx.fillText(String(label), padding.left - 6, yPix);
+            }
+
+            // Eixos
+            ctx.strokeStyle = axisColor;
+            ctx.lineWidth = 1.25;
+            // Y
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top);
+            ctx.lineTo(padding.left, padding.top + innerH);
+            ctx.stroke();
+            // X
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top + innerH);
+            ctx.lineTo(padding.left + innerW, padding.top + innerH);
+            ctx.stroke();
+
+            // Linha e área
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = lineColor;
+            ctx.fillStyle = fillColor;
+
+            ctx.beginPath();
+            for (let i = 0; i < values.length; i++) {
+                const x = padding.left + i * xStep;
+                const y = yToPix(values[i]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Área sob a linha
+            ctx.lineTo(padding.left + innerW, padding.top + innerH);
+            ctx.lineTo(padding.left, padding.top + innerH);
+            ctx.closePath();
+            ctx.fill();
+
+            // Pontos
+            ctx.fillStyle = lineColor;
+            for (let i = 0; i < values.length; i++) {
+                const x = padding.left + i * xStep;
+                const y = yToPix(values[i]);
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Rótulos do eixo X (espaciar para não poluir)
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const maxLabels = 6;
+            const step = Math.ceil(labels.length / maxLabels);
+            for (let i = 0; i < labels.length; i += step) {
+                const x = padding.left + i * xStep;
+                const lbl = String(labels[i]);
+                ctx.fillText(lbl, x, padding.top + innerH + 6);
+            }
+
+            // Interações: hover e tooltip
+            const state = {
+                labels,
+                values,
+                padding,
+                innerW,
+                innerH,
+                xStep,
+                yToPix,
+                lineColor,
+                dpr,
+                width,
+                height
+            };
+
+            // Salva estado para event handlers externos
+            canvas._lineChartState = state;
+
+            // Desenha highlight/tooltip se existir seleção anterior
+            if (canvas._hoverIndex != null) {
+                drawHover(canvas, ctx, canvas._hoverIndex, state);
+            }
+            }); // Fechar requestAnimationFrame
+        }
+
+        function drawHover(canvas, ctx, index, state) {
+            const { padding, innerH, xStep, yToPix, values, labels, lineColor } = state;
+            if (index < 0 || index >= values.length) return;
+            const x = padding.left + index * xStep;
+            const y = yToPix(values[index]);
+
+            // Linha guia vertical
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, padding.top + innerH);
+            ctx.stroke();
+
+            // Ponto
+            ctx.fillStyle = lineColor;
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tooltip
+            const tooltipPadding = 8;
+            const text = `${labels[index]} • ${values[index]}`;
+            ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+            const metrics = ctx.measureText(text);
+            const tw = Math.ceil(metrics.width) + tooltipPadding * 2;
+            const th = 24;
+            let tx = x - tw / 2;
+            let ty = y - th - 10;
+            // Mantém visível
+            tx = Math.min(Math.max(tx, padding.left), padding.left + state.innerW - tw);
+            if (ty < padding.top) ty = y + 14;
+
+            // Caixa
+            ctx.fillStyle = 'rgba(33, 37, 41, 0.92)';
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(tx, ty, tw, th, 6) : ctx.fillRect(tx, ty, tw, th);
+            ctx.fill();
+
+            // Texto
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, tx + tooltipPadding, ty + th / 2);
+            ctx.restore();
+        }
+
+        // Estado do período selecionado
+        let SELECTED_START = null; // 'YYYY-MM-DD'
+        let SELECTED_END = null;   // 'YYYY-MM-DD'
+
+        function formatDateYMD(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function formatDateBR(date) {
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+
+        function formatMonthYearPT(date) {
+            return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        }
+
+        function formatTimeFirstBR(input) {
+            if (!input) return '-';
+            const tryDate = new Date(input);
+            if (!isNaN(tryDate)) {
+                const hh = String(tryDate.getHours()).padStart(2, '0');
+                const mm = String(tryDate.getMinutes()).padStart(2, '0');
+                const dd = String(tryDate.getDate()).padStart(2, '0');
+                const mo = String(tryDate.getMonth() + 1).padStart(2, '0');
+                const yy = tryDate.getFullYear();
+                return `${hh}:${mm} - ${dd}/${mo}/${yy}`;
+            }
+            const s = String(input);
+            // Match DD/MM/YYYY [às ]HH:mm
+            const brMatch = s.match(/(\d{2})\/(\d{2})\/(\d{4}).*?(\d{2}):(\d{2})/);
+            if (brMatch) {
+                return `${brMatch[4]}:${brMatch[5]} - ${brMatch[1]}/${brMatch[2]}/${brMatch[3]}`;
+            }
+            // Match ISO-like YYYY-MM-DDTHH:mm
+            const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2}).*?(\d{2}):(\d{2})/);
+            if (isoMatch) {
+                return `${isoMatch[4]}:${isoMatch[5]} - ${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+            }
+            return s;
+        }
+
+        function buildUrlWithRange(baseUrl) {
+            const url = new URL(baseUrl, window.location.origin);
+            if (SELECTED_START) url.searchParams.set('start', SELECTED_START);
+            if (SELECTED_END) url.searchParams.set('end', SELECTED_END);
+            return url.toString();
+        }
+
+        function updatePeriodDisplay() {
+            const display = document.getElementById('periodDisplay');
+            if (!display || !SELECTED_START || !SELECTED_END) return;
+            const start = new Date(SELECTED_START);
+            const end = new Date(SELECTED_END);
+            if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+                display.textContent = formatMonthYearPT(start);
+            } else {
+                display.textContent = `${formatDateBR(start)} – ${formatDateBR(end)}`;
+            }
+        }
+
+        function initializeDateRangeDefaults() {
+            const startInput = document.getElementById('startDate');
+            const endInput = document.getElementById('endDate');
+            if (!startInput || !endInput) return;
+
+            const today = new Date();
+            const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            SELECTED_START = formatDateYMD(firstOfMonth);
+            SELECTED_END = formatDateYMD(today);
+
+            startInput.value = SELECTED_START;
+            endInput.value = SELECTED_END;
+
+            updatePeriodDisplay();
+        }
+
+        function setupDateRangeControls() {
+            const startInput = document.getElementById('startDate');
+            const endInput = document.getElementById('endDate');
+            if (!startInput || !endInput) return;
+
+            const handleChange = () => {
+                const s = startInput.value;
+                const e = endInput.value;
+                if (!s || !e) return;
+                // Garantir ordem cronológica
+                if (new Date(s) > new Date(e)) {
+                    // Troca se invertido
+                    SELECTED_START = e;
+                    SELECTED_END = s;
+                    startInput.value = SELECTED_START;
+                    endInput.value = SELECTED_END;
+                } else {
+                    SELECTED_START = s;
+                    SELECTED_END = e;
+                }
+                updatePeriodDisplay();
+                refreshDashboard();
+            };
+
+            startInput.addEventListener('change', handleChange);
+            endInput.addEventListener('change', handleChange);
+        }
+
+        let trendsChart = null;
+
+        // ── Retry fetch: tenta novamente em caso de 503/erro de rede ──────
+        let _retryTimer  = null;
+        let _retryCount  = 0;
+        const _RETRY_MAX = 30;
+        const _RETRY_DELAYS = [2,3,5,8,13,21]; // backoff em segundos
+
+        function _retryDelay() {
+            const idx = Math.min(_retryCount, _RETRY_DELAYS.length - 1);
+            return _RETRY_DELAYS[idx] * 1000;
+        }
+
+        function _mostrarBannerRetry(visivel, tentativa) {
+            let banner = document.getElementById('retryBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'retryBanner';
+                banner.style.cssText = `
+                    position:fixed; bottom:1rem; left:50%; transform:translateX(-50%);
+                    background:#1F3D59; color:#fff; padding:.65rem 1.4rem;
+                    border-radius:30px; font-size:.82rem; font-weight:600;
+                    box-shadow:0 4px 16px rgba(0,0,0,.25); z-index:9998;
+                    display:flex; align-items:center; gap:.6rem; transition:opacity .3s;
+                `;
+                document.body.appendChild(banner);
+            }
+            if (visivel) {
+                banner.innerHTML = `<i class="fas fa-sync fa-spin"></i> Reconectando… (tentativa ${tentativa})`;
+                banner.style.opacity = '1';
+                banner.style.display = 'flex';
+            } else {
+                banner.style.opacity = '0';
+                setTimeout(() => { banner.style.display = 'none'; }, 400);
+            }
+        }
+
+        async function fetchComRetry(url, opts = {}) {
+            clearTimeout(_retryTimer);
+            while (_retryCount <= _RETRY_MAX) {
+                try {
+                    const resp = await fetch(url, { ...opts, signal: AbortSignal.timeout(15000) });
+                    if (resp.status === 503 || resp.status === 502 || resp.status === 504) {
+                        throw new Error(`HTTP ${resp.status}`);
+                    }
+                    const ct = resp.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        throw new Error('Resposta não-JSON (servidor reiniciando?)');
+                    }
+                    _retryCount = 0;
+                    _mostrarBannerRetry(false);
+                    return resp;
+                } catch (err) {
+                    _retryCount++;
+                    if (_retryCount > _RETRY_MAX) {
+                        _mostrarBannerRetry(false);
+                        throw err;
+                    }
+                    const delay = _retryDelay();
+                    _mostrarBannerRetry(true, _retryCount);
+                    console.warn(`[retry ${_retryCount}] ${err.message} — próxima em ${delay/1000}s`);
+                    await new Promise(res => { _retryTimer = setTimeout(res, delay); });
+                }
+            }
+        }
+
+        // Função para mostrar erro (apenas erros reais, não de conectividade)
+        function showError(message) {
+            // Ignorar erros de 503/rede — o banner de retry já cuida disso
+            if (/503|502|504|JSON|não-JSON|reiniciando/i.test(message)) return;
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+            console.error('Erro:', message);
+        }
+
+        // Função para ocultar erro
+        function hideError() {
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) errorDiv.style.display = 'none';
+        }
+
+        // Função para fechar modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Função para carregar dados principais
+        async function loadDashboardData() {
+            try {
+                const response = await fetchComRetry(buildUrlWithRange(API_URLS.data));
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Atualizar estatísticas
+                const stats = data.stats;
+                document.getElementById('fluxosInicializados').textContent = stats.atendimentos;
+                document.getElementById('leadsCadastrados').textContent = stats.leads;
+                document.getElementById('totalProspectos').textContent = stats.prospectos;
+                document.getElementById('vendasValidadas').textContent = stats.vendas;
+                
+                // Atualizar mudanças percentuais com diferenças
+                const formatarMudanca = (variacao, diff) => {
+                    const sinal = diff >= 0 ? '+' : '';
+                    return `${variacao} (${sinal}${diff})`;
+                };
+                
+                document.getElementById('fluxosChange').textContent = formatarMudanca(stats.atendimentos_variacao, stats.atendimentos_diff);
+                document.getElementById('leadsChange').textContent = formatarMudanca(stats.leads_variacao, stats.leads_diff);
+                document.getElementById('prospectosChange').textContent = formatarMudanca(stats.prospectos_variacao, stats.prospectos_diff);
+                document.getElementById('vendasChange').textContent = formatarMudanca(stats.vendas_variacao, stats.vendas_diff);
+                
+                // Atualizar classes de mudança baseadas na diferença
+                const atualizarClasseMudanca = (elementId, diff) => {
+                    const element = document.getElementById(elementId).parentElement;
+                    element.classList.remove('positive', 'negative', 'neutral');
+                    if (diff > 0) {
+                        element.classList.add('positive');
+                    } else if (diff < 0) {
+                        element.classList.add('negative');
+                    } else {
+                        element.classList.add('neutral');
+                    }
+                };
+                
+                atualizarClasseMudanca('fluxosChange', stats.atendimentos_diff);
+                atualizarClasseMudanca('leadsChange', stats.leads_diff);
+                atualizarClasseMudanca('prospectosChange', stats.prospectos_diff);
+                atualizarClasseMudanca('vendasChange', stats.vendas_diff);
+                
+                // Atualizar setas de conversão
+                const conversionArrows = document.querySelectorAll('.conversion-arrow');
+                if (conversionArrows.length >= 3) {
+                    conversionArrows[0].textContent = stats.taxa_atendimento_lead;
+                    conversionArrows[1].textContent = stats.taxa_lead_prospecto;
+                    conversionArrows[2].textContent = stats.taxa_prospecto_venda;
+                }
+                
+                hideError();
+            } catch (error) {
+                showError(`Erro ao carregar dados principais: ${error.message}`);
+            }
+        }
+
+        // Função para carregar dados dos gráficos
+        async function loadChartsData() {
+            try {
+                const response = await fetchComRetry(buildUrlWithRange(API_URLS.charts));
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Atualizar gráfico de tendências (padrão: Leads)
+                if (Array.isArray(data.leadsUltimos7Dias) && data.leadsUltimos7Dias.length > 0) {
+                    updateTrendsChart(data.leadsUltimos7Dias, 'Leads');
+                    setTrendsStatus('');
+                    setTrendsOverlay('');
+                } else {
+                    // Mostrar mensagem de vazio
+                    clearTrendsChart();
+                    setTrendsStatus('Sem dados para o período');
+                    setTrendsOverlay('Sem dados para exibir neste período.');
+                }
+                // Guardar séries para troca via cards
+                window.TRENDS_SERIES = {
+                    atendimentos: data.atendimentosUltimos7Dias,
+                    leads: data.leadsUltimos7Dias,
+                    prospectos: data.prospectosUltimos7Dias,
+                    vendas: data.vendasUltimos7Dias
+                };
+                
+                hideError();
+            } catch (error) {
+                setTrendsStatus(`Erro` , true, error.message);
+                setTrendsOverlay(`Erro ao carregar gráficos: ${error.message}`);
+                showError(`Erro ao carregar gráficos: ${error.message}`);
+            }
+        }
+
+
+        // Função para carregar últimas conversões
+        async function loadUltimasConversoes() {
+            try {
+                const response = await fetchComRetry(buildUrlWithRange(API_URLS.ultimasConversoes));
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Atualizar cards de conversões
+                updateConversaoCards(data.conversoes);
+                
+                hideError();
+            } catch (error) {
+                showError(`Erro ao carregar últimas conversões: ${error.message}`);
+            }
+        }
+
+        // Função para atualizar cards de conversões (leads que viraram clientes Hubsoft)
+        function updateConversaoCards(conversoes) {
+            const grid = document.getElementById('conversoesGrid');
+            const info = document.getElementById('conversoesInfo');
+            if (!grid) return;
+
+            grid.innerHTML = '';
+
+            if (!conversoes || conversoes.length === 0) {
+                grid.innerHTML = '<p style="color:#999;padding:1rem;">Nenhuma conversão encontrada.</p>';
+                if (info) info.innerHTML = '<span>Sem dados de conversão</span>';
+                return;
+            }
+
+            const URL_LEADS = '{% url "vendas_web:leads" %}';
+
+            conversoes.forEach(c => {
+                const badgeColor = c.ativo ? '#059669' : '#6b7280';
+                const badgeBg   = c.ativo ? '#d1fae5' : '#f3f4f6';
+                const badgeText = c.ativo ? 'Ativo' : 'Inativo';
+
+                const card = document.createElement('div');
+                card.className = 'conversion-card';
+                card.style.cursor = c.lead_id ? 'pointer' : 'default';
+                if (c.lead_id) {
+                    card.title = 'Clique para ver o histórico do lead';
+                    card.addEventListener('click', () => {
+                        window.open(`${URL_LEADS}?lead_id=${c.lead_id}`, '_blank');
+                    });
+                }
+
+                card.innerHTML = `
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+                        <div class="conversion-name" style="flex:1;">${c.nome}</div>
+                        <span style="background:${badgeBg};color:${badgeColor};font-size:.65rem;font-weight:700;padding:.2rem .5rem;border-radius:10px;white-space:nowrap;">${badgeText}</span>
+                    </div>
+                    <div class="conversion-separator"></div>
+                    <div class="conversion-details">
+                        <div class="conversion-field">
+                            <span class="field-label">Serviço:</span>
+                            <span class="field-value">${c.servico_nome}</span>
+                        </div>
+                        <div class="conversion-field">
+                            <span class="field-label">Status:</span>
+                            <span class="field-value">${c.servico_status}</span>
+                        </div>
+                        <div class="conversion-field">
+                            <span class="field-label">Valor:</span>
+                            <span class="field-value" style="color:#059669;font-weight:700;">${c.valor}</span>
+                        </div>
+                        <div class="conversion-field">
+                            <span class="field-label">Origem:</span>
+                            <span class="field-value">${c.origem}</span>
+                        </div>
+                        <div class="conversion-field">
+                            <span class="field-label">Sincronizado:</span>
+                            <span class="field-value">${formatTimeFirstBR(c.data_sync)}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            if (info) info.innerHTML = `<span>Exibindo os últimos ${conversoes.length} clientes convertidos</span>`;
+        }
+
+        function clearTrendsChart() {
+            const canvas = document.getElementById('trendsChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.clientWidth || 600;
+            const h = canvas.clientHeight || 300;
+            // Reset dimension to clear in all DPRs
+            canvas.width = w;
+            canvas.height = h;
+            ctx.clearRect(0, 0, w, h);
+        }
+
+        // Função para atualizar gráfico de tendências
+        function updateTrendsChart(data, label = 'Leads') {
+            const canvas = document.getElementById('trendsChart');
+            if (!canvas) return;
+            const labels = data.map(item => item.date);
+            const values = data.map(item => Number(item.count) || 0);
+            
+            // Forçar redimensionamento inicial
+            setTimeout(() => {
+            drawLineChartOnCanvas(canvas, labels, values, {
+                lineColor: '#0022fa',
+                fillColor: 'rgba(102, 126, 234, 0.12)'
+            });
+            // Configura eventos de hover e resize
+            setupCanvasInteractions(canvas);
+            }, 100);
+            
+            // Redesenhar após um pequeno delay para garantir que o container esteja renderizado
+            setTimeout(() => {
+                drawLineChartOnCanvas(canvas, labels, values, {
+                    lineColor: '#0022fa',
+                    fillColor: 'rgba(102, 126, 234, 0.12)'
+                });
+            }, 300);
+        }
+
+        function setupCanvasInteractions(canvas) {
+            const redraw = () => {
+                if (!canvas._lineChartState) return;
+                const { labels, values } = canvas._lineChartState;
+                // Re-desenha mantendo índice hover, se existir
+                const hoverIndex = canvas._hoverIndex;
+                drawLineChartOnCanvas(canvas, labels, values, {
+                    lineColor: '#0022fa',
+                    fillColor: 'rgba(102, 126, 234, 0.12)'
+                });
+                if (hoverIndex != null && canvas._lineChartState) {
+                    const ctx = canvas.getContext('2d');
+                    drawHover(canvas, ctx, hoverIndex, canvas._lineChartState);
+                }
+            };
+
+            // Adicionar listener de resize para redimensionar o gráfico
+            const resizeObserver = new ResizeObserver(() => {
+                // Debounce para evitar muitas redraws
+                clearTimeout(canvas._resizeTimeout);
+                canvas._resizeTimeout = setTimeout(redraw, 100);
+            });
+            
+            if (canvas.parentElement) {
+                resizeObserver.observe(canvas.parentElement);
+            }
+
+            // Listener de resize da janela
+            const handleWindowResize = () => {
+                clearTimeout(canvas._resizeTimeout);
+                canvas._resizeTimeout = setTimeout(redraw, 100);
+            };
+            
+            window.addEventListener('resize', handleWindowResize);
+            
+            // Limpar listeners quando o canvas for removido
+            canvas._cleanup = () => {
+                resizeObserver.disconnect();
+                window.removeEventListener('resize', handleWindowResize);
+                clearTimeout(canvas._resizeTimeout);
+            };
+
+            // Função para obter coordenadas do evento (mouse ou touch)
+            const getEventCoordinates = (evt) => {
+                const rect = canvas.getBoundingClientRect();
+                if (evt.touches && evt.touches.length > 0) {
+                    // Touch event
+                    return {
+                        x: evt.touches[0].clientX - rect.left,
+                        y: evt.touches[0].clientY - rect.top
+                    };
+                } else {
+                    // Mouse event
+                    return {
+                        x: evt.clientX - rect.left,
+                        y: evt.clientY - rect.top
+                    };
+                }
+            };
+
+            const handleMove = (evt) => {
+                const { x } = getEventCoordinates(evt);
+                const state = canvas._lineChartState;
+                if (!state) return;
+                const { padding, xStep, innerW, labels } = state;
+                if (x < padding.left || x > padding.left + innerW) {
+                    if (canvas._hoverIndex != null) {
+                        canvas._hoverIndex = null;
+                        redraw();
+                    }
+                    return;
+                }
+                const idx = Math.round((x - padding.left) / xStep);
+                const clamped = Math.max(0, Math.min(labels.length - 1, idx));
+                if (clamped !== canvas._hoverIndex) {
+                    canvas._hoverIndex = clamped;
+                    redraw();
+                }
+            };
+
+            const handleLeave = () => {
+                if (canvas._hoverIndex != null) {
+                    canvas._hoverIndex = null;
+                    redraw();
+                }
+            };
+
+            // Evita múltiplos binds
+            if (!canvas._handlersBound) {
+                // Mouse events
+                canvas.addEventListener('mousemove', handleMove);
+                canvas.addEventListener('mouseleave', handleLeave);
+                
+                // Touch events para mobile
+                canvas.addEventListener('touchstart', handleMove, { passive: true });
+                canvas.addEventListener('touchmove', handleMove, { passive: true });
+                canvas.addEventListener('touchend', handleLeave, { passive: true });
+                
+                window.addEventListener('resize', redraw);
+                canvas._handlersBound = true;
+            }
+        }
+
+        function setTrendsStatus(message, isError = false, tooltip = '') {
+            const el = document.getElementById('trendsStatus');
+            if (!el) return;
+            el.title = tooltip || message || '';
+            if (!message) {
+                el.style.visibility = 'hidden';
+                el.classList.remove('error');
+            } else {
+                el.style.visibility = 'visible';
+                if (isError) {
+                    el.classList.add('error');
+                } else {
+                    el.classList.remove('error');
+                }
+            }
+        }
+
+        function setTrendsOverlay(message) {
+            const overlay = document.getElementById('trendsOverlay');
+            if (!overlay) return;
+            if (message) {
+                overlay.textContent = message;
+                overlay.style.display = 'flex';
+            } else {
+                overlay.textContent = '';
+                overlay.style.display = 'none';
+            }
+        }
+
+        
+
+        // Função para atualizar todos os dados
+        async function refreshDashboard() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                const originalText = refreshBtn.innerHTML;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+                await Promise.allSettled([loadDashboardData(), loadChartsData(), loadUltimasConversoes()]);
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = originalText;
+            } else {
+                await Promise.allSettled([loadDashboardData(), loadChartsData(), loadUltimasConversoes()]);
+            }
+        }
+
+        // Função principal de inicialização
+        async function initDashboard() {
+            if (!SELECTED_START || !SELECTED_END) {
+                initializeDateRangeDefaults();
+            }
+
+            // Mostrar conteúdo imediatamente (sem esperar dados)
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+
+            // Carregar os dados em paralelo — cada função tem retry interno
+            await Promise.allSettled([
+                loadDashboardData(),
+                loadChartsData(),
+                loadUltimasConversoes()
+            ]);
+        }
+
+        // Função para forçar redimensionamento de todos os gráficos
+        function forceChartResize() {
+            const canvas = document.getElementById('trendsChart');
+            if (canvas && canvas._lineChartState) {
+                const { labels, values } = canvas._lineChartState;
+                drawLineChartOnCanvas(canvas, labels, values, {
+                    lineColor: '#0022fa',
+                    fillColor: 'rgba(102, 126, 234, 0.12)'
+                });
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            initDashboard();
+
+            const refresh = document.getElementById('refreshBtn');
+            if (refresh) {
+                refresh.addEventListener('click', refreshDashboard);
+            }
+
+            setTimeout(forceChartResize, 500);
+            setTimeout(forceChartResize, 1000);
+
+            setupMetricCards();
+            setupDateRangeControls();
+
+            setInterval(refreshDashboard, 30000);
+        });
+
+        function setupMetricCards() {
+            const cards = document.querySelectorAll('.stats-grid .stat-card');
+            const labelsMap = ['ATENDIMENTOS', 'LEADS', 'PROSPECTOS', 'VENDAS'];
+            const seriesKey = ['atendimentos', 'leads', 'prospectos', 'vendas'];
+            cards.forEach((card, idx) => {
+                card.addEventListener('click', () => {
+                    if (!window.TRENDS_SERIES) return;
+                    // Alternar estado ativo nos cards
+                    cards.forEach(c => c.classList.remove('highlighted'));
+                    card.classList.add('highlighted');
+                    const key = seriesKey[idx];
+                    const label = labelsMap[idx];
+                    const series = window.TRENDS_SERIES[key] || [];
+                    updateTrendsChart(series, label);
+                });
+            });
+        }
+
+        
+
+        // Adicionar animações aos elementos quando eles entram na viewport
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observar todos os elementos com animação
+        document.addEventListener('DOMContentLoaded', () => {
+            const animatedElements = document.querySelectorAll('.fade-in-up, .slide-in-right');
+            animatedElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+                observer.observe(el);
+            });
+        });
+
+        // Redimensionar gráficos quando a janela carrega completamente
+        window.addEventListener('load', () => {
+            setTimeout(forceChartResize, 200);
+        });
+
+
+    </script>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Notificações — Megalink One{% endblock %}
+
+{% block custom_css %}
+<style>
+.nc-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+.nc-head h1 { font-size:21px; font-weight:800; letter-spacing:-.02em; }
+.nc-head .sub { font-size:13px; color:var(--text-2); margin-top:3px; }
+.nc-actions { display:flex; gap:8px; }
+
+.nc-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:20px; }
+.nc-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; display:flex; align-items:center; gap:13px; }
+.nc-stat .ic { width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px; }
+.nc-stat .num { font-size:21px; font-weight:800; line-height:1; }
+.nc-stat .lbl { font-size:12px; color:var(--text-3); margin-top:3px; }
+
+.nc-bar { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.nc-chip { padding:7px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text-2); }
+.nc-chip.on { background:var(--primary-soft); border-color:var(--primary); color:var(--primary); }
+.nc-search { flex:1; min-width:200px; position:relative; }
+.nc-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-3); font-size:12px; }
+.nc-search input { width:100%; padding:9px 12px 9px 33px; border:1px solid var(--border); border-radius:10px; font-size:13px; font-family:var(--font); outline:none; background:var(--surface); }
+.nc-search input:focus { border-color:var(--primary); }
+
+.nc-group-label { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); margin:18px 4px 8px; }
+.nc-item { display:flex; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:15px 17px; margin-bottom:8px; cursor:pointer; transition:box-shadow .12s, border-color .12s; position:relative; }
+.nc-item:hover { box-shadow:var(--shadow); border-color:#d8dbe8; }
+.nc-item.unread { border-left:3px solid var(--primary); background:linear-gradient(90deg, var(--primary-soft) 0%, var(--surface) 14%); }
+.nc-item .ic { width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--primary-soft);color:var(--primary); }
+.nc-item .tit { font-size:13.5px; font-weight:650; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.nc-item .msg { font-size:12.8px; color:var(--text-2); margin-top:3px; line-height:1.5; }
+.nc-item .meta { font-size:11.5px; color:var(--text-3); margin-top:6px; display:flex; gap:12px; }
+.nc-pill { font-size:10px; font-weight:700; padding:2px 8px; border-radius:9px; text-transform:uppercase; letter-spacing:.04em; }
+.nc-pill.urgente { background:#fef2f2; color:var(--danger); }
+.nc-pill.alta { background:#fff7ed; color:var(--warning); }
+.nc-pill.normal { background:var(--surface-2); color:var(--text-3); }
+.nc-pill.baixa { background:var(--surface-2); color:var(--text-3); }
+.nc-dot { width:9px; height:9px; border-radius:50%; background:var(--primary); position:absolute; top:17px; right:15px; }
+
+.nc-empty { text-align:center; padding:70px 20px; color:var(--text-3); }
+.nc-empty i { font-size:40px; opacity:.35; display:block; margin-bottom:14px; }
+.nc-more { display:block; margin:18px auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nc-head">
+    <div>
+        <h1><i class="fas fa-bell" style="color:var(--primary);margin-right:9px;"></i>Notificações</h1>
+        <div class="sub">Tudo que aconteceu na sua operação, em um só lugar.</div>
+    </div>
+    <div class="nc-actions">
+        <button class="btn-primary-v2" onclick="marcarTodas()">
+            <i class="fas fa-check-double" style="margin-right:6px;"></i>Marcar todas como lidas
+        </button>
+    </div>
+</div>
+
+<div class="nc-stats">
+    <div class="nc-stat">
+        <div class="ic" style="background:var(--primary-soft);color:var(--primary);"><i class="fas fa-envelope"></i></div>
+        <div><div class="num" id="stTotal">—</div><div class="lbl">Total</div></div>
+    </div>
+    <div class="nc-stat">
+        <div class="ic" style="background:#fff7ed;color:var(--warning);"><i class="fas fa-envelope-open"></i></div>
+        <div><div class="num" id="stNaoLidas">—</div><div class="lbl">Não lidas</div></div>
+    </div>
+</div>
+
+<div class="nc-bar">
+    <button class="nc-chip on" data-filtro="todas">Todas</button>
+    <button class="nc-chip" data-filtro="nao_lidas">Não lidas</button>
+    <button class="nc-chip" data-filtro="lidas">Lidas</button>
+    <button class="nc-chip" data-prio="urgente" style="color:var(--danger);">Urgentes</button>
+    <div class="nc-search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" id="ncBusca" placeholder="Buscar por título ou mensagem…">
+    </div>
+</div>
+
+<div id="ncLista"></div>
+<button class="btn-primary-v2 nc-more" id="ncMais" style="display:none;" onclick="carregar(false)">Carregar mais</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let filtro = 'todas', prio = '', page = 1, busca = '';
+
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+
+function tempoRelativo(iso) {
+    const d = new Date(iso), agora = new Date(), s = (agora - d) / 1000;
+    if (s < 3600) return Math.max(1, Math.round(s/60)) + ' min atrás';
+    if (s < 86400) return Math.round(s/3600) + ' h atrás';
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+}
+function grupoData(iso) {
+    const d = new Date(iso), hoje = new Date();
+    const ontem = new Date(hoje); ontem.setDate(hoje.getDate()-1);
+    if (d.toDateString() === hoje.toDateString()) return 'Hoje';
+    if (d.toDateString() === ontem.toDateString()) return 'Ontem';
+    return 'Anteriores';
+}
+const ICONES = {lead_novo:'fa-user-plus', venda:'fa-cart-shopping', upgrade:'fa-arrow-trend-up', instalacao:'fa-screwdriver-wrench', default:'fa-bell'};
+
+function render(itens, append) {
+    const el = document.getElementById('ncLista');
+    if (!append) el.innerHTML = '';
+    if (!itens.length && !append) {
+        el.innerHTML = '<div class="nc-empty"><i class="fas fa-bell-slash"></i>Nenhuma notificação encontrada.</div>';
+        return;
+    }
+    let ultimoGrupo = append ? (el.dataset.ultimoGrupo || '') : '';
+    itens.forEach(n => {
+        const g = grupoData(n.data_criacao);
+        if (g !== ultimoGrupo) {
+            el.insertAdjacentHTML('beforeend', `<div class="nc-group-label">${g}</div>`);
+            ultimoGrupo = g;
+        }
+        const ic = ICONES[n.tipo_codigo] || ICONES.default;
+        el.insertAdjacentHTML('beforeend', `
+        <div class="nc-item ${n.lida ? '' : 'unread'}" onclick="abrir(${n.id}, this)">
+            <div class="ic"><i class="fas ${ic}"></i></div>
+            <div style="flex:1;">
+                <div class="tit">${n.titulo || 'Notificação'}
+                    <span class="nc-pill ${n.prioridade}">${n.prioridade}</span>
+                </div>
+                <div class="msg">${n.mensagem || ''}</div>
+                <div class="meta">
+                    <span><i class="fas fa-tag" style="margin-right:4px;"></i>${n.tipo || '—'}</span>
+                    <span><i class="far fa-clock" style="margin-right:4px;"></i>${tempoRelativo(n.data_criacao)}</span>
+                </div>
+            </div>
+            ${n.lida ? '' : '<div class="nc-dot"></div>'}
+        </div>`);
+    });
+    el.dataset.ultimoGrupo = ultimoGrupo;
+}
+
+function carregar(reset = true) {
+    if (reset) page = 1; else page++;
+    const p = new URLSearchParams({filtro, prioridade: prio, q: busca, page, per_page: 15});
+    fetch(`{% url 'vendas_web:api_notif_listar_v2' %}?` + p)
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) return;
+            render(d.notificacoes, !reset);
+            document.getElementById('stTotal').textContent = d.total;
+            document.getElementById('stNaoLidas').textContent = d.nao_lidas;
+            document.getElementById('ncMais').style.display = d.tem_mais ? 'block' : 'none';
+            const badge = document.getElementById('notificationBadge');
+            if (badge) { badge.style.display = d.nao_lidas > 0 ? 'flex' : 'none'; badge.textContent = d.nao_lidas; }
+        });
+}
+
+function abrir(id, el) {
+    fetch(`/api/v2/notificacoes/${id}/lida/`, {method:'POST', headers:{'X-CSRFToken': getCookie('csrftoken')}})
+        .then(r => r.json())
+        .then(d => {
+            el.classList.remove('unread');
+            const dot = el.querySelector('.nc-dot'); if (dot) dot.remove();
+            document.getElementById('stNaoLidas').textContent = d.nao_lidas;
+            const badge = document.getElementById('notificationBadge');
+            if (badge) { badge.style.display = d.nao_lidas > 0 ? 'flex' : 'none'; badge.textContent = d.nao_lidas; }
+        });
+}
+
+function marcarTodas() {
+    fetch(`{% url 'vendas_web:api_notif_marcar_todas' %}`, {method:'POST', headers:{'X-CSRFToken': getCookie('csrftoken')}})
+        .then(r => r.json()).then(() => carregar(true));
+}
+
+document.querySelectorAll('.nc-chip').forEach(c => c.addEventListener('click', () => {
+    if (c.dataset.filtro) {
+        filtro = c.dataset.filtro; prio = '';
+        document.querySelectorAll('.nc-chip').forEach(x => x.classList.remove('on'));
+        c.classList.add('on');
+    } else if (c.dataset.prio) {
+        prio = (prio === c.dataset.prio) ? '' : c.dataset.prio;
+        c.classList.toggle('on', !!prio);
+    }
+    carregar(true);
+}));
+
+let buscaTimer;
+document.getElementById('ncBusca').addEventListener('input', (e) => {
+    clearTimeout(buscaTimer);
+    buscaTimer = setTimeout(() => { busca = e.target.value.trim(); carregar(true); }, 350);
+});
+
+carregar(true);
+</script>
+{% endblock %}

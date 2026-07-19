@@ -1,0 +1,136 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Como o Robô Atende no WhatsApp — Megalink One{% endblock %}
+{% block custom_css %}{% include 'vendas_web/ajuda/_estilos.html' %}{% endblock %}
+
+{% block content %}
+<div class="aj-wrap">
+    {% include 'vendas_web/ajuda/_nav.html' %}
+
+    <div class="aj-body">
+        <h2><i class="fas fa-robot" style="color:var(--primary);margin-right:9px;"></i>Como o Robô Atende no WhatsApp</h2>
+        <p class="lead">Referência para todos os perfis: o que acontece nos bastidores quando o robô
+           atende um cliente, e quando um humano precisa entrar.</p>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-robot"></i> A jornada no WhatsApp</h3>
+            <p>Todo contato começa com o robô pedindo o <b>CPF</b>. A partir daí a conversa se divide:</p>
+            <div class="aj-flow">
+                <span class="aj-step">Cliente manda "oi"</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">Robô pede CPF</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">É cliente? → Menu</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">Não é? → Venda nova</span>
+            </div>
+            <ul style="margin-top:12px;">
+                <li><b>Lead novo</b> — o robô coleta nome, endereço (com CEP automático), plano, vencimento,
+                    fotos de documento e agenda a instalação. Tudo guiado, com validação por IA. Isso
+                    alimenta o pipeline de <b>Aquisição</b> no CRM.</li>
+                <li><b>Cliente existente</b> — recebe o menu: <i>1) novo serviço · 2) upgrade de plano ·
+                    3) acompanhar instalação · 4) atendente · 5) finalizar</i>. A opção <b>upgrade</b> só
+                    aparece se o cliente já tem algum serviço habilitado.</li>
+            </ul>
+            <div class="aj-tip">O robô <b>não</b> cadastra Indicações — esse pipeline é sempre iniciado por
+            um Operador, manualmente, dentro do CRM (veja o <b>Guia do Operador</b>).</div>
+            <ul style="margin-top:10px;">
+                <li><b>Cliente inativo/cancelado</b> — se o CPF já teve cadastro na Megalink (mesmo
+                    cancelado), o robô reconhece e segue o fluxo de cliente existente: a pessoa pode
+                    contratar normalmente.</li>
+                <li><b>Cobertura (viabilidade)</b> — ao confirmar o endereço, o robô checa se a <b>cidade é
+                    atendida</b>. Fora da área de cobertura (ou imóvel <b>empresarial</b>), a conversa é
+                    transferida para um atendente — o robô não segue vendendo.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-clock"></i> Se o cliente para de responder (recontato)</h3>
+            <p>Quando o cliente some no meio da conversa, o robô <b>não encerra de primeira</b>: ele tenta
+               reengajar com até <b>3 mensagens diferentes e escalonadas</b> (personalizadas com o nome),
+               sem repetir a pergunta. Se mesmo assim não houver resposta, envia <b>uma</b> despedida e
+               <b>pausa em silêncio</b> — o atendimento fica aguardando o cliente voltar.</p>
+            <div class="aj-flow">
+                <span class="aj-step">Silêncio</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">3 mensagens de reengajamento</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">Despedida (1x)</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">Pausa aguardando</span>
+            </div>
+            <div class="aj-tip">Se o cliente responder <b>a pergunta pendente</b> durante o recontato
+            (ex.: mandar a data de nascimento), a resposta é <b>aproveitada</b> — o robô não pergunta de
+            novo. Os textos dessas mensagens são editáveis em <b>Mensagens do Robô</b>.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-rotate-left"></i> Se o cliente volta no meio do cadastro (retomada)</h3>
+            <p>Quem tinha um cadastro <b>pela metade</b> e manda "oi" de novo não cai no meio do formulário:
+               o robô pergunta como a pessoa quer seguir:</p>
+            <ul>
+                <li><b>1) Continuar de onde paramos</b> — retoma na pergunta pendente, com tudo salvo.</li>
+                <li><b>2) Recomeçar do início</b> — zera os dados (mantém o CPF) e recomeça do nome.</li>
+                <li><b>3) É para outro CPF</b> — zera tudo e recolhe o CPF (outra pessoa/cadastro).</li>
+            </ul>
+            <p>Para <b>clientes já cadastrados</b>, a pergunta equivalente é o <i>"é esse CPF ou outro?"</i>
+               antes do menu.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-arrow-trend-up"></i> Upgrade de plano (opção 2)</h3>
+            <p>O robô mostra os <b>serviços ativos</b> do cliente, os <b>planos disponíveis</b> (sem o atual),
+               pede confirmação e registra a solicitação. Dali em diante:</p>
+            <div class="aj-flow">
+                <span class="aj-step">Cliente confirma</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">Solicitação registrada</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">Robô executa no HubSoft (≤5 min)</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">Migração aplicada ✓</span>
+            </div>
+            <div class="aj-tip">A migração no HubSoft é feita por uma automação própria — API interna
+            rápida, com o antigo processo manual como reserva se algo mudar do lado do HubSoft.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-plus-circle"></i> Novo serviço (opção 1)</h3>
+            <p>Coleta guiada de endereço, plano, documentos e agendamento. Ao finalizar, acontecem
+               <b>duas automações em sequência</b>:</p>
+            <ol>
+                <li><b>HubSoft</b> — robô cria o novo serviço no cadastro do cliente (≤2 min), usando o
+                    <b>endereço que o cliente informou</b> para esse serviço (não o endereço cadastral).</li>
+                <li><b>Matrix</b> — o sistema abre o <b>Atendimento + OS de instalação</b> na data/turno
+                    escolhidos.</li>
+            </ol>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-eye"></i> Onde acompanhar</h3>
+            <ul>
+                <li><b>CRM → abas Novo Serviço / Upgrade</b> — cards andam sozinhos conforme o progresso
+                    (Coletando → Processando → Concluído/Falha).</li>
+                <li><b>Admin → Upgrades de Plano / Novos Serviços</b> — visão técnica com status do
+                    HubSoft, OS do Matrix e mensagens de erro.</li>
+                <li><b>Notificações</b> — o sino e a Central avisam os eventos importantes, para quem tem
+                    acesso àquele pipeline.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-hand"></i> Quando o humano entra</h3>
+            <ul>
+                <li><b>Transbordo</b> — cliente escolheu "Falar com Atendimento", o robô não conseguiu
+                    ajudar, ou não havia opções (ex.: upgrade sem serviço ativo). O lead fica marcado
+                    para atendimento humano.</li>
+                <li><b>Falha de automação</b> — card em <b>Falha</b> no CRM ou status <i>Falha</i> no Admin:
+                    o robô tentou e não conseguiu aplicar no HubSoft. Faça o processo manualmente no
+                    HubSoft e registre nota na oportunidade.</li>
+                <li><b>Cliente "preso"</b> — se uma conversa travar, o cliente pode mandar "oi" que o robô
+                    reapresenta o menu (fluxos abandonados são cancelados com segurança).</li>
+            </ul>
+            <div class="aj-warn"><b>Nunca</b> edite diretamente uma solicitação <i>Pendente</i> no Admin —
+            o robô pode processá-la a qualquer momento. Em dúvida, fale com o gestor.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-bell"></i> Notificações</h3>
+            <p>Use a <b>Central de Notificações</b> (menu lateral) com o filtro <b>Urgentes</b> no início
+               do turno — falhas de automação chegam para quem tem acesso a Desempenho (gerentes e
+               administradores). Marque como lida ao tratar, assim o time sabe o que ainda está pendente.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

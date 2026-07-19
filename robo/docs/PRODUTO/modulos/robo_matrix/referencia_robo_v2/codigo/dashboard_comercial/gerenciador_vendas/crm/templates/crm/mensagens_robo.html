@@ -1,0 +1,165 @@
+{% extends 'vendas_web/base.html' %}
+{% block page_title %}Mensagens do Robô{% endblock %}
+
+{% block extra_css %}
+<style>
+  .mr-wrap { padding:20px 24px; max-width:960px; }
+  .mr-title { font-size:22px; font-weight:800; color:#0b2a4a; }
+  .mr-title i { color:#6d28d9; }
+  .mr-sub { color:#6b7280; font-size:13px; margin:4px 0 14px; }
+
+  .mr-help { background:#f5f3ff; border:1px solid #ede9fe; border-radius:12px; padding:12px 15px;
+             color:#5b21b6; font-size:12.5px; margin-bottom:14px; }
+  .mr-help code { background:#ede9fe; padding:1px 5px; border-radius:5px; }
+
+  .mr-busca { position:relative; margin-bottom:16px; }
+  .mr-busca i { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:#9ca3af; }
+  .mr-busca input { width:100%; box-sizing:border-box; padding:11px 13px 11px 36px;
+    border:1px solid #d1d5db; border-radius:11px; font-size:14px; }
+  .mr-busca input:focus { outline:none; border-color:#6d28d9; box-shadow:0 0 0 3px #6d28d922; }
+
+  .mr-grupo { background:#fff; border:1px solid #eef0f4; border-radius:14px; margin-bottom:12px; overflow:hidden; }
+  .mr-grupo-head { display:flex; align-items:center; gap:10px; padding:14px 18px; cursor:pointer; user-select:none; }
+  .mr-grupo-head:hover { background:#fafafa; }
+  .mr-grupo-head .nm { font-weight:800; color:#0b2a4a; font-size:15px; flex:1; }
+  .mr-grupo-head .qt { background:#ede9fe; color:#6d28d9; border-radius:999px; padding:2px 10px;
+    font-size:12px; font-weight:800; }
+  .mr-grupo-head .seta { color:#9ca3af; transition:transform .18s; }
+  .mr-grupo.aberto .seta { transform:rotate(90deg); }
+  .mr-grupo-corpo { display:none; border-top:1px solid #f3f4f6; padding:6px 18px 14px; }
+  .mr-grupo.aberto .mr-grupo-corpo { display:block; }
+
+  .mr-card { padding:14px 0; border-bottom:1px dashed #eef0f4; }
+  .mr-card:last-child { border-bottom:none; }
+  .mr-nm { font-weight:800; color:#0b2a4a; font-size:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .mr-badge-edit { background:#fef3c7; color:#b45309; font-size:10.5px; font-weight:800;
+    border-radius:999px; padding:2px 8px; }
+  .mr-desc { color:#6b7280; font-size:12px; margin:3px 0 8px; }
+  .mr-fieldlabel { font-size:12px; font-weight:700; color:#6d28d9; margin:8px 0 4px; }
+  .mr-ph { font-size:11px; color:#7c3aed; background:#f5f3ff; border-radius:6px; padding:2px 7px; }
+  .mr-card textarea { width:100%; min-height:64px; padding:10px 13px; border:1px solid #d1d5db;
+    border-radius:10px; font-size:13px; font-family:inherit; box-sizing:border-box; resize:vertical; line-height:1.5; }
+  .mr-card textarea:focus { border-color:#6d28d9; outline:none; box-shadow:0 0 0 3px #6d28d922; }
+  .mr-foot { display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap; }
+  .mr-btn { background:#6d28d9; color:#fff; border:none; border-radius:9px; padding:7px 15px;
+    font-weight:700; font-size:12.5px; cursor:pointer; }
+  .mr-btn:hover { opacity:.92; }
+  .mr-btn-ghost { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; border-radius:9px;
+    padding:7px 13px; font-weight:700; font-size:12.5px; cursor:pointer; }
+  .mr-btn-ghost:hover { background:#ede9fe; color:#6d28d9; }
+  .mr-toggle { display:flex; align-items:center; gap:6px; font-size:12px; color:#6b7280; }
+  .mr-status { font-size:13px; font-weight:600; }
+  .mr-vazio { text-align:center; color:#9ca3af; padding:30px; font-size:13.5px; display:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mr-wrap">
+  <div class="mr-title"><i class="fas fa-robot"></i> Mensagens do Robô</div>
+  <p class="mr-sub">Tudo que o robô escreve para o cliente no WhatsApp, organizado pela ordem do
+     atendimento. As alterações valem <b>na hora</b>, sem reiniciar nada.</p>
+
+  <div class="mr-help">
+    <b>Dicas:</b> use <code>*texto*</code> para <b>negrito</b> e <code>##1f680##</code> para emojis
+    (o padrão do canal — emoji direto vira "?"). Onde houver <span class="mr-ph">placeholder</span>
+    (ex.: <code>{nome}</code>), mantenha-o no texto. Mensagens com opções numeradas precisam manter
+    os números (1, 2, 3…). O botão <b>Restaurar padrão</b> volta ao texto original de fábrica.
+  </div>
+
+  <div class="mr-busca"><i class="fas fa-search"></i>
+    <input id="busca" type="text" placeholder="Buscar mensagem… (ex.: plano, CPF, recontato, despedida)" oninput="filtrar()">
+  </div>
+
+  {% for g in grupos %}
+  <div class="mr-grupo{% if forloop.first %} aberto{% endif %}" data-grupo>
+    <div class="mr-grupo-head" onclick="this.parentElement.classList.toggle('aberto')">
+      <i class="fas fa-chevron-right seta"></i>
+      <span class="nm">{{ g.rotulo }}</span>
+      <span class="qt">{{ g.itens|length }}</span>
+    </div>
+    <div class="mr-grupo-corpo">
+      {% for it in g.itens %}
+      <div class="mr-card" data-busca="{{ it.titulo|lower }} {{ it.descricao|lower }}">
+        <div class="mr-nm">{{ it.titulo }}
+          {% for c in it.campos %}{% if c.editada %}<span class="mr-badge-edit">editada</span>{% endif %}{% endfor %}
+        </div>
+        {% if it.descricao %}<p class="mr-desc">{{ it.descricao }}</p>{% endif %}
+        {% for c in it.campos %}
+          {% if c.label %}<div class="mr-fieldlabel">{{ c.label }}{% if c.placeholder %} · <span class="mr-ph">{{ c.placeholder }}</span>{% endif %}</div>
+          {% elif c.placeholder %}<div class="mr-fieldlabel"><span class="mr-ph">{{ c.placeholder }}</span></div>{% endif %}
+          <textarea id="{{ c.id }}" data-fonte="{{ c.fonte }}"
+                    {% if c.fonte == 'mensagem' %}data-chave="{{ c.chave }}"{% else %}data-qid="{{ c.question_id }}" data-campo="{{ c.campo }}"{% endif %}
+                    {% if 'gerenciar_config' not in cap %}readonly{% endif %}>{{ c.texto }}</textarea>
+          {% if c.texto_padrao %}<script type="text/plain" id="pad__{{ c.id }}">{{ c.texto_padrao }}</script>{% endif %}
+          <div class="mr-foot">
+            {% if 'gerenciar_config' in cap %}
+            <button class="mr-btn" onclick="salvar('{{ c.id }}')"><i class="fas fa-save"></i> Salvar</button>
+            {% if c.texto_padrao %}<button class="mr-btn-ghost" onclick="restaurar('{{ c.id }}')"><i class="fas fa-rotate-left"></i> Restaurar padrão</button>{% endif %}
+            {% if c.tem_ativo %}<label class="mr-toggle"><input type="checkbox" id="at__{{ c.id }}" {% if c.ativo %}checked{% endif %}> ativa</label>{% endif %}
+            {% endif %}
+            <span class="mr-status" id="st__{{ c.id }}"></span>
+          </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <div class="mr-vazio" id="vazio">Nenhuma mensagem encontrada para essa busca.</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function filtrar(){
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  let total = 0;
+  document.querySelectorAll('[data-grupo]').forEach(g => {
+    let visiveis = 0;
+    g.querySelectorAll('.mr-card').forEach(card => {
+      const alvo = (card.dataset.busca || '') + ' ' +
+                   (card.querySelector('textarea')?.value || '').toLowerCase();
+      const mostra = !termo || alvo.includes(termo);
+      card.style.display = mostra ? '' : 'none';
+      if (mostra) visiveis++;
+    });
+    g.style.display = visiveis ? '' : 'none';
+    if (termo && visiveis) g.classList.add('aberto');
+    total += visiveis;
+  });
+  document.getElementById('vazio').style.display = total ? 'none' : 'block';
+}
+
+function restaurar(id){
+  const pad = document.getElementById('pad__'+id);
+  if (!pad) return;
+  document.getElementById(id).value = pad.textContent;
+  salvar(id);
+}
+
+async function salvar(id){
+  const ta = document.getElementById(id);
+  const st = document.getElementById('st__'+id);
+  const payload = { fonte: ta.dataset.fonte, texto: ta.value };
+  if (ta.dataset.fonte === 'mensagem') {
+    payload.chave = ta.dataset.chave;
+    const at = document.getElementById('at__'+id);
+    payload.ativo = at ? at.checked : true;
+  } else {
+    payload.question_id = ta.dataset.qid;
+    payload.campo = ta.dataset.campo;
+  }
+  st.style.color='#6b7280'; st.textContent='Salvando…';
+  try {
+    const r = await fetch("{% url 'crm:api_mensagem_robo_salvar' %}", {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify(payload)});
+    const d = await r.json().catch(()=>({ok:false,erro:'Erro no servidor.'}));
+    if(d.ok){ st.style.color='#059669'; st.textContent='✓ Salvo — já valendo no robô'; setTimeout(()=>st.textContent='',3000); }
+    else { st.style.color='#dc3545'; st.textContent=d.erro||'Erro ao salvar.'; }
+  } catch(e){ st.style.color='#dc3545'; st.textContent='Erro de conexão.'; }
+}
+</script>
+{% endblock %}

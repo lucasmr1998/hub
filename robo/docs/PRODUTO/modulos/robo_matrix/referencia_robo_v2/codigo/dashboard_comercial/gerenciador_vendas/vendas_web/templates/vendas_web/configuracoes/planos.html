@@ -1,0 +1,1084 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Planos de Internet - MegaLink{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .breadcrumb a {
+        color: #6b7280;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .breadcrumb a:hover {
+        color: #1F3D59;
+    }
+
+    .breadcrumb-separator {
+        color: #9ca3af;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-title-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-title {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+.btn-primary {
+    background: #1F3D59;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2c5282;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(31, 61, 89, 0.3);
+}
+
+.btn-secondary {
+        background: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+        background: #4b5563;
+        transform: translateY(-1px);
+    }
+
+    .filters-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .filters-grid {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-input-wrapper {
+        flex: 1;
+        min-width: 300px;
+    }
+
+    .filter-input, .filter-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: #1F3D59;
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.1);
+    }
+
+    .filter-input::placeholder {
+        color: #9ca3af;
+    }
+
+    /* Loading State */
+    .loading-container {
+        padding: 3rem;
+        text-align: center;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #1F3D59;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Planos Grid */
+    .planos-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        background: white;
+        border-radius: 12px;
+        border: 2px dashed #e5e7eb;
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-title {
+        color: #6b7280;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-text {
+        color: #9ca3af;
+        font-size: 0.95rem;
+        margin-bottom: 2rem;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Plano Card */
+.plano-card {
+    background: white;
+    border-radius: 12px;
+        border: 2px solid rgba(31, 61, 89, 0.3);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.plano-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(31, 61, 89, 0.2);
+        border-color: rgba(31, 61, 89, 0.6);
+}
+
+.plano-card.destaque {
+    border-color: #1F3D59;
+        border-width: 2px;
+        box-shadow: 0 2px 8px rgba(31, 61, 89, 0.25);
+    }
+
+    .plano-card.destaque:hover {
+        border-color: #2c5282;
+        box-shadow: 0 12px 24px rgba(44, 82, 130, 0.3);
+}
+
+.plano-header {
+        padding: 2.5rem 1rem 1rem 1rem;
+    background: linear-gradient(135deg, #1F3D59, #2c5282);
+    color: white;
+    position: relative;
+        min-height: 120px;
+}
+
+.plano-header.destaque::after {
+    content: "⭐ DESTAQUE";
+    position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: #fbbf24;
+        color: #1f2937;
+        padding: 0.2rem 0.6rem;
+        border-radius: 10px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        z-index: 10;
+    }
+
+    .status-badge {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 10px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        z-index: 10;
+    }
+
+    .status-ativo {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-inativo {
+        background: #fee2e2;
+        color: #991b1b;
+}
+
+.plano-nome {
+        font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+        line-height: 1.3;
+}
+
+.plano-preco {
+        font-size: 1.6rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.plano-preco small {
+        font-size: 0.75rem;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.plano-body {
+        padding: 1.25rem;
+}
+
+.plano-velocidades {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+}
+
+.velocidade-item {
+    text-align: center;
+        padding: 0.75rem;
+        background: #f9fafb;
+    border-radius: 8px;
+        border: 1px solid #e5e7eb;
+}
+
+.velocidade-valor {
+        font-size: 1.3rem;
+    font-weight: 700;
+    color: #1F3D59;
+        margin-bottom: 0.15rem;
+}
+
+.velocidade-label {
+        font-size: 0.7rem;
+        color: #6b7280;
+    font-weight: 500;
+}
+
+.plano-caracteristicas {
+        margin-bottom: 1rem;
+}
+
+.caracteristica-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+        margin-bottom: 0.4rem;
+        font-size: 0.85rem;
+}
+
+.caracteristica-item.ativo {
+        color: #059669;
+}
+
+.caracteristica-item.inativo {
+        color: #9ca3af;
+}
+
+.plano-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-edit {
+        background: #059669;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    cursor: pointer;
+    flex: 1;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+}
+
+.btn-edit:hover {
+        background: #047857;
+        transform: translateY(-1px);
+}
+
+.btn-danger {
+        background: #dc2626;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    cursor: pointer;
+    flex: 1;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+}
+
+.btn-danger:hover {
+        background: #b91c1c;
+        transform: translateY(-1px);
+    }
+
+    /* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+        backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+        max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header {
+    padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+        background: #f9fafb;
+}
+
+.modal-header h2 {
+    margin: 0;
+        color: #1f2937;
+        font-size: 1.5rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+        color: #6b7280;
+    padding: 0.5rem;
+        transition: color 0.2s;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+    }
+
+    .btn-close:hover {
+        color: #1f2937;
+        background: #e5e7eb;
+}
+
+.form-section {
+    padding: 1.5rem;
+        border-bottom: 1px solid #f3f4f6;
+}
+
+    .form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    margin: 0 0 1rem 0;
+        color: #1f2937;
+    font-size: 1.1rem;
+    font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+        color: #374151;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.form-group input, 
+.form-group textarea, 
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+    font-size: 0.9rem;
+        transition: all 0.2s;
+}
+
+.form-group input:focus, 
+.form-group textarea:focus, 
+.form-group select:focus {
+    outline: none;
+    border-color: #1F3D59;
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.1);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+        gap: 0.5rem;
+    cursor: pointer;
+    margin-bottom: 0 !important;
+        font-weight: 500;
+        color: #374151;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+        cursor: pointer;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+        background: #f9fafb;
+    }
+
+    @media (max-width: 1400px) {
+        .planos-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 1024px) {
+        .planos-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+        
+        .planos-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .plano-velocidades {
+        grid-template-columns: 1fr;
+    }
+    
+        .page-title-wrapper {
+        flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .filters-grid {
+            flex-direction: column;
+        }
+
+        .filter-input-wrapper {
+            width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="{% url 'vendas_web:configuracoes' %}">
+            <i class="fas fa-cog"></i> Configurações
+        </a>
+        <span class="breadcrumb-separator">/</span>
+        <span style="color: #1f2937; font-weight: 500;">Planos de Internet</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="page-title-wrapper">
+            <h1 class="page-title">
+                <i class="fas fa-wifi" style="color: #1F3D59;"></i>
+                Planos de Internet
+            </h1>
+            <button onclick="abrirModalNovoPlano()" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Novo Plano
+            </button>
+        </div>
+        <p class="page-subtitle">
+            Gerencie os planos de internet disponíveis para venda
+        </p>
+    </div>
+
+    <!-- Filtros e Pesquisa -->
+    <div class="filters-card">
+        <div class="filters-grid">
+            <div class="filter-input-wrapper">
+                <input type="text" id="pesquisaPlano" class="filter-input"
+                       placeholder="🔍 Pesquisar por nome ou descrição..." 
+                       oninput="filtrarPlanos()">
+            </div>
+            <div>
+                <select id="filtroStatus" class="filter-select" onchange="filtrarPlanos()">
+                    <option value="">Todos os Status</option>
+                    <option value="true">✅ Ativo</option>
+                    <option value="false">❌ Inativo</option>
+                </select>
+            </div>
+            <div>
+                <select id="filtroDestaque" class="filter-select" onchange="filtrarPlanos()">
+                    <option value="">Todos</option>
+                    <option value="true">⭐ Em Destaque</option>
+                    <option value="false">Sem Destaque</option>
+                </select>
+            </div>
+            <button onclick="carregarPlanos()" class="btn btn-secondary">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingPlanos" class="loading-container" style="display: none;">
+        <div class="spinner"></div>
+        <p style="color: #6b7280; margin-top: 1rem;">Carregando planos...</p>
+    </div>
+
+    <!-- Cards dos Planos -->
+    <div id="planosGrid" class="planos-grid">
+        <!-- Planos serão carregados aqui via JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-state-icon">
+            <i class="fas fa-wifi"></i>
+        </div>
+        <h3 class="empty-state-title">Nenhum plano encontrado</h3>
+        <p class="empty-state-text">Crie seu primeiro plano de internet para disponibilizar aos clientes</p>
+        <button onclick="abrirModalNovoPlano()" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Criar Primeiro Plano
+        </button>
+    </div>
+</div>
+
+<!-- Modal para Novo/Editar Plano -->
+<div id="modalPlano" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitulo">
+                <i class="fas fa-wifi"></i>
+                <span id="modalTituloTexto">Novo Plano</span>
+            </h2>
+            <button onclick="fecharModal()" class="btn-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="formPlano" onsubmit="salvarPlano(event)">
+            <input type="hidden" id="plano_id" name="id">
+            
+            <div class="form-section">
+                <h3>
+                    <i class="fas fa-info-circle"></i>
+                    Informações Básicas
+                </h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nome">Nome do Plano *</label>
+                        <input type="text" id="nome" name="nome" required 
+                               placeholder="Ex: Fibra 100MB">
+                    </div>
+                    <div class="form-group">
+                        <label for="valor_mensal">Valor Mensal (R$) *</label>
+                        <input type="number" id="valor_mensal" name="valor_mensal" step="0.01" required 
+                               placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="descricao">Descrição</label>
+                    <textarea id="descricao" name="descricao" rows="3" 
+                              placeholder="Descrição do plano (opcional)"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>
+                    <i class="fas fa-tachometer-alt"></i>
+                    Velocidades
+                </h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="velocidade_download">
+                            <i class="fas fa-download"></i> Velocidade Download (Mbps) *
+                        </label>
+                        <input type="number" id="velocidade_download" name="velocidade_download" required 
+                               placeholder="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="velocidade_upload">
+                            <i class="fas fa-upload"></i> Velocidade Upload (Mbps) *
+                        </label>
+                        <input type="number" id="velocidade_upload" name="velocidade_upload" required 
+                               placeholder="50">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>
+                    <i class="fas fa-star"></i>
+                    Características
+                </h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="wifi_6" name="wifi_6">
+                            <span class="checkmark"></span>
+                            Wi-Fi 6
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="upload_simetrico" name="upload_simetrico">
+                            <span class="checkmark"></span>
+                            Upload Simétrico
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="suporte_prioritario" name="suporte_prioritario">
+                            <span class="checkmark"></span>
+                            Suporte Prioritário
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="suporte_24h" name="suporte_24h">
+                            <span class="checkmark"></span>
+                            Suporte 24h
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>
+                    <i class="fas fa-cog"></i>
+                    Configurações de Exibição
+                </h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ordem_exibicao">
+                            <i class="fas fa-sort"></i> Ordem de Exibição
+                        </label>
+                        <input type="number" id="ordem_exibicao" name="ordem_exibicao" 
+                               placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="destaque" name="destaque">
+                            <i class="fas fa-star" style="color: #fbbf24;"></i>
+                            Plano em Destaque
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ativo" name="ativo" checked>
+                        <i class="fas fa-toggle-on" style="color: #059669;"></i>
+                        Plano Ativo
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="fecharModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    <span id="btnSalvarTexto">Salvar Plano</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let planos = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarPlanos();
+});
+
+async function carregarPlanos() {
+    const loading = document.getElementById('loadingPlanos');
+    const grid = document.getElementById('planosGrid');
+    const emptyState = document.getElementById('emptyState');
+    
+    loading.style.display = 'block';
+    grid.style.display = 'none';
+    emptyState.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/configuracoes/planos/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            planos = data.data;
+            renderizarPlanos(planos);
+        } else {
+            throw new Error(data.error || 'Erro ao carregar planos');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao carregar planos: ' + error.message);
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function renderizarPlanos(planosLista) {
+    const grid = document.getElementById('planosGrid');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (planosLista.length === 0) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    grid.style.display = 'grid';
+    emptyState.style.display = 'none';
+    
+    grid.innerHTML = planosLista.map(plano => `
+        <div class="plano-card ${plano.destaque ? 'destaque' : ''}">
+            <div class="plano-header ${plano.destaque ? 'destaque' : ''}">
+                <div class="status-badge ${plano.ativo ? 'status-ativo' : 'status-inativo'}">
+                    ${plano.ativo ? 'ATIVO' : 'INATIVO'}
+                </div>
+                <div class="plano-nome">${plano.nome}</div>
+                <div class="plano-preco">
+                    R$ ${plano.valor_mensal.toFixed(2).replace('.', ',')}
+                    <small>/mês</small>
+                </div>
+            </div>
+            
+            <div class="plano-body">
+                <div class="plano-velocidades">
+                    <div class="velocidade-item">
+                        <div class="velocidade-valor">${plano.velocidade_download}</div>
+                        <div class="velocidade-label">Mbps Download</div>
+                    </div>
+                    <div class="velocidade-item">
+                        <div class="velocidade-valor">${plano.velocidade_upload}</div>
+                        <div class="velocidade-label">Mbps Upload</div>
+                    </div>
+                </div>
+                
+                ${plano.descricao ? `<p style="color: #6b7280; font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.4;">${plano.descricao}</p>` : ''}
+                
+                <div class="plano-caracteristicas">
+                    <div class="caracteristica-item ${plano.wifi_6 ? 'ativo' : 'inativo'}">
+                        <i class="fas fa-${plano.wifi_6 ? 'check-circle' : 'times-circle'}"></i>
+                        Wi-Fi 6
+                    </div>
+                    <div class="caracteristica-item ${plano.upload_simetrico ? 'ativo' : 'inativo'}">
+                        <i class="fas fa-${plano.upload_simetrico ? 'check-circle' : 'times-circle'}"></i>
+                        Upload Simétrico
+                    </div>
+                    <div class="caracteristica-item ${plano.suporte_prioritario ? 'ativo' : 'inativo'}">
+                        <i class="fas fa-${plano.suporte_prioritario ? 'check-circle' : 'times-circle'}"></i>
+                        Suporte Prioritário
+                    </div>
+                    <div class="caracteristica-item ${plano.suporte_24h ? 'ativo' : 'inativo'}">
+                        <i class="fas fa-${plano.suporte_24h ? 'check-circle' : 'times-circle'}"></i>
+                        Suporte 24h
+                    </div>
+                </div>
+                
+                <div class="plano-actions">
+                    <button onclick="editarPlano(${plano.id})" class="btn-edit">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button onclick="excluirPlano(${plano.id})" class="btn-danger">
+                        <i class="fas fa-trash-alt"></i> Excluir
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function filtrarPlanos() {
+    const pesquisa = document.getElementById('pesquisaPlano').value.toLowerCase();
+    const status = document.getElementById('filtroStatus').value;
+    const destaque = document.getElementById('filtroDestaque').value;
+    
+    let planosFiltrados = planos;
+    
+    if (pesquisa) {
+        planosFiltrados = planosFiltrados.filter(plano => 
+            plano.nome.toLowerCase().includes(pesquisa) ||
+            (plano.descricao && plano.descricao.toLowerCase().includes(pesquisa))
+        );
+    }
+    
+    if (status !== '') {
+        const statusBool = status === 'true';
+        planosFiltrados = planosFiltrados.filter(plano => plano.ativo === statusBool);
+    }
+    
+    if (destaque !== '') {
+        const destaqueBool = destaque === 'true';
+        planosFiltrados = planosFiltrados.filter(plano => plano.destaque === destaqueBool);
+    }
+    
+    renderizarPlanos(planosFiltrados);
+}
+
+function abrirModalNovoPlano() {
+    document.getElementById('modalTituloTexto').textContent = 'Novo Plano';
+    document.getElementById('btnSalvarTexto').textContent = 'Salvar Plano';
+    document.getElementById('formPlano').reset();
+    document.getElementById('plano_id').value = '';
+    document.getElementById('ativo').checked = true;
+    document.getElementById('modalPlano').style.display = 'flex';
+}
+
+function editarPlano(id) {
+    const plano = planos.find(p => p.id === id);
+    if (!plano) return;
+    
+    document.getElementById('modalTituloTexto').textContent = 'Editar Plano';
+    document.getElementById('btnSalvarTexto').textContent = 'Salvar Alterações';
+    
+    document.getElementById('plano_id').value = plano.id;
+    document.getElementById('nome').value = plano.nome;
+    document.getElementById('descricao').value = plano.descricao || '';
+    document.getElementById('velocidade_download').value = plano.velocidade_download;
+    document.getElementById('velocidade_upload').value = plano.velocidade_upload;
+    document.getElementById('valor_mensal').value = plano.valor_mensal;
+    document.getElementById('destaque').checked = plano.destaque;
+    document.getElementById('ativo').checked = plano.ativo;
+    document.getElementById('ordem_exibicao').value = plano.ordem_exibicao;
+    document.getElementById('wifi_6').checked = plano.wifi_6;
+    document.getElementById('suporte_prioritario').checked = plano.suporte_prioritario;
+    document.getElementById('suporte_24h').checked = plano.suporte_24h;
+    document.getElementById('upload_simetrico').checked = plano.upload_simetrico;
+    
+    document.getElementById('modalPlano').style.display = 'flex';
+}
+
+async function salvarPlano(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const data = {
+        nome: formData.get('nome'),
+        descricao: formData.get('descricao'),
+        velocidade_download: parseInt(formData.get('velocidade_download')),
+        velocidade_upload: parseInt(formData.get('velocidade_upload')),
+        valor_mensal: parseFloat(formData.get('valor_mensal')),
+        destaque: formData.get('destaque') === 'on',
+        ativo: formData.get('ativo') === 'on',
+        ordem_exibicao: parseInt(formData.get('ordem_exibicao')) || 0,
+        wifi_6: formData.get('wifi_6') === 'on',
+        suporte_prioritario: formData.get('suporte_prioritario') === 'on',
+        suporte_24h: formData.get('suporte_24h') === 'on',
+        upload_simetrico: formData.get('upload_simetrico') === 'on'
+    };
+    
+    const planoId = formData.get('id');
+    const isEdit = planoId && planoId !== '';
+    
+    if (isEdit) {
+        data.id = parseInt(planoId);
+    }
+    
+    try {
+        const response = await fetch('/api/configuracoes/planos/', {
+            method: isEdit ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            fecharModal();
+            carregarPlanos();
+        } else {
+            throw new Error(result.error || 'Erro ao salvar plano');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao salvar plano: ' + error.message);
+    }
+}
+
+async function excluirPlano(id) {
+    if (!confirm('Tem certeza que deseja excluir este plano?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/configuracoes/planos/', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ id: id })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            carregarPlanos();
+        } else {
+            throw new Error(result.error || 'Erro ao excluir plano');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao excluir plano: ' + error.message);
+    }
+}
+
+function fecharModal() {
+    document.getElementById('modalPlano').style.display = 'none';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('modalPlano');
+    if (event.target === modal) {
+        fecharModal();
+    }
+});
+</script>
+{% endblock %}

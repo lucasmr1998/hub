@@ -1,0 +1,645 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TecHub — Comercial{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+    /* ── Prefixo de subpath (/robo-v2) ──────────────────────────────────
+       O app roda sob FORCE_SCRIPT_NAME atrás do nginx do TecHub. Os
+       templates fazem fetch/XHR com caminhos absolutos ("/api/...");
+       este patch prefixa essas chamadas com o SCRIPT_NAME para que tudo
+       funcione tanto na raiz (dev) quanto sob /robo-v2/ (portal). */
+    window.APP_BASE = '{{ request.META.SCRIPT_NAME|default:"" }}';
+    window.CSRF_TOKEN = '{{ csrf_token }}';
+    (function () {
+        const base = window.APP_BASE;
+        const prefix = (u) => {
+            if (typeof u !== 'string' || !base) return u;
+            if (u.startsWith('/') && !u.startsWith('//') && !u.startsWith(base + '/') && u !== base) return base + u;
+            return u;
+        };
+        window.appUrl = prefix;
+        /* Em produção o cookie CSRF chama robo_v2_csrftoken, mas os JS das
+           páginas leem "csrftoken" — corrigimos o header na camada fetch/XHR. */
+        const fixHeaders = (headers) => {
+            if (!headers) return headers;
+            if (headers instanceof Headers) {
+                if (headers.has('X-CSRFToken')) headers.set('X-CSRFToken', window.CSRF_TOKEN);
+            } else {
+                for (const k of Object.keys(headers)) {
+                    if (k.toLowerCase() === 'x-csrftoken') headers[k] = window.CSRF_TOKEN;
+                }
+            }
+            return headers;
+        };
+        const origFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+            if (typeof input === 'string') input = prefix(input);
+            else if (input instanceof Request && base && input.url.startsWith(location.origin + '/') && !input.url.startsWith(location.origin + base)) {
+                input = new Request(location.origin + base + input.url.slice(location.origin.length), input);
+            }
+            if (init && init.headers) fixHeaders(init.headers);
+            return origFetch(input, init);
+        };
+        const origOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            return origOpen.call(this, method, prefix(url), ...rest);
+        };
+        const origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+        XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+            if (String(name).toLowerCase() === 'x-csrftoken') value = window.CSRF_TOKEN;
+            return origSetHeader.call(this, name, value);
+        };
+    })();
+    </script>
+    {% block extra_css %}{% endblock %}
+    <style>
+    /* ════════════════════════════════════════════════════════════════
+       TECHUB — Design System (Robô de Vendas v2)
+       Shell SaaS: sidebar + topbar. Tokens em :root alinhados ao
+       techub-ds.css do portal; as páginas filhas herdam tipografia/
+       cores e mantêm seus estilos locais.
+       ════════════════════════════════════════════════════════════════ */
+    :root {
+        /* Brand — TecHub DS */
+        --primary: #000b4a;          /* --ds-primary (navy)          */
+        --primary-600: #0018b0;      /* --ds-primary-dark            */
+        --primary-soft: #eef2ff;     /* --ds-primary-light           */
+        --accent: #ff6b00;           /* --ds-accent (laranja)        */
+        --gradient: linear-gradient(135deg, #000b4a 0%, #0022fa 100%);
+
+        /* Superfícies — TecHub DS */
+        --bg: #f8fafc;               /* --ds-bg-page                 */
+        --surface: #ffffff;          /* --ds-bg-card                 */
+        --surface-2: #f1f5f9;        /* --ds-bg-subtle               */
+        --border: #e5e7eb;           /* --ds-border                  */
+
+        /* Texto — TecHub DS */
+        --text: #1e293b;             /* --ds-text-main               */
+        --text-2: #64748b;           /* --ds-text-muted              */
+        --text-3: #94a3b8;           /* --ds-text-light              */
+
+        /* Semânticas — TecHub DS */
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --info: #6366f1;
+
+        /* Métricas do shell */
+        --sidebar-w: 248px;
+        --sidebar-w-min: 76px;
+        --topbar-h: 60px;
+
+        --radius: 12px;              /* --ds-radius-md               */
+        --radius-sm: 8px;            /* --ds-radius-sm               */
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, .08);
+        --shadow: 0 4px 16px rgba(0, 0, 0, .10);
+        --shadow-lg: 0 8px 30px rgba(0, 0, 0, .15);
+        --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --font-display: 'Poppins', 'Inter', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 15px; }
+    body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+    }
+    a { color: inherit; }
+    button { font-family: var(--font); }
+
+    /* ── Scrollbar fina e neutra ───────────────────────────────────── */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d3d6e2; border-radius: 8px; border: 2px solid var(--bg); }
+    ::-webkit-scrollbar-thumb:hover { background: #b9bdce; }
+
+    /* ════════════════ SIDEBAR ════════════════ */
+    .app-sidebar {
+        position: fixed; inset: 0 auto 0 0;
+        width: var(--sidebar-w);
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex; flex-direction: column;
+        z-index: 90;
+        transition: width .18s ease;
+    }
+    .app-sidebar .brand {
+        height: var(--topbar-h);
+        display: flex; align-items: center; gap: 10px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .app-sidebar .brand:hover { background: var(--surface-2); }
+    .brand-img { height: 30px; width: auto; display: block; flex-shrink: 0; }
+    .brand-mini {
+        width: 34px; height: 34px; border-radius: 9px;
+        background: var(--gradient);
+        display: none; align-items: center; justify-content: center;
+        color: #fff; font-weight: 800; font-size: 16px;
+        flex-shrink: 0;
+    }
+    .brand-tag {
+        font-family: var(--font-display); font-weight: 600; font-size: 11.5px;
+        color: var(--text-3); letter-spacing: .04em; text-transform: uppercase;
+        white-space: nowrap; margin-top: 6px;
+    }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 14px 12px 20px; }
+    .nav-group { margin-bottom: 18px; }
+    .nav-group-label {
+        font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+        text-transform: uppercase; color: var(--text-3);
+        padding: 0 10px; margin-bottom: 6px; white-space: nowrap;
+    }
+    .snav-item {
+        display: flex; align-items: center; gap: 11px;
+        padding: 9px 10px; margin-bottom: 2px;
+        border-radius: var(--radius-sm);
+        color: var(--text-2); text-decoration: none;
+        font-size: 13.5px; font-weight: 500;
+        transition: background .12s, color .12s;
+        white-space: nowrap;
+    }
+    .snav-item i { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
+    .snav-item:hover { background: var(--surface-2); color: var(--text); }
+    .snav-item.active {
+        background: var(--primary-soft); color: var(--primary);
+        font-weight: 600;
+    }
+    .snav-item.active i { color: var(--primary); }
+
+    .sidebar-footer {
+        border-top: 1px solid var(--border);
+        padding: 10px 12px; flex-shrink: 0;
+    }
+
+    /* Sidebar colapsada */
+    body.sidebar-min .app-sidebar { width: var(--sidebar-w-min); }
+    body.sidebar-min .brand-img,
+    body.sidebar-min .brand-tag,
+    body.sidebar-min .nav-group-label,
+    body.sidebar-min .snav-item span { display: none; }
+    body.sidebar-min .brand-mini { display: flex; }
+    body.sidebar-min .app-sidebar .brand { justify-content: center; }
+    body.sidebar-min .snav-item { justify-content: center; }
+    body.sidebar-min .app-main, body.sidebar-min .app-topbar { margin-left: var(--sidebar-w-min); }
+
+    /* ════════════════ TOPBAR ════════════════ */
+    .app-topbar {
+        position: sticky; top: 0;
+        margin-left: var(--sidebar-w);
+        height: var(--topbar-h);
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; gap: 14px;
+        padding: 0 22px;
+        z-index: 80;
+        transition: margin-left .18s ease;
+    }
+    .topbar-toggle {
+        border: none; background: transparent; cursor: pointer;
+        width: 34px; height: 34px; border-radius: 8px;
+        color: var(--text-2); font-size: 15px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .topbar-toggle:hover { background: var(--surface-2); color: var(--text); }
+    .topbar-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+    .topbar-spacer { flex: 1; }
+
+    .topbar-btn {
+        position: relative;
+        border: 1px solid var(--border); background: var(--surface);
+        cursor: pointer; width: 36px; height: 36px; border-radius: 10px;
+        color: var(--text-2); font-size: 14px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all .12s;
+    }
+    .topbar-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .notification-badge {
+        position: absolute; top: -5px; right: -5px;
+        background: var(--danger); color: #fff;
+        min-width: 17px; height: 17px; border-radius: 9px;
+        font-size: 10px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0 4px; border: 2px solid var(--surface);
+    }
+
+    .user-chip {
+        display: flex; align-items: center; gap: 10px;
+        padding: 5px 6px; border-radius: 12px;
+        cursor: pointer; border: 1px solid transparent;
+        position: relative;
+    }
+    .user-chip:hover { background: var(--surface-2); border-color: var(--border); }
+    .user-avatar {
+        width: 32px; height: 32px; border-radius: 9px;
+        background: var(--gradient); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12.5px; font-weight: 700;
+    }
+    .user-meta { line-height: 1.15; }
+    .user-name { font-size: 13px; font-weight: 600; }
+    .user-org { font-size: 11px; color: var(--text-3); }
+
+    .user-menu {
+        position: absolute; top: calc(100% + 8px); right: 0;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); box-shadow: var(--shadow-lg);
+        min-width: 200px; padding: 6px; display: none; z-index: 120;
+    }
+    .user-menu.open { display: block; }
+    .user-menu a {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 10px; border-radius: 8px;
+        font-size: 13px; color: var(--text-2); text-decoration: none;
+    }
+    .user-menu a:hover { background: var(--surface-2); color: var(--text); }
+    .user-menu a.danger { color: var(--danger); }
+    .user-menu .sep { height: 1px; background: var(--border); margin: 5px 4px; }
+
+    /* ════════════════ CONTEÚDO ════════════════ */
+    .app-main {
+        margin-left: var(--sidebar-w);
+        padding: 24px;
+        min-height: calc(100vh - var(--topbar-h));
+        transition: margin-left .18s ease;
+    }
+    /* compat: estilos antigos assumem um wrapper .main-container */
+    .main-container { width: 100%; max-width: 1500px; margin: 0 auto; }
+
+    /* ── Componentes base reutilizáveis pelas páginas ──────────────── */
+    .card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    }
+    .btn-primary-v2 {
+        background: var(--gradient); color: #fff; border: none;
+        border-radius: 10px; padding: 9px 18px; font-weight: 600;
+        font-size: 13.5px; cursor: pointer;
+    }
+    .btn-primary-v2:hover { filter: brightness(1.06); }
+
+    /* ════════════════ DRAWER DE NOTIFICAÇÕES ════════════════ */
+    .drawer-overlay {
+        position: fixed; inset: 0; background: rgba(22,24,43,.35);
+        opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 140;
+    }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+    .notif-drawer {
+        position: fixed; top: 0; right: -400px; width: 380px; max-width: 92vw;
+        height: 100vh; background: var(--surface);
+        box-shadow: var(--shadow-lg); z-index: 150;
+        display: flex; flex-direction: column;
+        transition: right .22s ease;
+    }
+    .notif-drawer.open { right: 0; }
+    .notif-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .notif-head h3 { font-size: 15px; font-weight: 700; }
+    .notif-close {
+        border: none; background: transparent; cursor: pointer;
+        color: var(--text-3); font-size: 16px; width: 30px; height: 30px;
+        border-radius: 8px;
+    }
+    .notif-close:hover { background: var(--surface-2); color: var(--text); }
+    .notif-body { flex: 1; overflow-y: auto; padding: 12px; }
+    .notif-item {
+        display: flex; gap: 12px; padding: 12px;
+        border-radius: var(--radius-sm); margin-bottom: 6px;
+        border: 1px solid transparent;
+    }
+    .notif-item:hover { background: var(--surface-2); border-color: var(--border); }
+    .notif-item .ico {
+        width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+        background: var(--primary-soft); color: var(--primary);
+        display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .notif-item .tit { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .notif-item .msg { font-size: 12.5px; color: var(--text-2); }
+    .notif-item .tim { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+    .notif-empty {
+        text-align: center; color: var(--text-3); padding: 48px 16px; font-size: 13px;
+    }
+    .notif-empty i { font-size: 28px; display: block; margin-bottom: 10px; opacity: .5; }
+
+    /* ════════════════ MOBILE ════════════════ */
+    .sidebar-backdrop {
+        position: fixed; inset: 0; background: rgba(22,24,43,.4);
+        z-index: 85; display: none;
+    }
+    @media (max-width: 960px) {
+        .app-sidebar { left: calc(-1 * var(--sidebar-w)); transition: left .2s ease; }
+        body.sidebar-open .app-sidebar { left: 0; }
+        body.sidebar-open .sidebar-backdrop { display: block; }
+        .app-topbar, .app-main { margin-left: 0 !important; }
+        .user-meta { display: none; }
+    }
+
+    /* mensagens django */
+    .flash-stack { position: fixed; top: 70px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+    .flash {
+        background: var(--surface); border: 1px solid var(--border);
+        border-left: 4px solid var(--info);
+        border-radius: 10px; box-shadow: var(--shadow);
+        padding: 12px 16px; font-size: 13px; min-width: 260px;
+    }
+    .flash.success { border-left-color: var(--success); }
+    .flash.error, .flash.danger { border-left-color: var(--danger); }
+    .flash.warning { border-left-color: var(--warning); }
+    </style>
+    {% block custom_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- ════════ SIDEBAR ════════ -->
+    <aside class="app-sidebar" id="appSidebar">
+        <a class="brand" href="https://techub.megalinkpiaui.com.br/" title="Voltar ao portal TecHub">
+            <img class="brand-img" src="{% static 'images/logo_techub.png' %}" alt="TecHub">
+            <div class="brand-mini">T</div>
+        </a>
+
+        <nav class="sidebar-nav">
+            {% if 'ver_dashboard' in cap or 'ver_analises' in cap %}
+            <div class="nav-group">
+                <div class="nav-group-label">Visão geral</div>
+                {% comment %} Dashboard OCULTO (2026-07-13, pedido do usuário): Análises é a visão
+                única. /dashboard1/ virou roteador → Análises. P/ restaurar, recolocar o link. {% endcomment %}
+                {% if 'ver_analises' in cap %}<a href="{% url 'vendas_web:analytics_dashboard' %}" class="snav-item {% if request.resolver_match.url_name == 'analytics_dashboard' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i><span>Análises</span>
+                </a>{% endif %}
+            </div>
+            {% endif %}
+
+            {% if 'ver_leads' in cap or 'ver_vendas' in cap %}
+            <div class="nav-group">
+                <div class="nav-group-label">Comercial</div>
+                {% if 'ver_leads' in cap %}<a href="{% url 'vendas_web:leads' %}" class="snav-item {% if request.resolver_match.url_name == 'leads' %}active{% endif %}">
+                    <i class="fas fa-user-plus"></i><span>Leads</span>
+                </a>{% endif %}
+                {% if 'ver_vendas' in cap %}<a href="{% url 'vendas_web:vendas' %}" class="snav-item {% if request.resolver_match.url_name == 'vendas' %}active{% endif %}">
+                    <i class="fas fa-cart-shopping"></i><span>Vendas</span>
+                </a>{% endif %}
+            </div>
+            {% endif %}
+
+            {% if pipelines_permitidos or 'ver_tarefas' in cap or 'ver_desempenho' in cap or 'ver_retencao' in cap or 'ver_metas' in cap or 'ver_segmentos' in cap %}
+            <div class="nav-group">
+                <div class="nav-group-label">CRM</div>
+                {% if pipelines_permitidos %}<a href="{% url 'crm:pipeline' %}{% if request.GET.pipeline %}?pipeline={{ request.GET.pipeline }}{% endif %}" class="snav-item {% if request.resolver_match.url_name == 'pipeline' or request.resolver_match.url_name == 'oportunidade_detalhe' and request.GET.pipeline %}active{% endif %}">
+                    <i class="fas fa-table-columns"></i><span>Pipeline</span>
+                </a>
+                <a href="{% url 'crm:oportunidades_lista' %}" class="snav-item {% if request.resolver_match.url_name == 'oportunidades_lista' or request.resolver_match.url_name == 'oportunidade_detalhe' and not request.GET.pipeline %}active{% endif %}">
+                    <i class="fas fa-briefcase"></i><span>Oportunidades</span>
+                </a>{% endif %}
+                {% comment %} OCULTOS TEMPORARIAMENTE (2026-07-13, pedido do usuário — sem uso):
+                     Tarefas · Desempenho · Retenção · Metas · Segmentos.
+                     As páginas/rotas continuam existindo; para restaurar, descomentar.
+                {% if 'ver_tarefas' in cap %}<a href="{% url 'crm:tarefas_lista' %}" class="snav-item {% if request.resolver_match.url_name == 'tarefas_lista' %}active{% endif %}">
+                    <i class="fas fa-list-check"></i><span>Tarefas</span>
+                </a>{% endif %}
+                {% if 'ver_desempenho' in cap %}<a href="{% url 'crm:desempenho' %}" class="snav-item {% if request.resolver_match.url_name == 'desempenho' %}active{% endif %}">
+                    <i class="fas fa-ranking-star"></i><span>Desempenho</span>
+                </a>{% endif %}
+                {% if 'ver_retencao' in cap %}<a href="{% url 'crm:retencao' %}" class="snav-item {% if request.resolver_match.url_name == 'retencao' %}active{% endif %}">
+                    <i class="fas fa-shield-heart"></i><span>Retenção</span>
+                </a>{% endif %}
+                {% if 'ver_metas' in cap %}<a href="{% url 'crm:metas' %}" class="snav-item {% if request.resolver_match.url_name == 'metas' %}active{% endif %}">
+                    <i class="fas fa-bullseye"></i><span>Metas</span>
+                </a>{% endif %}
+                {% if 'ver_segmentos' in cap %}<a href="{% url 'crm:segmentos_lista' %}" class="snav-item {% if request.resolver_match.url_name == 'segmentos_lista' or request.resolver_match.url_name == 'segmento_detalhe' %}active{% endif %}">
+                    <i class="fas fa-layer-group"></i><span>Segmentos</span>
+                </a>{% endif %}
+                {% endcomment %}
+            </div>
+            {% endif %}
+
+            {% if 'ver_config' in cap or 'ver_admin' in cap or 'gerenciar_perfis' in cap or 'gerenciar_usuarios' in cap %}
+            <div class="nav-group">
+                <div class="nav-group-label">Administração</div>
+                {% if 'gerenciar_usuarios' in cap %}<a href="{% url 'crm:usuarios' %}" class="snav-item {% if request.resolver_match.url_name == 'usuarios' %}active{% endif %}">
+                    <i class="fas fa-users-gear"></i><span>Usuários</span>
+                </a>{% endif %}
+                {% if 'gerenciar_perfis' in cap %}<a href="{% url 'crm:perfis' %}" class="snav-item {% if request.resolver_match.url_name == 'perfis' %}active{% endif %}">
+                    <i class="fas fa-user-shield"></i><span>Perfis de Acesso</span>
+                </a>{% endif %}
+                {% if 'ver_config' in cap %}<a href="{% url 'crm:configuracoes' %}" class="snav-item {% if request.resolver_match.url_name == 'configuracoes' and 'crm' in request.path %}active{% endif %}">
+                    <i class="fas fa-sliders"></i><span>Config. CRM</span>
+                </a>
+                <a href="{% url 'crm:mensagens' %}" class="snav-item {% if request.resolver_match.url_name == 'mensagens' %}active{% endif %}">
+                    <i class="fab fa-whatsapp"></i><span>Mensagens WhatsApp</span>
+                </a>
+                <a href="{% url 'crm:mensagens_robo' %}" class="snav-item {% if request.resolver_match.url_name == 'mensagens_robo' %}active{% endif %}">
+                    <i class="fas fa-robot"></i><span>Mensagens do Robô</span>
+                </a>{% endif %}
+                {% if 'gerenciar_wifeed' in cap %}<a href="{% url 'crm:wifeed_fontes' %}" class="snav-item {% if request.resolver_match.url_name == 'wifeed_fontes' %}active{% endif %}">
+                    <i class="fas fa-wifi"></i><span>Fontes Wifeed</span>
+                </a>{% endif %}
+                {% if 'ver_admin' in cap %}<a href="{% url 'admin:index' %}" class="snav-item">
+                    <i class="fas fa-screwdriver-wrench"></i><span>Admin Django</span>
+                </a>{% endif %}
+            </div>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="https://techub.megalinkpiaui.com.br/" class="snav-item">
+                <i class="fas fa-arrow-left"></i><span>Voltar ao portal</span>
+            </a>
+            <a href="{% url 'vendas_web:notificacoes_central' %}" class="snav-item {% if request.resolver_match.url_name == 'notificacoes_central' %}active{% endif %}">
+                <i class="fas fa-bell"></i><span>Notificações</span>
+            </a>
+            <a href="{% url 'vendas_web:ajuda' %}" class="snav-item {% if 'ajuda' in request.path %}active{% endif %}">
+                <i class="fas fa-circle-question"></i><span>Central de Ajuda</span>
+            </a>
+            <a href="{% url 'vendas_web:configuracoes' %}" class="snav-item {% if request.resolver_match.url_name == 'configuracoes' and 'crm' not in request.path %}active{% endif %}">
+                <i class="fas fa-gear"></i><span>Configurações</span>
+            </a>
+        </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- ════════ TOPBAR ════════ -->
+    <header class="app-topbar">
+        <button class="topbar-toggle" id="sidebarToggle" title="Alternar menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="topbar-title">{% block page_title %}{{ page_title|default:'' }}{% endblock %}</div>
+        <div class="topbar-spacer"></div>
+
+        <button class="topbar-btn" id="notificationBtn" title="Notificações">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
+        </button>
+
+        <div class="user-chip" id="userChip">
+            {% if user.is_authenticated %}
+                <div class="user-avatar">{{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper|default:"" }}</div>
+                <div class="user-meta">
+                    <div class="user-name">{{ user.first_name|default:user.username }}</div>
+                    <div class="user-org">{{ empresa_nome|default:'Megalink' }}</div>
+                </div>
+            {% else %}
+                <div class="user-avatar">?</div>
+                <div class="user-meta"><div class="user-name">Visitante</div></div>
+            {% endif %}
+            <i class="fas fa-chevron-down" style="font-size:10px;color:var(--text-3);"></i>
+
+            <div class="user-menu" id="userMenu">
+                <a href="{% url 'vendas_web:configuracoes' %}"><i class="fas fa-gear"></i> Configurações</a>
+                <a href="https://techub.megalinkpiaui.com.br/"><i class="fas fa-table-cells-large"></i> Portal TecHub</a>
+                {% if request.user.is_superuser %}<a href="{% url 'admin:index' %}"><i class="fas fa-screwdriver-wrench"></i> Admin</a>{% endif %}
+                <div class="sep"></div>
+                {% if user.is_authenticated %}
+                <a href="{% url 'vendas_web:logout' %}" class="danger"><i class="fas fa-arrow-right-from-bracket"></i> Sair da conta</a>
+                {% else %}
+                <a href="{% url 'vendas_web:login' %}"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- ════════ DRAWER NOTIFICAÇÕES ════════ -->
+    <div class="drawer-overlay" id="notifOverlay"></div>
+    <aside class="notif-drawer" id="notifDrawer">
+        <div class="notif-head">
+            <h3><i class="fas fa-bell" style="color:var(--primary);margin-right:8px;"></i>Notificações</h3>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <button class="notif-close" id="notifMarcarTodas" title="Marcar todas como lidas" style="width:auto;padding:0 8px;font-size:12px;">
+                    <i class="fas fa-check-double"></i>
+                </button>
+                <button class="notif-close" id="notifClose"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="notif-body" id="notifBody">
+            <div class="notif-empty"><i class="fas fa-spinner fa-spin"></i>Carregando…</div>
+        </div>
+        <a href="{% url 'vendas_web:notificacoes_central' %}"
+           style="display:block;text-align:center;padding:13px;border-top:1px solid var(--border);
+                  font-size:13px;font-weight:600;color:var(--primary);text-decoration:none;">
+            Ver todas as notificações <i class="fas fa-arrow-right" style="font-size:11px;"></i>
+        </a>
+    </aside>
+
+    {% if messages %}
+    <div class="flash-stack">
+        {% for message in messages %}
+        <div class="flash {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ════════ CONTEÚDO ════════ -->
+    <main class="app-main">
+        <div class="main-container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+    (function () {
+        // ── Sidebar: colapso (desktop) / off-canvas (mobile) ──────────
+        const body = document.body;
+        const isMobile = () => window.innerWidth <= 960;
+        if (localStorage.getItem('ml1.sidebarMin') === '1' && !isMobile()) {
+            body.classList.add('sidebar-min');
+        }
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            if (isMobile()) {
+                body.classList.toggle('sidebar-open');
+            } else {
+                body.classList.toggle('sidebar-min');
+                localStorage.setItem('ml1.sidebarMin', body.classList.contains('sidebar-min') ? '1' : '0');
+            }
+        });
+        document.getElementById('sidebarBackdrop').addEventListener('click', () => body.classList.remove('sidebar-open'));
+
+        // ── Menu do usuário ────────────────────────────────────────────
+        const chip = document.getElementById('userChip');
+        const menu = document.getElementById('userMenu');
+        chip.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('open'); });
+        document.addEventListener('click', () => menu.classList.remove('open'));
+
+        // ── Notificações (mesma API do v1) ─────────────────────────────
+        const drawer = document.getElementById('notifDrawer');
+        const overlay = document.getElementById('notifOverlay');
+        const badge = document.getElementById('notificationBadge');
+        const bodyEl = document.getElementById('notifBody');
+
+        function abrirDrawer() { drawer.classList.add('open'); overlay.classList.add('open'); carregar(); }
+        function fecharDrawer() { drawer.classList.remove('open'); overlay.classList.remove('open'); }
+        document.getElementById('notificationBtn').addEventListener('click', abrirDrawer);
+        document.getElementById('notifClose').addEventListener('click', fecharDrawer);
+        overlay.addEventListener('click', fecharDrawer);
+
+        function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+
+        function tempoRel(iso) {
+            if (!iso) return '';
+            const s = (new Date() - new Date(iso)) / 1000;
+            if (s < 3600) return Math.max(1, Math.round(s/60)) + ' min atrás';
+            if (s < 86400) return Math.round(s/3600) + ' h atrás';
+            return new Date(iso).toLocaleDateString('pt-BR');
+        }
+
+        function render(items) {
+            if (!items || !items.length) {
+                bodyEl.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash"></i>Nenhuma notificação por aqui.</div>';
+                return;
+            }
+            bodyEl.innerHTML = items.map(n => `
+                <div class="notif-item" data-id="${n.id}" style="cursor:pointer;${n.lida ? 'opacity:.65;' : ''}">
+                    <div class="ico"><i class="fas fa-bell"></i></div>
+                    <div style="flex:1;">
+                        <div class="tit">${n.titulo || 'Notificação'} ${n.lida ? '' : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);margin-left:5px;"></span>'}</div>
+                        <div class="msg">${n.mensagem || ''}</div>
+                        <div class="tim">${tempoRel(n.data_criacao)}</div>
+                    </div>
+                </div>`).join('');
+            bodyEl.querySelectorAll('.notif-item').forEach(el => el.addEventListener('click', () => {
+                fetch(`/api/v2/notificacoes/${el.dataset.id}/lida/`, {method:'POST', headers:{'X-CSRFToken': getCookie('csrftoken')}})
+                    .then(r => r.json()).then(d => { el.style.opacity = .65; el.querySelector('.tit span')?.remove(); setBadge(d.nao_lidas); });
+            }));
+        }
+
+        function setBadge(n) {
+            if (n > 0) { badge.style.display = 'flex'; badge.textContent = n > 99 ? '99+' : n; }
+            else badge.style.display = 'none';
+        }
+
+        function carregar() {
+            fetch('/api/v2/notificacoes/?filtro=todas&per_page=8')
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(d => { render(d.notificacoes || []); setBadge(d.nao_lidas || 0); })
+                .catch(() => render([]));
+        }
+        document.getElementById('notifMarcarTodas').addEventListener('click', () => {
+            fetch('/api/v2/notificacoes/marcar-todas/', {method:'POST', headers:{'X-CSRFToken': getCookie('csrftoken')}})
+                .then(() => carregar());
+        });
+        carregar();
+        setInterval(carregar, 60000);
+
+        // flash auto-dismiss
+        setTimeout(() => document.querySelectorAll('.flash').forEach(f => f.style.display = 'none'), 6000);
+    })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,790 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Campanhas de Tráfego Pago - MegaLink{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .breadcrumb a {
+        color: #6b7280;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .breadcrumb a:hover {
+        color: #1F3D59;
+    }
+
+    .breadcrumb-separator {
+        color: #9ca3af;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-title-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-title {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .stat-card-title {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stat-card-value {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    /* Campanhas Grid */
+    .campanhas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .campanha-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .campanha-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: #1F3D59;
+    }
+
+    .campanha-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #1F3D59, #2c5282);
+        color: white;
+        position: relative;
+    }
+
+    .campanha-header h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .campanha-codigo {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        font-family: monospace;
+    }
+
+    .campanha-body {
+        padding: 1.5rem;
+    }
+
+    .campanha-info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+        color: #4b5563;
+    }
+
+    .campanha-info-item i {
+        color: #0022fa;
+        width: 20px;
+    }
+
+    .campanha-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .campanha-stat {
+        text-align: center;
+    }
+
+    .campanha-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1F3D59;
+    }
+
+    .campanha-stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+
+    .campanha-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: #1F3D59;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2c5282;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(31, 61, 89, 0.3);
+    }
+
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4b5563;
+        transform: translateY(-1px);
+    }
+
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #059669;
+        transform: translateY(-1px);
+    }
+
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #dc2626;
+        transform: translateY(-1px);
+    }
+
+    .status-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .status-ativa {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-inativa {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .plataforma-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        color: #1f2937;
+        font-weight: 600;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+        color: #1f2937;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: block;
+        color: #374151;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+        outline: none;
+        border-color: #1F3D59;
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.1);
+    }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .form-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+    }
+
+    .form-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .form-checkbox span {
+        color: #374151;
+        font-size: 0.9rem;
+    }
+
+    small {
+        color: #6b7280;
+        font-size: 0.8rem;
+        display: block;
+        margin-top: 0.25rem;
+    }
+
+    .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+        .campanhas-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .container {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="{% url 'vendas_web:configuracoes' %}"><i class="fas fa-cog"></i> Configurações</a>
+        <span class="breadcrumb-separator">›</span>
+        <span>Campanhas de Tráfego</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="page-title-wrapper">
+            <h1 class="page-title">
+                <i class="fas fa-bullhorn"></i>
+                Campanhas de Tráfego Pago
+            </h1>
+            <button onclick="abrirModalNovaCampanha()" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nova Campanha
+            </button>
+        </div>
+        <p class="page-subtitle">
+            Gerencie campanhas de marketing e rastreie a origem dos leads
+        </p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-title"><i class="fas fa-bullhorn"></i> Total de Campanhas</div>
+            <div class="stat-card-value">{{ total_campanhas }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-title"><i class="fas fa-check-circle"></i> Campanhas Ativas</div>
+            <div class="stat-card-value">{{ campanhas_ativas }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-title"><i class="fas fa-chart-line"></i> Total de Detecções</div>
+            <div class="stat-card-value">{{ total_deteccoes }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-title"><i class="fas fa-users"></i> Total de Leads</div>
+            <div class="stat-card-value">{{ total_leads }}</div>
+        </div>
+    </div>
+
+    <!-- Campanhas -->
+    {% if campanhas %}
+    <div class="campanhas-grid">
+        {% for campanha in campanhas %}
+        <div class="campanha-card">
+            <div class="campanha-header" style="background: linear-gradient(135deg, {{ campanha.cor_identificacao }}, {{ campanha.cor_identificacao }}dd);">
+                <span class="status-badge {% if campanha.ativa %}status-ativa{% else %}status-inativa{% endif %}">
+                    {% if campanha.ativa %}✓ Ativa{% else %}✗ Inativa{% endif %}
+                </span>
+                <h3>{{ campanha.nome }}</h3>
+                <div class="campanha-codigo">{{ campanha.codigo }}</div>
+            </div>
+            <div class="campanha-body">
+                <div class="campanha-info-item">
+                    <i class="fas fa-key"></i>
+                    <span><strong>Palavra-chave:</strong> "{{ campanha.palavra_chave }}"</span>
+                </div>
+                <div class="campanha-info-item">
+                    <i class="fas fa-search"></i>
+                    <span><strong>Tipo:</strong> {{ campanha.get_tipo_match_display }}</span>
+                </div>
+                <div class="campanha-info-item">
+                    <i class="fas fa-layer-group"></i>
+                    <span class="plataforma-badge">{{ campanha.get_plataforma_display }}</span>
+                </div>
+
+                <div class="campanha-stats">
+                    <div class="campanha-stat">
+                        <div class="campanha-stat-value">{{ campanha.contador_deteccoes }}</div>
+                        <div class="campanha-stat-label">Detecções</div>
+                    </div>
+                    <div class="campanha-stat">
+                        <div class="campanha-stat-value">{{ campanha.total_leads }}</div>
+                        <div class="campanha-stat-label">Leads</div>
+                    </div>
+                </div>
+
+                <div class="campanha-actions">
+                    <button onclick="editarCampanha({{ campanha.id }})" class="btn btn-primary" style="flex: 1;">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button onclick="excluirCampanha({{ campanha.id }})" class="btn btn-danger">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-bullhorn"></i>
+        <h3>Nenhuma campanha cadastrada</h3>
+        <p>Comece criando sua primeira campanha de tráfego pago</p>
+        <button onclick="abrirModalNovaCampanha()" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Criar Primeira Campanha
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Nova/Editar Campanha -->
+<div id="modalCampanha" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Nova Campanha</h2>
+            <button class="modal-close" onclick="fecharModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="formCampanha">
+                <input type="hidden" id="campanhaId">
+
+                <div class="form-group">
+                    <label class="form-label">Nome da Campanha *</label>
+                    <input type="text" id="nome" class="form-input" required placeholder="Ex: Black Friday 2024">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Código Único *</label>
+                    <input type="text" id="codigo" class="form-input" required placeholder="Ex: BF2024">
+                    <small style="color: #6c757d;">Código identificador único (sem espaços)</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Palavra-chave *</label>
+                    <input type="text" id="palavra_chave" class="form-input" required placeholder="Ex: cupom50">
+                    <small style="color: #6c757d;">Palavra ou termo que identifica esta campanha</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tipo de Detecção *</label>
+                    <select id="tipo_match" class="form-select" required>
+                        <option value="parcial">Match Parcial (recomendado)</option>
+                        <option value="exato">Match Exato</option>
+                        <option value="regex">Expressão Regular</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Plataforma *</label>
+                    <select id="plataforma" class="form-select" required>
+                        <option value="google_ads">Google Ads</option>
+                        <option value="facebook_ads">Facebook Ads</option>
+                        <option value="instagram_ads">Instagram Ads</option>
+                        <option value="tiktok_ads">TikTok Ads</option>
+                        <option value="linkedin_ads">LinkedIn Ads</option>
+                        <option value="email">Email Marketing</option>
+                        <option value="sms">SMS Marketing</option>
+                        <option value="whatsapp">WhatsApp Business</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Prioridade (1-10)</label>
+                    <input type="number" id="prioridade" class="form-input" min="1" max="10" value="5">
+                    <small style="color: #6c757d;">Prioridade para desempate quando múltiplas campanhas são detectadas</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <textarea id="descricao" class="form-textarea" placeholder="Descrição da campanha..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="ativa" checked>
+                        <span>Campanha Ativa</span>
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button onclick="fecharModal()" class="btn btn-secondary">Cancelar</button>
+            <button onclick="salvarCampanha()" class="btn btn-primary" id="btnSalvar">
+                <i class="fas fa-save"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalNovaCampanha() {
+    document.getElementById('modalTitle').textContent = 'Nova Campanha';
+    document.getElementById('formCampanha').reset();
+    document.getElementById('campanhaId').value = '';
+    document.getElementById('modalCampanha').classList.add('active');
+}
+
+function fecharModal() {
+    document.getElementById('modalCampanha').classList.remove('active');
+}
+
+function salvarCampanha() {
+    // Validação
+    const nome = document.getElementById('nome').value.trim();
+    const codigo = document.getElementById('codigo').value.trim();
+    const palavra_chave = document.getElementById('palavra_chave').value.trim();
+    const plataforma = document.getElementById('plataforma').value;
+    
+    if (!nome || !codigo || !palavra_chave || !plataforma) {
+        alert('❌ Por favor, preencha todos os campos obrigatórios!');
+        return;
+    }
+    
+    // Desabilitar botão e mostrar loading
+    const btnSalvar = document.getElementById('btnSalvar');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    
+    const id = document.getElementById('campanhaId').value;
+    const data = {
+        nome: nome,
+        codigo: codigo,
+        palavra_chave: palavra_chave,
+        tipo_match: document.getElementById('tipo_match').value,
+        plataforma: plataforma,
+        prioridade: parseInt(document.getElementById('prioridade').value) || 5,
+        descricao: document.getElementById('descricao').value.trim(),
+        ativa: document.getElementById('ativa').checked
+    };
+
+    const url = '/api/campanhas/';
+    const method = id ? 'PUT' : 'POST';
+    if (id) data.id = parseInt(id);
+    
+    console.log('=== DEBUG CAMPANHA ===');
+    console.log('Método:', method);
+    console.log('URL:', url);
+    console.log('Dados:', data);
+    console.log('CSRF Token:', getCsrfToken());
+    console.log('====================');
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        console.log('Status da resposta:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(result => {
+        console.log('Resultado:', result);
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = textoOriginal;
+        
+        if (result.success) {
+            alert('✅ ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + (result.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro completo:', error);
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = textoOriginal;
+        alert('❌ Erro ao salvar campanha: ' + error.message + '\n\nVeja o console (F12) para mais detalhes.');
+    });
+}
+
+function editarCampanha(id) {
+    fetch(`/api/campanhas/`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const campanha = result.data.find(c => c.id === id);
+                if (campanha) {
+                    document.getElementById('modalTitle').textContent = 'Editar Campanha';
+                    document.getElementById('campanhaId').value = campanha.id;
+                    document.getElementById('nome').value = campanha.nome;
+                    document.getElementById('codigo').value = campanha.codigo;
+                    document.getElementById('palavra_chave').value = campanha.palavra_chave;
+                    document.getElementById('tipo_match').value = campanha.tipo_match;
+                    document.getElementById('plataforma').value = campanha.plataforma;
+                    document.getElementById('prioridade').value = campanha.prioridade;
+                    document.getElementById('descricao').value = campanha.descricao || '';
+                    document.getElementById('ativa').checked = campanha.ativa;
+                    document.getElementById('modalCampanha').classList.add('active');
+                }
+            }
+        });
+}
+
+function excluirCampanha(id) {
+    if (!confirm('Tem certeza que deseja excluir esta campanha?')) return;
+
+    fetch('/api/campanhas/', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ id: id })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Erro: ' + (result.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao excluir campanha');
+    });
+}
+
+function getCsrfToken() {
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+    
+    // Fallback: tentar pegar do cookie
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='));
+    
+    return cookieValue ? cookieValue.split('=')[1] : '';
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('modalCampanha').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fecharModal();
+    }
+});
+</script>
+{% endblock %}
+

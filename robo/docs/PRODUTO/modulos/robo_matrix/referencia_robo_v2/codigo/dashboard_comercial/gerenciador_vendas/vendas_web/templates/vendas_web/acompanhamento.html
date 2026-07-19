@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acompanhamento - {{ config.titulo_pagina|default:"Megalink" }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: {{ config.primary_color|default:"#0022fa" }};
+            --secondary: {{ config.secondary_color|default:"#0018b0" }};
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:linear-gradient(135deg,var(--primary),var(--secondary)); min-height:100vh; color:#333; }
+        .container { max-width:700px; margin:0 auto; padding:20px; }
+        .header { display:flex; justify-content:space-between; align-items:center; background:#fff; padding:16px 24px; border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,.1); margin-bottom:24px; }
+        .header img { height:42px; }
+        .help-btn { background:linear-gradient(135deg,#25d366,#128c7e); color:#fff; padding:10px 18px; border-radius:20px; text-decoration:none; font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px; }
+
+        /* Progress */
+        .progress { display:flex; align-items:center; justify-content:center; gap:0; background:#fff; padding:20px; border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,.1); margin-bottom:24px; }
+        .p-step { display:flex; flex-direction:column; align-items:center; position:relative; z-index:2; flex:1; }
+        .p-num { width:36px; height:36px; border-radius:50%; background:#e5e7eb; color:#9ca3af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; transition:all .3s; }
+        .p-label { font-size:10px; color:#9ca3af; margin-top:4px; text-align:center; font-weight:600; transition:all .3s; }
+        .p-step.active .p-num { background:var(--primary); color:#fff; box-shadow:0 0 0 4px rgba(102,126,234,.2); }
+        .p-step.active .p-label { color:var(--primary); }
+        .p-step.done .p-num { background:var(--success); color:#fff; }
+        .p-step.done .p-label { color:var(--success); }
+        .p-line { flex:1; height:3px; background:#e5e7eb; transition:background .3s; max-width:60px; }
+        .p-line.done { background:var(--success); }
+
+        /* Card principal */
+        .card { background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.1); padding:32px; margin-bottom:20px; }
+        .card h2 { font-size:20px; color:#1e1b4b; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+        .card p.sub { color:#6b7280; font-size:14px; margin-bottom:24px; }
+
+        /* Etapa oculta */
+        .step { display:none; }
+        .step.active { display:block; }
+
+        /* Validacao spinner */
+        .status-box { text-align:center; padding:30px 0; }
+        .spinner { width:60px; height:60px; border:4px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .status-text { font-size:15px; color:#374151; font-weight:600; }
+        .status-detail { font-size:13px; color:#9ca3af; margin-top:8px; }
+
+        /* Info do cliente */
+        .info-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f3f4f6; font-size:14px; }
+        .info-row:last-child { border:none; }
+        .info-label { color:#6b7280; }
+        .info-value { font-weight:600; color:#1e1b4b; }
+
+        /* Cards de selecao */
+        .options { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:20px 0; }
+        .opt-card { background:#f8fafc; border:2px solid #e5e7eb; border-radius:14px; padding:24px 16px; text-align:center; cursor:pointer; transition:all .2s; }
+        .opt-card:hover { border-color:var(--primary); background:rgba(102,126,234,.04); transform:translateY(-2px); }
+        .opt-card.selected { border-color:var(--primary); background:rgba(102,126,234,.08); box-shadow:0 0 0 3px rgba(102,126,234,.15); }
+        .opt-card i { font-size:28px; color:var(--primary); margin-bottom:10px; }
+        .opt-card h3 { font-size:16px; color:#1e1b4b; margin-bottom:4px; }
+        .opt-card p { font-size:12px; color:#6b7280; }
+
+        /* Datas */
+        .dates { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0; }
+        .date-card { background:#f8fafc; border:2px solid #e5e7eb; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:all .2s; }
+        .date-card:hover { border-color:var(--primary); }
+        .date-card.selected { border-color:var(--primary); background:rgba(102,126,234,.08); }
+        .date-card .day { font-size:22px; font-weight:800; color:#1e1b4b; }
+        .date-card .month { font-size:12px; color:#6b7280; text-transform:uppercase; }
+        .date-card .weekday { font-size:11px; color:var(--primary); font-weight:600; margin-top:4px; }
+
+        /* Loading overlay nos cards */
+        .loading-dates { text-align:center; padding:30px; color:var(--primary); }
+
+        /* Resumo */
+        .summary-item { display:flex; align-items:center; gap:12px; padding:14px; background:#f8fafc; border-radius:10px; margin-bottom:8px; }
+        .summary-icon { width:40px; height:40px; border-radius:10px; background:rgba(102,126,234,.1); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+        .summary-label { font-size:12px; color:#6b7280; }
+        .summary-value { font-size:14px; font-weight:600; color:#1e1b4b; }
+
+        /* Botoes */
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 28px; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; border:none; transition:all .2s; width:100%; }
+        .btn-primary { background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#fff; }
+        .btn-primary:hover { opacity:.9; transform:translateY(-1px); }
+        .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+        .btn-back { background:none; border:1px solid #e5e7eb; color:#6b7280; margin-top:8px; }
+        .btn-back:hover { background:#f9fafb; }
+
+        /* Sucesso */
+        .success-icon { width:80px; height:80px; border-radius:50%; background:var(--success); color:#fff; display:flex; align-items:center; justify-content:center; font-size:36px; margin:0 auto 20px; animation:popIn .4s ease; }
+        @keyframes popIn { 0%{transform:scale(0)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+        /* Erro */
+        .error-box { background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.2); border-radius:10px; padding:14px; color:#dc2626; font-size:13px; margin:16px 0; text-align:center; }
+
+        /* ── MOBILE 480px ─────────────────────────────────────── */
+        @media(max-width:480px) {
+            .container { padding:10px; }
+            .card { padding:20px 16px; border-radius:14px; }
+            .header { padding:12px 16px; border-radius:12px; margin-bottom:16px; }
+            .header img { height:36px; }
+            .help-btn { padding:9px 14px; font-size:13px; }
+            .progress { padding:14px 10px; border-radius:12px; margin-bottom:16px; }
+            .p-num { width:32px; height:32px; font-size:12px; }
+            .p-label { font-size:9px; }
+            .p-line { max-width:30px; }
+            .card h2 { font-size:17px; }
+            .card p.sub { font-size:13px; margin-bottom:18px; }
+            .dates { grid-template-columns:1fr; gap:8px; }
+            .options { grid-template-columns:1fr; gap:10px; }
+            .opt-card { padding:18px 14px; }
+            .opt-card i { font-size:24px; margin-bottom:8px; }
+            .opt-card h3 { font-size:15px; }
+            .opt-card p { font-size:12px; }
+            .date-card { padding:14px; }
+            .date-card .day { font-size:20px; }
+            .date-card .month { font-size:11px; }
+            .date-card .weekday { font-size:10px; }
+            .btn { padding:13px 20px; font-size:15px; min-height:48px; border-radius:10px; }
+            .btn-back { padding:11px 20px; font-size:14px; min-height:44px; }
+            .summary-item { padding:12px; gap:10px; }
+            .summary-icon { width:36px; height:36px; font-size:14px; }
+            .summary-label { font-size:11px; }
+            .summary-value { font-size:13px; }
+            .info-row { font-size:13px; padding:8px 0; }
+            .status-text { font-size:14px; }
+            .status-detail { font-size:12px; }
+            .spinner { width:48px; height:48px; margin-bottom:16px; }
+            .success-icon { width:64px; height:64px; font-size:28px; }
+        }
+
+        /* ── TELAS MUITO PEQUENAS 390px (iPhone SE, etc.) ─────── */
+        @media(max-width:390px) {
+            .container { padding:8px; }
+            .card { padding:16px 14px; }
+            .header { padding:10px 12px; gap:8px; }
+            .header img { height:32px; }
+            .help-btn { padding:8px 12px; font-size:12px; }
+            .progress { padding:12px 8px; gap:0; }
+            .p-num { width:28px; height:28px; font-size:11px; }
+            .p-label { font-size:8px; }
+            .p-line { max-width:16px; height:2px; }
+            .card h2 { font-size:16px; gap:8px; }
+            .card h2 i { font-size:16px; }
+            /* inputs/botoes - 16px evita zoom automatico no iOS */
+            .btn { font-size:16px; min-height:48px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <img src="{{ config.logo_url|default:'https://i.ibb.co/q3MyCdBZ/Ativo-33.png' }}" alt="Logo">
+        <a href="https://wa.me/55{{ config.whatsapp_suporte|default:'8922210068' }}" target="_blank" class="help-btn">
+            <i class="fab fa-whatsapp"></i> Suporte
+        </a>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress" id="progressBar">
+        <div class="p-step active" data-step="1"><div class="p-num">1</div><div class="p-label">Validacao</div></div>
+        <div class="p-line"></div>
+        <div class="p-step" data-step="2"><div class="p-num">2</div><div class="p-label">Turno</div></div>
+        <div class="p-line"></div>
+        <div class="p-step" data-step="3"><div class="p-num">3</div><div class="p-label">Data</div></div>
+        <div class="p-line"></div>
+        <div class="p-step" data-step="4"><div class="p-num">4</div><div class="p-label">Confirmar</div></div>
+        <div class="p-line"></div>
+        <div class="p-step" data-step="5"><div class="p-num">5</div><div class="p-label">Sucesso</div></div>
+    </div>
+
+    <!-- ETAPA 1: Validacao -->
+    <div class="step active" id="step-1">
+        <div class="card">
+            <h2><i class="fas fa-file-shield" style="color:var(--primary)"></i> Validando Documentacao</h2>
+            <p class="sub">Estamos verificando seus documentos. Isso pode levar alguns minutos.</p>
+
+            <div class="info-row"><span class="info-label">Cliente</span><span class="info-value" id="info-nome">{{ lead.nome_razaosocial|default:"-" }}</span></div>
+            <div class="info-row"><span class="info-label">Plano</span><span class="info-value">{{ plano.nome|default:"-" }}</span></div>
+            <div class="info-row"><span class="info-label">Valor</span><span class="info-value">R$ {{ plano.valor_mensal|default:"0" }}</span></div>
+
+            <div class="status-box" id="status-box">
+                <div class="spinner"></div>
+                <div class="status-text" id="status-text">Aguardando validacao da documentacao...</div>
+                <div class="status-detail" id="status-detail">Verificando automaticamente a cada 10 segundos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ETAPA 2: Turno -->
+    <div class="step" id="step-2">
+        <div class="card">
+            <h2><i class="fas fa-clock" style="color:var(--primary)"></i> Escolha o Turno</h2>
+            <p class="sub">Em qual periodo voce prefere receber a instalacao?</p>
+
+            <div class="options">
+                <div class="opt-card" onclick="selecionarTurno('manha')">
+                    <i class="fas fa-sun"></i>
+                    <h3>Manha</h3>
+                    <p>08:00 - 12:00</p>
+                </div>
+                <div class="opt-card" onclick="selecionarTurno('tarde')">
+                    <i class="fas fa-cloud-sun"></i>
+                    <h3>Tarde</h3>
+                    <p>13:00 - 17:00</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ETAPA 3: Data -->
+    <div class="step" id="step-3">
+        <div class="card">
+            <h2><i class="fas fa-calendar-alt" style="color:var(--primary)"></i> Escolha a Data</h2>
+            <p class="sub">Selecione a melhor data para a instalacao</p>
+
+            <div id="dates-container">
+                <div class="loading-dates"><div class="spinner"></div>Carregando datas disponiveis...</div>
+            </div>
+
+            <div id="agenda-info" style="display:none">
+                <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px 16px;text-align:center;margin-bottom:16px">
+                    <i class="fas fa-check-circle" style="color:var(--success);font-size:20px;margin-bottom:6px;display:block"></i>
+                    <div style="font-weight:600;color:#065f46;font-size:14px">Disponibilidade confirmada para esta data!</div>
+                </div>
+                <button class="btn btn-primary" onclick="avancarParaConfirmacao()">
+                    <i class="fas fa-arrow-right"></i> Continuar
+                </button>
+            </div>
+
+            <div id="agenda-erro" class="error-box" style="display:none"></div>
+
+            <button class="btn btn-back" onclick="voltarPara(2)">
+                <i class="fas fa-arrow-left"></i> Voltar e trocar turno
+            </button>
+        </div>
+    </div>
+
+    <!-- ETAPA 4: Confirmacao -->
+    <div class="step" id="step-4">
+        <div class="card">
+            <h2><i class="fas fa-check-double" style="color:var(--primary)"></i> Confirmar Agendamento</h2>
+            <p class="sub">Revise os detalhes e confirme</p>
+
+            <div id="resumo-agendamento"></div>
+
+            <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarAgendamento()">
+                <i class="fas fa-calendar-check"></i> Confirmar Instalacao
+            </button>
+
+            <div id="confirm-erro" class="error-box" style="display:none"></div>
+
+            <button class="btn btn-back" onclick="voltarPara(3)">
+                <i class="fas fa-arrow-left"></i> Voltar e trocar data
+            </button>
+        </div>
+    </div>
+
+    <!-- ETAPA 5: Sucesso -->
+    <div class="step" id="step-5">
+        <div class="card" style="text-align:center">
+            <div class="success-icon"><i class="fas fa-check"></i></div>
+            <h2 style="justify-content:center">Instalacao Agendada!</h2>
+            <p class="sub">Tudo certo! Aqui estao os detalhes do seu agendamento.</p>
+
+            <div id="sucesso-detalhes" style="text-align:left"></div>
+
+            <div style="margin-top:24px;padding:16px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0">
+                <p style="font-size:13px;color:#166534"><strong><i class="fas fa-info-circle"></i> Importante:</strong> Esteja presente no endereco no dia e horario agendados. O tecnico entrara em contato antes de chegar.</p>
+            </div>
+
+            <div style="margin-top:20px">
+                <p style="font-size:13px;color:#6b7280">Duvidas? Fale conosco</p>
+                <a href="https://wa.me/55{{ config.whatsapp_suporte|default:'8922210068' }}" target="_blank" class="help-btn" style="display:inline-flex;margin-top:8px">
+                    <i class="fab fa-whatsapp"></i> WhatsApp
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const CADASTRO_ID = {{ cadastro.id }};
+const API_STATUS = '/api/acompanhamento/' + CADASTRO_ID + '/status/';
+const API_DATAS = '/api/instalacao/datas/';
+const API_AGENDA = '/api/instalacao/agenda/';
+const API_AGENDAR = '/api/instalacao/agendar/';
+
+let currentStep = 1;
+let pollingInterval = null;
+let selectedTurno = null;
+let selectedDate = null;
+let agendaData = null;  // dados da agenda selecionada
+let leadCidade = '';
+let idClienteServico = null;
+
+// ═══ INICIALIZACAO ════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', function() {
+    iniciarPolling();
+});
+
+// ═══ NAVEGACAO ════════════════════════════════════════════════════════════
+
+function irPara(step) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step-' + step).classList.add('active');
+    currentStep = step;
+    atualizarProgress();
+}
+
+function voltarPara(step) {
+    irPara(step);
+}
+
+function atualizarProgress() {
+    document.querySelectorAll('.p-step').forEach((el, i) => {
+        const n = i + 1;
+        el.classList.remove('active', 'done');
+        if (n < currentStep) el.classList.add('done');
+        else if (n === currentStep) el.classList.add('active');
+    });
+    document.querySelectorAll('.p-line').forEach((el, i) => {
+        el.classList.toggle('done', i + 1 < currentStep);
+    });
+}
+
+// ═══ ETAPA 1: POLLING ════════════════════════════════════════════════════
+
+function iniciarPolling() {
+    verificarStatus();
+    pollingInterval = setInterval(verificarStatus, 10000);
+}
+
+function verificarStatus() {
+    fetch(API_STATUS)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+
+            // Guardar dados
+            leadCidade = data.cidade || '';
+            idClienteServico = data.id_cliente_servico;
+
+            // Se ja tem agendamento, ir direto para sucesso
+            if (data.agendamento && data.agendamento.status === 'agendado') {
+                clearInterval(pollingInterval);
+                mostrarSucesso(data.agendamento);
+                return;
+            }
+
+            // Atualizar textos
+            const el = document.getElementById('status-text');
+            if (!data.documentacao_validada) {
+                el.textContent = 'Aguardando validacao da documentacao...';
+                document.getElementById('status-detail').textContent = 'Seus documentos estao sendo analisados';
+            } else if (!data.eh_cliente_hubsoft) {
+                el.textContent = 'Documentacao validada! Processando cadastro...';
+                document.getElementById('status-detail').textContent = 'Registrando no sistema';
+            } else if (!data.id_cliente_servico) {
+                el.textContent = 'Cadastro processado! Configurando servico...';
+                document.getElementById('status-detail').textContent = 'Quase la!';
+            }
+
+            // Condicao para avancar: doc validada + eh cliente + tem servico
+            if (data.documentacao_validada && data.eh_cliente_hubsoft && data.id_cliente_servico) {
+                clearInterval(pollingInterval);
+                document.getElementById('status-box').innerHTML = `
+                    <div style="width:60px;height:60px;border-radius:50%;background:var(--success);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px"><i class="fas fa-check"></i></div>
+                    <div class="status-text" style="color:var(--success)">Tudo pronto!</div>
+                    <div class="status-detail">Documentacao aprovada. Vamos agendar sua instalacao.</div>
+                `;
+                setTimeout(() => irPara(2), 1500);
+            }
+        })
+        .catch(err => console.error('Erro no polling:', err));
+}
+
+// ═══ ETAPA 2: TURNO ══════════════════════════════════════════════════════
+
+function selecionarTurno(turno) {
+    selectedTurno = turno;
+    document.querySelectorAll('.opt-card').forEach(c => c.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    setTimeout(() => {
+        irPara(3);
+        carregarDatas();
+    }, 300);
+}
+
+// ═══ ETAPA 3: DATA ═══════════════════════════════════════════════════════
+
+function carregarDatas() {
+    const hoje = new Date();
+    const dataRef = String(hoje.getDate()).padStart(2,'0') + '/' + String(hoje.getMonth()+1).padStart(2,'0') + '/' + hoje.getFullYear();
+
+    document.getElementById('dates-container').innerHTML = '<div class="loading-dates"><div class="spinner"></div>Carregando datas...</div>';
+    document.getElementById('agenda-info').style.display = 'none';
+    document.getElementById('agenda-erro').style.display = 'none';
+
+    fetch(API_DATAS + '?data_referencia=' + encodeURIComponent(dataRef))
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.datas || !data.datas.length) {
+                document.getElementById('dates-container').innerHTML = '<div class="error-box">Nenhuma data disponivel no momento. Tente novamente mais tarde.</div>';
+                return;
+            }
+            renderDatas(data.datas);
+        })
+        .catch(() => {
+            document.getElementById('dates-container').innerHTML = '<div class="error-box">Erro ao carregar datas. Tente novamente.</div>';
+        });
+}
+
+function renderDatas(datas) {
+    const meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+    const dias = ['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+
+    let html = '<div class="dates">';
+    datas.forEach(d => {
+        const [dd, mm, yyyy] = d.split('/');
+        const dt = new Date(yyyy, mm-1, dd);
+        html += `<div class="date-card" onclick="selecionarData('${d}', this)">
+            <div class="day">${dd}</div>
+            <div class="month">${meses[parseInt(mm)-1]} ${yyyy}</div>
+            <div class="weekday">${dias[dt.getDay()]}</div>
+        </div>`;
+    });
+    html += '</div>';
+    document.getElementById('dates-container').innerHTML = html;
+}
+
+function selecionarData(data, el) {
+    selectedDate = data;
+    document.querySelectorAll('.date-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+
+    document.getElementById('agenda-info').style.display = 'none';
+    document.getElementById('agenda-erro').style.display = 'none';
+
+    // Consultar agenda — cidade pode estar vazia se polling ainda nao passou
+    const cidadeConsulta = leadCidade || '{{ lead.cidade|default:"" }}';
+    const url = API_AGENDA + '?cidade=' + encodeURIComponent(cidadeConsulta) + '&data_referencia=' + encodeURIComponent(data) + '&turno=' + selectedTurno;
+
+    el.style.opacity = '0.6';
+    fetch(url)
+        .then(r => r.json())
+        .then(resp => {
+            el.style.opacity = '1';
+            const dados = resp.dados || {};
+            const slots = dados.disponibilidade_turno || [];
+            if (!resp.success || !dados.tem_disponibilidade_no_turno || !slots.length) {
+                document.getElementById('agenda-erro').style.display = 'block';
+                document.getElementById('agenda-erro').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Sem disponibilidade para este dia/turno. Tente outra data ou turno.';
+                return;
+            }
+            // Salvar dados da agenda (primeiro slot disponivel)
+            const slot = slots[0];
+            agendaData = {
+                id_agenda_os: dados.id_agenda_ordem_servico,
+                horario: slot.horario,
+                id_tecnico: slot.tecnicos[0].id,
+                nome_tecnico: slot.tecnicos[0].nome,
+                vagas: slot.vagas_disponiveis,
+            };
+
+            document.getElementById('agenda-info').style.display = 'block';
+            document.getElementById('agenda-erro').style.display = 'none';
+        })
+        .catch(err => {
+            el.style.opacity = '1';
+            console.error('Erro agenda:', err, 'cidade:', cidadeConsulta, 'data:', data, 'turno:', selectedTurno);
+            document.getElementById('agenda-erro').style.display = 'block';
+            document.getElementById('agenda-erro').textContent = 'Erro ao consultar agenda. Tente novamente.';
+        });
+}
+
+function avancarParaConfirmacao() {
+    irPara(4);
+    renderResumo();
+}
+
+// ═══ ETAPA 4: CONFIRMACAO ════════════════════════════════════════════════
+
+function renderResumo() {
+    const turnoLabel = selectedTurno === 'manha' ? 'Manha (08:00 - 12:00)' : 'Tarde (13:00 - 17:00)';
+    const html = `
+        <div class="summary-item">
+            <div class="summary-icon"><i class="fas fa-calendar"></i></div>
+            <div><div class="summary-label">Data</div><div class="summary-value">${selectedDate}</div></div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-icon"><i class="fas fa-clock"></i></div>
+            <div><div class="summary-label">Turno</div><div class="summary-value">${turnoLabel}</div></div>
+        </div>
+    `;
+    document.getElementById('resumo-agendamento').innerHTML = html;
+}
+
+function confirmarAgendamento() {
+    const btn = document.getElementById('btn-confirmar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agendando...';
+    document.getElementById('confirm-erro').style.display = 'none';
+
+    fetch(API_AGENDAR, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            cadastro_id: CADASTRO_ID,
+            turno: selectedTurno,
+            data_instalacao: selectedDate,
+            horario: agendaData.horario,
+            id_tecnico: agendaData.id_tecnico,
+            nome_tecnico: agendaData.nome_tecnico,
+            id_agenda_os: agendaData.id_agenda_os,
+            id_cliente_servico: idClienteServico,
+        })
+    })
+    .then(r => r.json())
+    .then(resp => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calendar-check"></i> Confirmar Instalacao';
+
+        if (resp.success) {
+            mostrarSucesso({
+                data_instalacao: selectedDate,
+                turno: selectedTurno,
+                horario: agendaData.horario.substring(0,5),
+                nome_tecnico: agendaData.nome_tecnico,
+            });
+        } else {
+            document.getElementById('confirm-erro').style.display = 'block';
+            document.getElementById('confirm-erro').textContent = resp.error || 'Erro ao agendar. Tente novamente.';
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calendar-check"></i> Confirmar Instalacao';
+        document.getElementById('confirm-erro').style.display = 'block';
+        document.getElementById('confirm-erro').textContent = 'Erro de conexao. Tente novamente.';
+    });
+}
+
+// ═══ ETAPA 5: SUCESSO ════════════════════════════════════════════════════
+
+function mostrarSucesso(dados) {
+    irPara(5);
+    const turnoLabel = (dados.turno === 'manha') ? 'Manha (08:00 - 12:00)' : 'Tarde (13:00 - 17:00)';
+    document.getElementById('sucesso-detalhes').innerHTML = `
+        <div class="summary-item">
+            <div class="summary-icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-calendar-check"></i></div>
+            <div><div class="summary-label">Data da Instalacao</div><div class="summary-value">${dados.data_instalacao}</div></div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-clock"></i></div>
+            <div><div class="summary-label">Turno</div><div class="summary-value">${turnoLabel}</div></div>
+        </div>
+    `;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Fluxos de Atendimento - Dashboard Megalink{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <a href="{% url 'vendas_web:configuracoes' %}" style="color: #666; text-decoration: none; font-size: 0.9rem;">
+                    ← Voltar para Configurações
+                </a>
+            </div>
+            <h1 style="color: #333; font-size: 2rem; font-weight: 700; margin: 0;">
+                🔄 Fluxos de Atendimento
+            </h1>
+            <p style="color: #666; font-size: 1rem; margin: 0.5rem 0 0 0;">
+                Gerencie os fluxos de atendimento automatizados
+            </p>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'vendas_web:questoes_fluxo' %}" class="btn-secondary">
+                ❓ Gerenciar Questões
+            </a>
+            <button onclick="alert('Funcionalidade em desenvolvimento')" class="btn-primary">
+                ➕ Novo Fluxo
+            </button>
+        </div>
+    </div>
+
+    <!-- Cards dos Fluxos -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 1.5rem;">
+        {% for fluxo in fluxos %}
+        <div class="fluxo-card">
+            <div class="fluxo-header">
+                <div class="fluxo-status {{ fluxo.status }}">
+                    {{ fluxo.get_status_display|upper }}
+                </div>
+                <h3 class="fluxo-nome">{{ fluxo.nome }}</h3>
+                <p class="fluxo-tipo">{{ fluxo.get_tipo_fluxo_display }}</p>
+            </div>
+            
+            <div class="fluxo-body">
+                <p class="fluxo-descricao">{{ fluxo.descricao|truncatechars:120 }}</p>
+                
+                <div class="fluxo-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ fluxo.questoes.count }}</div>
+                        <div class="stat-label">Questões</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ fluxo.atendimentos.count }}</div>
+                        <div class="stat-label">Atendimentos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ fluxo.max_tentativas }}</div>
+                        <div class="stat-label">Max Tentativas</div>
+                    </div>
+                </div>
+                
+                <div class="fluxo-config">
+                    <div class="config-item">
+                        <span class="config-label">Tempo Limite:</span>
+                        <span class="config-value">{{ fluxo.tempo_limite_minutos|default:"Ilimitado" }}{% if fluxo.tempo_limite_minutos %} min{% endif %}</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">Pular Questões:</span>
+                        <span class="config-value {{ fluxo.permite_pular_questoes|yesno:'sim,não' }}">
+                            {{ fluxo.permite_pular_questoes|yesno:"Sim,Não" }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="fluxo-actions">
+                    <a href="{% url 'vendas_web:questoes_fluxo_por_id' fluxo.id %}" class="btn-edit">
+                        ❓ Questões
+                    </a>
+                    <button onclick="alert('Funcionalidade em desenvolvimento')" class="btn-secondary-small">
+                        ✏️ Editar
+                    </button>
+                    <button onclick="alert('Funcionalidade em desenvolvimento')" class="btn-danger">
+                        🗑️ Excluir
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="grid-column: 1 / -1; padding: 3rem; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
+            <h3 style="color: #666; margin-bottom: 0.5rem;">Nenhum fluxo encontrado</h3>
+            <p style="color: #999; margin-bottom: 2rem;">Crie seu primeiro fluxo de atendimento</p>
+            <button onclick="alert('Funcionalidade em desenvolvimento')" class="btn-primary">
+                ➕ Criar Fluxo
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.btn-primary {
+    background: #1F3D59;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    background: #2c5282;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-secondary-small {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-secondary-small:hover {
+    background: #545b62;
+}
+
+.btn-edit {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-edit:hover {
+    background: #218838;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.fluxo-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.fluxo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.fluxo-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #1F3D59, #2c5282);
+    color: white;
+    position: relative;
+}
+
+.fluxo-status {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.fluxo-status.ativo {
+    background: #28a745;
+    color: white;
+}
+
+.fluxo-status.inativo {
+    background: #dc3545;
+    color: white;
+}
+
+.fluxo-status.rascunho {
+    background: #ffc107;
+    color: #333;
+}
+
+.fluxo-status.teste {
+    background: #17a2b8;
+    color: white;
+}
+
+.fluxo-nome {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.fluxo-tipo {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fluxo-body {
+    padding: 1.5rem;
+}
+
+.fluxo-descricao {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+}
+
+.fluxo-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1F3D59;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.fluxo-config {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.config-item:last-child {
+    margin-bottom: 0;
+}
+
+.config-label {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.config-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.config-value.sim {
+    color: #28a745;
+}
+
+.config-value.não {
+    color: #dc3545;
+}
+
+.fluxo-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .fluxo-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .fluxo-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

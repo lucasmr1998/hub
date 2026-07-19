@@ -1,0 +1,8 @@
+<nav class="aj-nav">
+    <a href="{% url 'vendas_web:ajuda' %}"><i class="fas fa-house"></i> Início</a>
+    {% for slug, g in guias.items %}
+    <a href="{% url 'vendas_web:ajuda_guia' slug %}" class="{% if slug == perfil_atual %}on{% endif %}">
+        <i class="fas {{ g.icone }}"></i> {{ g.titulo }}
+    </a>
+    {% endfor %}
+</nav>

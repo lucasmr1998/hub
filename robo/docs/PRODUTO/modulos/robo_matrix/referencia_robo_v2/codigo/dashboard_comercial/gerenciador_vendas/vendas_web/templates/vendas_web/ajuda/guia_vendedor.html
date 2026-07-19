@@ -1,0 +1,80 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Guia do Vendedor — Megalink One{% endblock %}
+{% block custom_css %}{% include 'vendas_web/ajuda/_estilos.html' %}{% endblock %}
+
+{% block content %}
+<div class="aj-wrap">
+    {% include 'vendas_web/ajuda/_nav.html' %}
+
+    <div class="aj-body">
+        <h2><i class="fas fa-briefcase" style="color:var(--primary);margin-right:9px;"></i>Guia do Vendedor</h2>
+        <p class="lead">Seu dia a dia: pipeline de Aquisição, oportunidades, tarefas e follow-up — sem
+           perder nenhum lead.</p>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-table-columns"></i> Pipeline (Kanban)</h3>
+            <p>O <b>Pipeline</b> é sua mesa de trabalho. Cada card é uma oportunidade; as colunas são os
+               estágios. Arraste o card para mover de estágio — o sistema registra o histórico e
+               recalcula a probabilidade.</p>
+            <ul>
+                <li>Seu perfil abre direto na aba <b>Aquisição</b> — as abas dos outros pipelines (Novo
+                    Serviço, Upgrade, Atendimento, Indicação) não aparecem para você; são conduzidos por
+                    outros perfis ou pelo robô.</li>
+                <li>Seu <b>escopo</b> mostra as oportunidades atribuídas a <b>você</b> e as <b>sem
+                    responsável</b> (pegue as órfãs!).</li>
+                <li>Use a busca e os filtros da barra para achar um cliente rápido.</li>
+                <li>Cartões com <b>SLA vencido</b> indicam que a oportunidade está parada demais no estágio.</li>
+            </ul>
+            <div class="aj-tip"><b>Dica:</b> muitos cards se movem sozinhos — o robô qualifica, coleta
+            documentos e até fecha upgrades. Seu foco são os que precisam de gente: negociação, retomada
+            de contato e os transbordos.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-folder-open"></i> Detalhe da oportunidade</h3>
+            <p>Clicando no card você abre a visão 360°:</p>
+            <ul>
+                <li><b>Dados do lead</b> — telefone, endereço, plano de interesse, documentos.</li>
+                <li><b>Histórico de contatos</b> — tudo que o robô e a equipe já falaram com o cliente.</li>
+                <li><b>Serviços HubSoft</b> — o que o cliente já tem ativo (bom para ofertar upgrade!).</li>
+                <li><b>Notas internas</b> — registre acordos e contexto; use @menção para avisar um colega.</li>
+                <li><b>Tarefas</b> — crie o follow-up na hora, com vencimento.</li>
+                <li><b>Botão de WhatsApp</b> (verde) — abre a conversa já com uma mensagem inicial pronta,
+                    configurada para o pipeline de Aquisição. Só conferir e mandar.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-list-check"></i> Tarefas</h3>
+            <p>A tela <b>Tarefas</b> organiza seu dia: <b>Hoje</b>, <b>Semana</b> e <b>Vencidas</b>.
+               Conclua com o resultado (ex.: "cliente pediu retorno sexta") — isso vira histórico da
+               oportunidade. Tarefa vencida fica vermelha e pesa contra o SLA.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-arrow-trend-up"></i> Pós-venda: upgrade e novo serviço</h3>
+            <p>Quando um cliente existente pede <b>upgrade</b> ou <b>novo ponto</b> pelo WhatsApp, o robô
+               cuida de tudo e os cards aparecem nas abas <b>Upgrade</b> e <b>Novo Serviço</b> do pipeline.
+               Você não precisa operar — mas vale acompanhar:</p>
+            <ul>
+                <li><b>Upgrade Aplicado / Serviço Criado</b> = concluído com sucesso. 🎉</li>
+                <li><b>Falha</b> = o robô não conseguiu — é a sua deixa pra ligar pro cliente e acionar o gestor.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-bullseye"></i> Suas metas</h3>
+            <p>Em <b>Metas</b> você acompanha sua quota do período e o realizado. Toda oportunidade que
+               você fecha (estágio de ganho) soma automaticamente — sem planilha.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-bell"></i> Notificações</h3>
+            <p>O sino avisa sobre novos leads, oportunidades atribuídas a você e tarefas vencendo.
+               Clique numa notificação para marcá-la como lida; o botão <span class="aj-kbd">✓✓</span>
+               marca todas. O histórico completo fica na <b>Central de Notificações</b>.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

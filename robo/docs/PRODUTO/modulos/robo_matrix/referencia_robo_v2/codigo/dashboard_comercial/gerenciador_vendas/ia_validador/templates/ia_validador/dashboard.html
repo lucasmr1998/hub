@@ -1,0 +1,637 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IA Validador — Visão Completa</title>
+  <link href="https://cdn.jsdelivr.net/npm/inter-ui@4.0.2/inter.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-1: #0f172a; --bg-2: #1e293b;
+      --c-violet: #8b5cf6; --c-indigo: #6366f1; --c-blue: #3b82f6;
+      --c-green: #10b981; --c-orange: #f59e0b; --c-red: #ef4444;
+      --c-pink: #ec4899; --c-cyan: #06b6d4;
+      --tx-1: #f8fafc; --tx-2: #cbd5e1; --tx-3: #94a3b8;
+      --card-bg: rgba(255,255,255,0.04);
+      --card-bg-2: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.08);
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      color: var(--tx-1); min-height: 100vh;
+      padding: 32px 24px; line-height: 1.5;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* ── HEADER ───────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15));
+      border: 1px solid var(--border); border-radius: 24px;
+      padding: 40px 48px; margin-bottom: 32px; position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -50%; right: -10%;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(139,92,246,0.3), transparent 70%);
+      filter: blur(60px); pointer-events: none;
+    }
+    .hero-title {
+      font-size: 36px; font-weight: 800; margin-bottom: 12px;
+      background: linear-gradient(135deg, #c4b5fd, #93c5fd, #67e8f9);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 16px; color: var(--tx-2); max-width: 700px;
+      position: relative; z-index: 1;
+    }
+    .hero-badges {
+      display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;
+      position: relative; z-index: 1;
+    }
+    .hero-badge {
+      padding: 6px 14px; border-radius: 999px;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+      font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+    }
+    .hero-badge i { font-size: 12px; }
+
+    /* ── METRICS GRID ─────────────────────────────────────── */
+    .metrics {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px; margin-bottom: 40px;
+    }
+    .metric-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px 24px;
+      transition: transform .2s, border-color .2s;
+    }
+    .metric-card:hover { transform: translateY(-2px); border-color: rgba(139,92,246,0.4); }
+    .metric-label {
+      font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--tx-3); font-weight: 600; margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 32px; font-weight: 800;
+      background: linear-gradient(135deg, #c4b5fd, #93c5fd);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .metric-sub { font-size: 12px; color: var(--tx-3); margin-top: 4px; }
+
+    /* ── SECTIONS ─────────────────────────────────────────── */
+    .section {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px 32px; margin-bottom: 28px;
+    }
+    .section-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+    }
+    .section-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--c-violet), var(--c-indigo));
+      font-size: 18px;
+    }
+    .section-title { font-size: 22px; font-weight: 700; }
+    .section-sub { font-size: 14px; color: var(--tx-3); margin-top: 2px; }
+
+    /* ── FLUXOGRAMA ───────────────────────────────────────── */
+    .flow-diagram {
+      background: var(--card-bg-2); border-radius: 16px; padding: 32px;
+      overflow-x: auto;
+    }
+    .flow-steps {
+      display: flex; align-items: stretch; gap: 12px;
+      min-width: 900px;
+    }
+    .flow-step {
+      flex: 1; background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(59,130,246,0.1));
+      border: 1px solid rgba(99,102,241,0.3); border-radius: 14px;
+      padding: 16px 18px; position: relative;
+    }
+    .flow-step-num {
+      display: inline-block; padding: 2px 10px; background: var(--c-indigo);
+      color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .flow-step-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+    .flow-step-desc { font-size: 12px; color: var(--tx-2); line-height: 1.4; }
+    .flow-arrow {
+      display: flex; align-items: center; color: var(--c-indigo); font-size: 18px;
+    }
+
+    /* ── ENDPOINTS ────────────────────────────────────────── */
+    .endpoints-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 16px;
+    }
+    .endpoint-card {
+      background: var(--card-bg-2); border-left: 4px solid var(--c-blue);
+      border-radius: 12px; padding: 20px;
+    }
+    .endpoint-card.green  { border-left-color: var(--c-green); }
+    .endpoint-card.violet { border-left-color: var(--c-violet); }
+    .endpoint-method {
+      display: inline-block; padding: 3px 10px; border-radius: 6px;
+      background: rgba(255,255,255,0.1); font-size: 11px; font-weight: 700;
+      letter-spacing: .05em;
+    }
+    .endpoint-rota {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 14px; font-weight: 600; margin-left: 8px; color: #e0e7ff;
+    }
+    .endpoint-desc { color: var(--tx-2); font-size: 13px; margin: 10px 0; }
+    .endpoint-io {
+      background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--tx-2); margin-top: 8px; line-height: 1.5;
+      word-break: break-word;
+    }
+    .endpoint-io-label {
+      font-size: 10px; font-weight: 700; color: var(--c-cyan);
+      letter-spacing: .05em; margin-bottom: 4px;
+    }
+    .endpoint-logica {
+      font-size: 12px; color: var(--tx-3); font-style: italic;
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+    }
+
+    /* ── REGRAS (TABELA) ──────────────────────────────────── */
+    .categoria-bloco { margin-bottom: 24px; }
+    .categoria-titulo {
+      font-size: 15px; font-weight: 700; color: #c4b5fd;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .categoria-titulo::before {
+      content: ''; width: 4px; height: 18px; background: var(--c-violet);
+      border-radius: 2px;
+    }
+    .regras-table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      background: var(--card-bg-2); border-radius: 12px; overflow: hidden;
+    }
+    .regras-table th {
+      background: rgba(99,102,241,0.15); padding: 10px 14px;
+      font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--tx-2); font-weight: 700; text-align: left;
+    }
+    .regras-table td {
+      padding: 12px 14px; border-top: 1px solid var(--border);
+      font-size: 13px; color: var(--tx-2); vertical-align: top;
+    }
+    .regras-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    .qid {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: #93c5fd; font-weight: 600;
+    }
+    .ext-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(139,92,246,0.2); color: #c4b5fd;
+      text-transform: uppercase; letter-spacing: .03em;
+    }
+    .status-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 600;
+    }
+    .status-tag.ativo    { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .status-tag.inativo  { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .campo-tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: #fbbf24; background: rgba(245,158,11,0.1);
+      padding: 2px 6px; border-radius: 4px;
+    }
+    .msg-snippet {
+      font-style: italic; color: var(--tx-3); font-size: 12px;
+      max-width: 280px; overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+
+    /* ── HOOKS ESPECIAIS ──────────────────────────────────── */
+    .hooks-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 14px;
+    }
+    .hook-card {
+      background: var(--card-bg-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 18px;
+      border-left: 3px solid var(--c-pink);
+    }
+    .hook-evento {
+      font-weight: 700; color: #f9a8d4; font-size: 13px; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .hook-evento i { color: var(--c-pink); }
+    .hook-detalhe { font-size: 12px; color: var(--tx-2); line-height: 1.5; }
+    .hook-arrow { color: var(--c-pink); margin: 0 4px; }
+
+    /* ── ROTAS POR STATUS ─────────────────────────────────── */
+    .status-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 12px;
+    }
+    .status-card {
+      background: var(--card-bg-2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px;
+    }
+    .status-key {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: #67e8f9; font-weight: 700; margin-bottom: 4px;
+    }
+    .status-desc { font-size: 13px; color: var(--tx-2); margin-bottom: 4px; }
+    .status-rota {
+      font-size: 11px; color: var(--c-orange);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── TOP QUESTIONS / ÚLTIMAS ───────────────────────────── */
+    .stats-row {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 16px;
+    }
+    .top-list { background: var(--card-bg-2); border-radius: 12px; padding: 16px; }
+    .top-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .top-item:last-child { border-bottom: none; }
+    .top-item-qid {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: #93c5fd; font-weight: 600;
+    }
+    .top-item-count {
+      background: rgba(139,92,246,0.2); color: #c4b5fd;
+      padding: 2px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+    }
+
+    .timeline { background: var(--card-bg-2); border-radius: 12px; padding: 16px; }
+    .timeline-item {
+      display: flex; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-time {
+      font-size: 11px; color: var(--tx-3); white-space: nowrap;
+      min-width: 90px; font-family: 'JetBrains Mono', monospace;
+    }
+    .timeline-content { flex: 1; font-size: 12px; }
+    .timeline-endpoint {
+      font-weight: 700; color: #67e8f9; font-family: 'JetBrains Mono', monospace;
+    }
+    .timeline-detail { color: var(--tx-3); margin-top: 2px; }
+    .badge-pill {
+      display: inline-block; padding: 1px 7px; border-radius: 999px;
+      font-size: 10px; font-weight: 700; margin-left: 6px;
+    }
+    .badge-pill.ok    { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .badge-pill.err   { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .badge-pill.transb{ background: rgba(245,158,11,0.2); color: #fbbf24; }
+
+    /* ── EXTRACTORS GRID ──────────────────────────────────── */
+    .ext-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 10px;
+    }
+    .ext-item {
+      background: var(--card-bg-2); border-radius: 10px; padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .ext-item-name {
+      background: rgba(139,92,246,0.2); color: #c4b5fd;
+      padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px;
+      font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+    }
+    .ext-item-desc { font-size: 12px; color: var(--tx-2); }
+
+    /* ── RESPONSIVE ───────────────────────────────────────── */
+    @media (max-width: 768px) {
+      body { padding: 16px 12px; }
+      .hero { padding: 24px; }
+      .hero-title { font-size: 26px; }
+      .stats-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    {# ───────── HERO ───────── #}
+    <div class="hero">
+      <div class="hero-title">
+        <i class="fas fa-robot" style="margin-right: 12px;"></i>
+        IA Validador — Visão Completa
+      </div>
+      <div class="hero-subtitle">
+        Esta página explica como a IA do bot de vendas funciona: quais APIs são chamadas
+        em cada interação, como cada pergunta é validada, o que acontece com base na resposta
+        do cliente e como o roteamento de status é decidido.
+      </div>
+      <div class="hero-badges">
+        <span class="hero-badge"><i class="fas fa-cog" style="color:#a78bfa;"></i> {{ regras_ativas }} regras ativas</span>
+        <span class="hero-badge"><i class="fas fa-database" style="color:#67e8f9;"></i> {{ total_regras }} regras totais</span>
+        <span class="hero-badge"><i class="fas fa-bolt" style="color:#fbbf24;"></i> {{ stats.total_24h }} interações nas últimas 24h</span>
+        <span class="hero-badge"><i class="fas fa-stopwatch" style="color:#6ee7b7;"></i> {{ stats.duracao_media_ms|floatformat:0 }}ms média</span>
+      </div>
+    </div>
+
+    {# ───────── METRICS ───────── #}
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">/validar (24h)</div>
+        <div class="metric-value">{{ stats.validar_24h }}</div>
+        <div class="metric-sub">Respostas validadas</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">/proximo-passo (24h)</div>
+        <div class="metric-value">{{ stats.proximo_24h }}</div>
+        <div class="metric-sub">Roteamentos decididos</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">/validar-imagem (24h)</div>
+        <div class="metric-value">{{ stats.imagem_24h }}</div>
+        <div class="metric-sub">Imagens analisadas pela IA Vision</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Transbordos (24h)</div>
+        <div class="metric-value">{{ stats.transbordos_24h }}</div>
+        <div class="metric-sub">Encaminhados pra atendente</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total 7 dias</div>
+        <div class="metric-value">{{ stats.total_7d }}</div>
+        <div class="metric-sub">Interações totais na semana</div>
+      </div>
+    </div>
+
+    {# ───────── FLUXOGRAMA ───────── #}
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon"><i class="fas fa-route"></i></div>
+        <div>
+          <div class="section-title">Como funciona uma interação</div>
+          <div class="section-sub">O caminho que cada mensagem do cliente percorre</div>
+        </div>
+      </div>
+      <div class="flow-diagram">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <span class="flow-step-num">1</span>
+            <div class="flow-step-title"><i class="fab fa-whatsapp"></i> Cliente envia msg</div>
+            <div class="flow-step-desc">WhatsApp → Matrix recebe mensagem do cliente.</div>
+          </div>
+          <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+          <div class="flow-step">
+            <span class="flow-step-num">2</span>
+            <div class="flow-step-title"><i class="fas fa-compass"></i> /proximo-passo</div>
+            <div class="flow-step-desc">Matrix consulta API IA. Decide se mostra menu, retoma fluxo, transborda ou encerra.</div>
+          </div>
+          <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+          <div class="flow-step">
+            <span class="flow-step-num">3</span>
+            <div class="flow-step-title"><i class="fas fa-comment-dots"></i> Bot pergunta</div>
+            <div class="flow-step-desc">Matrix exibe a mensagem retornada (msg_pergunta). Cliente responde.</div>
+          </div>
+          <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+          <div class="flow-step">
+            <span class="flow-step-num">4</span>
+            <div class="flow-step-title"><i class="fas fa-check-double"></i> /validar</div>
+            <div class="flow-step-desc">API IA aplica regra (extractor), executa hooks especiais, salva no lead.</div>
+          </div>
+          <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+          <div class="flow-step">
+            <span class="flow-step-num">5</span>
+            <div class="flow-step-title"><i class="fas fa-share"></i> Resposta</div>
+            <div class="flow-step-desc">Se válido → loop volta. Se inválido → pede de novo. Se transbordo → atendente.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ───────── ENDPOINTS ───────── #}
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--c-blue), var(--c-cyan));"><i class="fas fa-plug"></i></div>
+        <div>
+          <div class="section-title">Endpoints da API IA</div>
+          <div class="section-sub">FastAPI rodando em :8090 — chamados pelo Matrix e pelo site /cadastro/</div>
+        </div>
+      </div>
+      <div class="endpoints-grid">
+        {% for ep in endpoints %}
+        <div class="endpoint-card {% if ep.cor == '#10b981' %}green{% elif ep.cor == '#8b5cf6' %}violet{% endif %}">
+          <div>
+            <span class="endpoint-method">{{ ep.metodo }}</span>
+            <span class="endpoint-rota">{{ ep.rota }}</span>
+          </div>
+          <div class="endpoint-desc">{{ ep.descricao }}</div>
+          <div class="endpoint-io">
+            <div class="endpoint-io-label">→ ENTRADA</div>
+            {{ ep.entrada }}
+          </div>
+          <div class="endpoint-io">
+            <div class="endpoint-io-label">← SAÍDA</div>
+            {{ ep.saida }}
+          </div>
+          <div class="endpoint-logica">{{ ep.logica }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ───────── HOOKS ESPECIAIS ───────── #}
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--c-pink), var(--c-violet));"><i class="fas fa-bolt"></i></div>
+        <div>
+          <div class="section-title">Hooks Especiais — O que acontece com base na resposta</div>
+          <div class="section-sub">Lógicas que disparam automaticamente após certas validações</div>
+        </div>
+      </div>
+      <div class="hooks-grid">
+        {% for h in hooks %}
+        <div class="hook-card">
+          <div class="hook-evento"><i class="fas fa-zap"></i> {{ h.evento }}</div>
+          <div class="hook-detalhe">
+            <strong>Ação:</strong> {{ h.acao }}<br>
+            <span class="hook-arrow"><i class="fas fa-arrow-right"></i></span>
+            <strong>Efeito:</strong> {{ h.efeito }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ───────── ROTEAMENTO POR STATUS ───────── #}
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--c-orange), var(--c-red));"><i class="fas fa-map-signs"></i></div>
+        <div>
+          <div class="section-title">Roteamento por Status do Lead</div>
+          <div class="section-sub">O que o /proximo-passo retorna conforme o status_api do lead</div>
+        </div>
+      </div>
+      <div class="status-grid">
+        {% for status_key, desc, rota in status_rotas %}
+        <div class="status-card">
+          <div class="status-key">{{ status_key }}</div>
+          <div class="status-desc">{{ desc }}</div>
+          <div class="status-rota"><i class="fas fa-arrow-right"></i> {{ rota }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ───────── REGRAS DE VALIDAÇÃO ───────── #}
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--c-green), var(--c-cyan));"><i class="fas fa-list-check"></i></div>
+        <div>
+          <div class="section-title">Gestão das Perguntas (Regras de Validação)</div>
+          <div class="section-sub">{{ total_regras }} regras configuradas — agrupadas por categoria</div>
+        </div>
+      </div>
+
+      {% for cat in categorias %}
+      <div class="categoria-bloco">
+        <div class="categoria-titulo">{{ cat.nome }} <small style="color:var(--tx-3);font-weight:500;">({{ cat.regras|length }} regras)</small></div>
+        <table class="regras-table">
+          <thead>
+            <tr>
+              <th style="width:200px;">Pergunta (question_id)</th>
+              <th style="width:110px;">Validador</th>
+              <th style="width:130px;">Campo do lead</th>
+              <th>Mensagem de sucesso</th>
+              <th style="width:80px;text-align:center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in cat.regras %}
+            <tr>
+              <td>
+                <div class="qid">{{ r.question_id }}</div>
+                {% if r.descricao %}<div style="font-size:11px;color:var(--tx-3);margin-top:2px;">{{ r.descricao }}</div>{% endif %}
+              </td>
+              <td><span class="ext-tag">{{ r.extractor_tipo }}</span></td>
+              <td>
+                {% if r.campo_lead_atualizar %}
+                  <span class="campo-tag">{{ r.campo_lead_atualizar }}</span>
+                {% else %}
+                  <span style="color:var(--tx-3);font-size:11px;">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="msg-snippet">{{ r.msg_sucesso|default:"—" }}</div>
+                {% if r.status_api_apos_sucesso %}
+                <div style="font-size:10px;color:#fbbf24;margin-top:4px;">
+                  <i class="fas fa-flag"></i> status → {{ r.status_api_apos_sucesso }}
+                </div>
+                {% endif %}
+                {% if r.tags_adicionar %}
+                <div style="font-size:10px;color:#67e8f9;margin-top:2px;">
+                  <i class="fas fa-tags"></i> {{ r.tags_adicionar|join:", " }}
+                </div>
+                {% endif %}
+              </td>
+              <td style="text-align:center;">
+                {% if r.ativo %}
+                  <span class="status-tag ativo">ATIVA</span>
+                {% else %}
+                  <span class="status-tag inativo">INATIVA</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# ───────── EXTRACTORS ───────── #}
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--c-cyan), var(--c-blue));"><i class="fas fa-microchip"></i></div>
+        <div>
+          <div class="section-title">Validadores Disponíveis</div>
+          <div class="section-sub">Tipos de extractor que podem ser configurados em cada regra</div>
+        </div>
+      </div>
+      <div class="ext-grid">
+        {% for nome, desc in extractors %}
+        <div class="ext-item">
+          <span class="ext-item-name">{{ nome }}</span>
+          <span class="ext-item-desc">{{ desc }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ───────── ESTATÍSTICAS EM TEMPO REAL ───────── #}
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--c-blue), var(--c-violet));"><i class="fas fa-chart-line"></i></div>
+        <div>
+          <div class="section-title">Atividade em Tempo Real</div>
+          <div class="section-sub">Perguntas mais usadas + últimas interações registradas</div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="top-list">
+          <div style="font-size:13px;font-weight:700;color:var(--tx-2);margin-bottom:12px;">
+            <i class="fas fa-fire" style="color:var(--c-orange);"></i> TOP perguntas (24h)
+          </div>
+          {% for q in top_questions %}
+          <div class="top-item">
+            <span class="top-item-qid">{{ q.question_id }}</span>
+            <span class="top-item-count">{{ q.n }}x</span>
+          </div>
+          {% empty %}
+          <div style="color:var(--tx-3);font-size:12px;text-align:center;padding:20px;">
+            Sem interações registradas ainda.
+          </div>
+          {% endfor %}
+        </div>
+        <div class="timeline">
+          <div style="font-size:13px;font-weight:700;color:var(--tx-2);margin-bottom:12px;">
+            <i class="fas fa-history" style="color:var(--c-cyan);"></i> Últimas 10 interações
+          </div>
+          {% for log in ultimas_interacoes %}
+          <div class="timeline-item">
+            <span class="timeline-time">{{ log.timestamp|date:"d/m H:i:s" }}</span>
+            <div class="timeline-content">
+              <span class="timeline-endpoint">{{ log.endpoint }}</span>
+              {% if log.question_id %}<span style="color:var(--tx-3);">/ {{ log.question_id }}</span>{% endif %}
+              {% if log.valido == True %}<span class="badge-pill ok">VÁLIDO</span>
+              {% elif log.valido == False %}<span class="badge-pill err">INVÁL.</span>{% endif %}
+              {% if log.transbordou %}<span class="badge-pill transb">TRANSB.</span>{% endif %}
+              <div class="timeline-detail">
+                cel: <code>{{ log.cellphone|default:"—" }}</code>
+                {% if log.duracao_ms %} · {{ log.duracao_ms }}ms{% endif %}
+                {% if log.motivo %} · {{ log.motivo }}{% endif %}
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div style="color:var(--tx-3);font-size:12px;text-align:center;padding:20px;">
+            Aguardando primeiras interações...
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ───────── FOOTER ───────── #}
+    <div style="text-align:center; padding: 30px; color: var(--tx-3); font-size: 12px;">
+      <i class="fas fa-robot"></i> IA Validador · Megalink Rob-Vendas ·
+      Visão atualizada em <strong>{% now "d/m/Y H:i" %}</strong>
+    </div>
+
+  </div>
+</body>
+</html>

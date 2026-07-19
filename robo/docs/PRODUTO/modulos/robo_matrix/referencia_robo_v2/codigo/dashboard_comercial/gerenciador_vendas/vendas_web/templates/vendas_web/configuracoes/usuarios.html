@@ -1,0 +1,832 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Gerenciar Usuários - MegaLink{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .page-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .search-box {
+        display: flex;
+        align-items: center;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        min-width: 300px;
+    }
+
+    .search-box input {
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 0.9rem;
+    }
+
+    .search-box i {
+        color: #9ca3af;
+        margin-right: 0.5rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: #1F3D59;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2c5282;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+
+    .btn-danger {
+        background: #dc2626;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+    }
+
+    .btn-success {
+        background: #059669;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #047857;
+    }
+
+    .users-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .table-header {
+        background: #f8fafc;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    td {
+        color: #1f2937;
+        font-size: 0.9rem;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1F3D59, #2c5282);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .user-details h4 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .user-details p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-staff {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-superuser {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .groups-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .group-badge {
+        background: #e5e7eb;
+        color: #374151;
+        padding: 0.125rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .btn-icon {
+        padding: 0.5rem;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #9ca3af;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #1F3D59;
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.1);
+    }
+
+    .form-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-checkbox input {
+        width: 16px;
+        height: 16px;
+    }
+
+    .form-checkbox label {
+        font-size: 0.9rem;
+        color: #374151;
+        cursor: pointer;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .alert-success {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .alert-info {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+
+        .page-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-box {
+            min-width: auto;
+        }
+
+        .table-container {
+            font-size: 0.8rem;
+        }
+
+        th, td {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .user-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+            margin: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-users"></i>
+            Gerenciar Usuários
+        </h1>
+        <p class="page-subtitle">
+            Crie, edite e gerencie usuários do sistema, permissões e grupos de acesso
+        </p>
+    </div>
+
+    <!-- Actions -->
+    <div class="page-actions">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar usuários...">
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">
+            <i class="fas fa-plus"></i>
+            Novo Usuário
+        </button>
+    </div>
+
+    <!-- Users Table -->
+    <div class="users-table">
+        <div class="table-header">
+            <h3 class="table-title">Usuários do Sistema</h3>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Grupos</th>
+                        <th>Data de Criação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    {% for user in users %}
+                    <tr data-user-id="{{ user.id }}">
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">
+                                    {{ user.first_name|first|default:user.username|first|upper }}
+                                </div>
+                                <div class="user-details">
+                                    <h4>{{ user.get_full_name|default:user.username }}</h4>
+                                    <p>@{{ user.username }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.is_superuser %}
+                                <span class="status-badge status-superuser">Superuser</span>
+                            {% elif user.is_staff %}
+                                <span class="status-badge status-staff">Staff</span>
+                            {% elif user.is_active %}
+                                <span class="status-badge status-active">Ativo</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="groups-list">
+                                {% for group in user.groups.all %}
+                                    <span class="group-badge">{{ group.name }}</span>
+                                {% empty %}
+                                    <span class="group-badge">Sem grupos</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>{{ user.date_joined|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-secondary btn-sm" onclick="editUser({{ user.id }})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% if not user.is_superuser and user.id != request.user.id %}
+                                <button class="btn btn-danger btn-sm" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="Deletar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit User Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modalTitle">Novo Usuário</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        
+        <div id="alertContainer"></div>
+        
+        <form id="userForm">
+            <input type="hidden" id="userId" name="user_id">
+            
+            <div class="form-group">
+                <label class="form-label" for="username">Username *</label>
+                <input type="text" id="username" name="username" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="email">Email *</label>
+                <input type="email" id="email" name="email" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="firstName">Nome</label>
+                <input type="text" id="firstName" name="first_name" class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="lastName">Sobrenome</label>
+                <input type="text" id="lastName" name="last_name" class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="password">Senha <span id="passwordRequired">*</span></label>
+                <input type="password" id="password" name="password" class="form-input">
+                <small style="color: #6b7280; font-size: 0.8rem;">Deixe em branco para manter a senha atual (apenas em edição)</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Grupos</label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
+                    {% for group in groups %}
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="group_{{ group.id }}" name="groups" value="{{ group.name }}">
+                        <label for="group_{{ group.id }}">{{ group.name }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-checkbox">
+                    <input type="checkbox" id="isActive" name="is_active" checked>
+                    <label for="isActive">Usuário ativo</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-checkbox">
+                    <input type="checkbox" id="isStaff" name="is_staff">
+                    <label for="isStaff">Acesso ao admin (Staff)</label>
+                </div>
+            </div>
+        </form>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveUser()">Salvar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentUser = null;
+let isEditMode = false;
+
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#usersTableBody tr');
+    
+    rows.forEach(row => {
+        const username = row.querySelector('.user-details h4').textContent.toLowerCase();
+        const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        
+        if (username.includes(searchTerm) || email.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+
+// Modal functions
+function openCreateModal() {
+    isEditMode = false;
+    currentUser = null;
+    document.getElementById('modalTitle').textContent = 'Novo Usuário';
+    document.getElementById('passwordRequired').textContent = '*';
+    document.getElementById('userForm').reset();
+    document.getElementById('isActive').checked = true;
+    document.getElementById('userModal').classList.add('active');
+    clearAlerts();
+}
+
+function editUser(userId) {
+    isEditMode = true;
+    currentUser = userId;
+    document.getElementById('modalTitle').textContent = 'Editar Usuário';
+    document.getElementById('passwordRequired').textContent = '';
+    
+    // Buscar dados do usuário
+    const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+    const username = row.querySelector('.user-details p').textContent.replace('@', '');
+    const email = row.querySelector('td:nth-child(2)').textContent;
+    const fullName = row.querySelector('.user-details h4').textContent;
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    // Preencher formulário
+    document.getElementById('userId').value = userId;
+    document.getElementById('username').value = username;
+    document.getElementById('email').value = email;
+    document.getElementById('firstName').value = firstName;
+    document.getElementById('lastName').value = lastName;
+    document.getElementById('password').value = '';
+    
+    // Limpar checkboxes
+    document.querySelectorAll('input[name="groups"]').forEach(cb => cb.checked = false);
+    
+    // Marcar grupos do usuário
+    const groupBadges = row.querySelectorAll('.group-badge');
+    groupBadges.forEach(badge => {
+        const groupName = badge.textContent;
+        if (groupName !== 'Sem grupos') {
+            const checkbox = document.querySelector(`input[value="${groupName}"]`);
+            if (checkbox) checkbox.checked = true;
+        }
+    });
+    
+    // Status
+    const statusBadge = row.querySelector('.status-badge');
+    if (statusBadge.classList.contains('status-active') || statusBadge.classList.contains('status-staff') || statusBadge.classList.contains('status-superuser')) {
+        document.getElementById('isActive').checked = true;
+    } else {
+        document.getElementById('isActive').checked = false;
+    }
+    
+    if (statusBadge.classList.contains('status-staff') || statusBadge.classList.contains('status-superuser')) {
+        document.getElementById('isStaff').checked = true;
+    } else {
+        document.getElementById('isStaff').checked = false;
+    }
+    
+    document.getElementById('userModal').classList.add('active');
+    clearAlerts();
+}
+
+function closeModal() {
+    document.getElementById('userModal').classList.remove('active');
+    clearAlerts();
+}
+
+function clearAlerts() {
+    document.getElementById('alertContainer').innerHTML = '';
+}
+
+function showAlert(message, type = 'info') {
+    const alertContainer = document.getElementById('alertContainer');
+    alertContainer.innerHTML = `
+        <div class="alert alert-${type}">
+            ${message}
+        </div>
+    `;
+}
+
+function saveUser() {
+    const form = document.getElementById('userForm');
+    const formData = new FormData(form);
+    
+    // Validar campos obrigatórios
+    if (!formData.get('username') || !formData.get('email')) {
+        showAlert('Username e email são obrigatórios', 'error');
+        return;
+    }
+    
+    if (!isEditMode && !formData.get('password')) {
+        showAlert('Senha é obrigatória para novos usuários', 'error');
+        return;
+    }
+    
+    // Coletar dados
+    const data = {
+        username: formData.get('username'),
+        email: formData.get('email'),
+        first_name: formData.get('first_name'),
+        last_name: formData.get('last_name'),
+        password: formData.get('password'),
+        is_active: formData.get('is_active') === 'on',
+        is_staff: formData.get('is_staff') === 'on',
+        groups: Array.from(document.querySelectorAll('input[name="groups"]:checked')).map(cb => cb.value)
+    };
+    
+    const url = isEditMode 
+        ? `/api/configuracoes/usuarios/${currentUser}/`
+        : '/api/configuracoes/usuarios/';
+    
+    const method = isEditMode ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showAlert(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showAlert('Erro ao salvar usuário', 'error');
+    });
+}
+
+function deleteUser(userId, username) {
+    if (!confirm(`Tem certeza que deseja deletar o usuário "${username}"? Esta ação não pode ser desfeita.`)) {
+        return;
+    }
+    
+    fetch(`/api/configuracoes/usuarios/${userId}/deletar/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showAlert(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showAlert('Erro ao deletar usuário', 'error');
+    });
+}
+
+// Utility function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+});
+
+// Close modal on outside click
+document.getElementById('userModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

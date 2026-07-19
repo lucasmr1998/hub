@@ -1,0 +1,119 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Guia do Gerente — Megalink One{% endblock %}
+{% block custom_css %}{% include 'vendas_web/ajuda/_estilos.html' %}{% endblock %}
+
+{% block content %}
+<div class="aj-wrap">
+    {% include 'vendas_web/ajuda/_nav.html' %}
+
+    <div class="aj-body">
+        <h2><i class="fas fa-chart-pie" style="color:var(--primary);margin-right:9px;"></i>Guia do Gerente</h2>
+        <p class="lead">Visão completa da operação: números, equipe, os 5 pipelines e a saúde das
+           automações. Você opera tudo, exceto as configurações de sistema (isso é com o Administrador).</p>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-gauge-high"></i> Dashboard e Análises</h3>
+            <p>O <b>Dashboard</b> (menu Visão geral) concentra os indicadores do dia: leads novos,
+               conversões, vendas e funil. <b>Análises</b> é o hub completo de métricas, com filtro de
+               período (7/30/90 dias ou datas livres):</p>
+            <ul>
+                <li><b>Funil de conversão</b> — da entrada do lead até virar cliente HubSoft (venda real =
+                    cadastro criado no HubSoft).</li>
+                <li><b>Indicações</b> — volume, taxa de conversão do canal e <b>ranking de quem mais
+                    indica</b>.</li>
+                <li><b>Automação HubSoft</b> — taxa de sucesso das execuções (novo serviço, upgrade,
+                    conversão) e as últimas falhas para investigação.</li>
+                <li><b>Operação do CRM</b> — tempo médio por estágio, oportunidades <b>paradas há 7+
+                    dias</b> e carga por responsável (ótimo para redistribuir trabalho).</li>
+                <li><b>Atrito do robô</b> — em qual pergunta os clientes mais erram a resposta; use para
+                    pedir ajuste dos textos ao administrador.</li>
+            </ul>
+            <div class="aj-tip">Use antes das reuniões de equipe: oportunidades paradas + ranking de
+            indicadores costumam render as melhores pautas.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-table-columns"></i> Os 5 pipelines do CRM</h3>
+            <p>As <b>abas de pipeline</b> no topo do Kanban contam histórias diferentes:</p>
+            <ul>
+                <li><b>Aquisição</b> — do lead novo até virar cliente (Novo Lead → Qualificação → Aguardando
+                    Assinatura → Aguardando Instalação → Cliente Ativo). Anda sozinho, conduzido pelo robô.</li>
+                <li><b>Novo Serviço</b> — cliente existente contratando mais um ponto (Coletando → Processando
+                    HubSoft → Abrindo OS → Serviço Criado). Automático.</li>
+                <li><b>Upgrade de Plano</b> — migrações de plano feitas pelo robô (Em Andamento → Migrando
+                    no HubSoft → Upgrade Aplicado). Automático.</li>
+                <li><b>Atendimento</b> — solicitações que foram para atendimento humano.</li>
+                <li><b>Indicação</b> — o único pipeline <b>100% manual</b>: um operador cadastra a pessoa
+                    indicada, completa os dados, converte em cliente e abre o atendimento/O.S. pela própria
+                    tela. Veja o <b>Guia do Operador</b> para o passo a passo completo.</li>
+            </ul>
+            <div class="aj-tip"><b>Importante:</b> os pipelines de pós-venda (Novo Serviço, Upgrade) e a
+            Aquisição andam <u>sozinhos</u> — o robô e os processadores automáticos movem os cards conforme
+            o progresso real no HubSoft/Matrix. Cards parados em "Processando" por muito tempo merecem
+            investigação. Indicação é diferente: só anda com alguém operando.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-file-signature"></i> Contrato — a trava antes da instalação</h3>
+            <p>Depois que um cliente é criado (aquisição automática ou indicação manual), o HubSoft gera um
+               contrato. <b>Quem aceita é o próprio cliente, pelo app da Megalink</b> — ninguém da equipe
+               assina em nome dele. O sistema só <b>monitora</b> esse status, e usa isso como trava: o
+               atendimento e a ordem de serviço de instalação só podem ser abertos <b>depois</b> do aceite.
+               Isso evita agendar instalação sem contrato assinado.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-robot"></i> Regras automáticas do funil de Aquisição</h3>
+            <p>Em <b>Config. CRM → estágios</b>, cada estágio de Aquisição pode ter <b>regras</b>
+               (condições sobre status do lead, documentos, serviços HubSoft, tags). Quando o lead
+               atende as condições, a oportunidade muda de estágio sem ninguém tocar.</p>
+            <ul>
+                <li>Condições na mesma regra = <b>E</b> (todas precisam valer).</li>
+                <li>Várias regras no mesmo estágio = <b>OU</b> (qualquer uma move).</li>
+                <li>Estágios finais (ganho/perda) nunca são reavaliados.</li>
+                <li>O pipeline de Indicação <b>não</b> tem regras automáticas — a movimentação é sempre
+                    feita pelo operador, à mão ou pelos botões de ação (converter, agendar).</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-ranking-star"></i> Equipe: metas e desempenho</h3>
+            <ul>
+                <li><b>Metas</b> — defina quotas por vendedor ou equipe (quantidade, valor, período). O
+                    fechamento de oportunidades alimenta o realizado automaticamente.</li>
+                <li><b>Desempenho</b> — ranking de vendas do período, funil por estágio e comparação com
+                    a meta. É também para onde vão as notificações de <b>falha</b> de automação
+                    (conversão ou agendamento que não deram certo) — comece o dia olhando ali.</li>
+                <li><b>Atribuição</b> — oportunidades sem responsável ficam visíveis a todos (dependendo do
+                    escopo do perfil); atribua pelo card ou pela tela de detalhe. A pessoa atribuída recebe
+                    notificação na hora.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-shield-heart"></i> Retenção</h3>
+            <p>A tela de <b>Retenção</b> lista alertas de risco (contrato expirando, churn score).
+               Rode o <b>scanner</b> periodicamente para gerar alertas a partir das datas de contrato
+               do HubSoft, e distribua o tratamento pela equipe.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-user-shield"></i> Perfis de acesso da equipe</h3>
+            <p>Você não gerencia perfis (isso é do Administrador), mas vale saber como funciona: cada
+               pessoa da equipe tem um perfil que define o que ela vê e opera, e um escopo de dados
+               (tudo, só o pipeline dela, ou só os próprios registros). Se alguém da equipe reclamar que
+               "não está vendo" algo, é provável que seja o perfil dela — acione o Administrador.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-bell"></i> Notificações</h3>
+            <p>O sino na topbar mostra as não lidas; a <b>Central de Notificações</b> (menu lateral) tem
+               histórico completo com filtros. As notificações agora são <b>personalizadas por perfil</b>:
+               você recebe entradas em qualquer pipeline que tem acesso, marcos importantes (conversão,
+               contrato, instalação) e principalmente <b>alertas de falha</b> — essas são só para
+               gerentes/administradores, então trate como prioridade.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

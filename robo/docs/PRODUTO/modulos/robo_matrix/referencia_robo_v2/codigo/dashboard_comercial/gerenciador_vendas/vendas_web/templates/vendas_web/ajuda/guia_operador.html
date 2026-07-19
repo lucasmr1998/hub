@@ -1,0 +1,93 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Guia do Operador — Megalink One{% endblock %}
+{% block custom_css %}{% include 'vendas_web/ajuda/_estilos.html' %}{% endblock %}
+
+{% block content %}
+<div class="aj-wrap">
+    {% include 'vendas_web/ajuda/_nav.html' %}
+
+    <div class="aj-body">
+        <h2><i class="fas fa-headset" style="color:var(--primary);margin-right:9px;"></i>Guia do Operador</h2>
+        <p class="lead">Você conduz o pipeline de <b>Indicação</b> (e, conforme seu perfil, o de
+           <b>Atendimento</b>) do começo ao fim, na mão — é o único fluxo do CRM que não anda sozinho.</p>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-lightbulb"></i> O que é uma Indicação</h3>
+            <p>É um lead trazido por alguém — um cliente que indicou um conhecido, uma campanha externa,
+               etc. Diferente da Aquisição (que vem do robô no WhatsApp), a Indicação nasce de um
+               <b>cadastro manual</b> feito por você, e carrega um <b>código do indicador</b> para
+               rastreio (quem trouxe aquele cliente).</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-route"></i> A jornada, passo a passo</h3>
+            <div class="aj-flow">
+                <span class="aj-step">1. Cadastrar</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">2. Completar dados</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">3. Converter em cliente</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">4. Contrato aceito</span><i class="fas fa-arrow-right"></i>
+                <span class="aj-step">5. Abrir atendimento + O.S.</span>
+            </div>
+
+            <h3 style="margin-top:22px;"><i class="fas fa-plus-circle"></i> 1. Cadastrar a indicação</h3>
+            <p>No Pipeline, na aba <b>Indicação</b>, use o botão <b>+ Nova Indicação</b>. Preencha nome,
+               telefone e o <b>código do indicador</b> — o resto pode ser completado depois. Ao salvar,
+               a oportunidade já aparece no primeiro estágio do funil.</p>
+
+            <h3 style="margin-top:18px;"><i class="fas fa-id-card"></i> 2. Completar os dados</h3>
+            <p>Abra a oportunidade e use o botão <b>Ações do Operador</b> — ele abre um painel central
+               com um formulário para preencher CPF, endereço, plano e demais dados obrigatórios. Salve
+               antes de seguir para a conversão.</p>
+
+            <h3 style="margin-top:18px;"><i class="fas fa-user-check"></i> 3. Converter em cliente</h3>
+            <p>Com os dados completos, clique em <b>Converter em cliente</b>. Nos bastidores, em segundos,
+               o sistema faz duas chamadas ao HubSoft:</p>
+            <ol>
+                <li>Cria o <b>prospecto</b> (cadastro inicial no HubSoft).</li>
+                <li>Converte o prospecto em <b>cliente</b>, já com o plano escolhido — via API própria,
+                    bem mais rápida que o processo manual antigo.</li>
+            </ol>
+            <div class="aj-tip">Se faltar algum dado obrigatório, o botão avisa exatamente o que falta —
+            não precisa adivinhar.</div>
+
+            <h3 style="margin-top:18px;"><i class="fas fa-file-signature"></i> 4. Acompanhar o contrato</h3>
+            <p>Depois da conversão, o HubSoft gera o contrato do cliente. <b>Você não aceita por ele</b> —
+               o próprio cliente recebe e assina pelo <b>app da Megalink</b>. Sua parte é acompanhar:
+               o painel mostra um selo <b>Aguardando aceite</b> (laranja) ou <b>Aceito</b> (verde), e o
+               botão <b>Atualizar status</b> consulta o HubSoft na hora.</p>
+            <div class="aj-warn">O botão de abrir atendimento fica <b>bloqueado</b> enquanto o contrato não
+            estiver aceito — é uma trava do sistema, não um bug. Assim que o cliente aceitar no app, o
+            selo vira verde e o botão libera sozinho.</div>
+
+            <h3 style="margin-top:18px;"><i class="fas fa-screwdriver-wrench"></i> 5. Abrir atendimento + O.S.</h3>
+            <p>Com o contrato aceito, escolha turno e data e clique em <b>Abrir atendimento + O.S.</b>.
+               O sistema agenda automaticamente no Matrix — abre o atendimento e a ordem de serviço de
+               instalação já com a data escolhida. A oportunidade avança para o estágio final do funil.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-table-columns"></i> Movendo o card manualmente</h3>
+            <p>Além dos botões de ação, você também pode arrastar o card entre as colunas do kanban a
+               qualquer momento — útil para marcar como <b>Perdido</b> se a indicação não avançar, por
+               exemplo. Toda mudança de estágio fica registrada no histórico da oportunidade.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fab fa-whatsapp"></i> Falar com o lead</h3>
+            <p>O botão verde de WhatsApp na tela da oportunidade já abre com uma <b>mensagem inicial
+               pronta</b> (configurada pelo Administrador para o pipeline de Indicação) — é só conferir
+               e enviar.</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-bell"></i> Notificações</h3>
+            <p>Você é avisado automaticamente quando uma nova indicação entra no funil, quando uma
+               conversão em cliente é concluída e quando o atendimento/O.S. é aberto com sucesso. Se uma
+               conversão ou um agendamento <b>falhar</b>, quem é avisado é o gerente/administrador — a
+               mensagem de erro na tela já te diz o que aconteceu, para tentar de novo. Acompanhe tudo
+               pelo sino da topbar.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

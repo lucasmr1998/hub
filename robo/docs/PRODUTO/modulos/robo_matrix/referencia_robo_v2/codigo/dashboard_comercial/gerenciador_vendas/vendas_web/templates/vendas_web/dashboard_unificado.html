@@ -1,0 +1,389 @@
+{% extends 'vendas_web/base.html' %}
+{% block title %}Dashboard — Megalink{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+  --primary:#1e1b4b; --accent:#0022fa; --accent2:#0018b0;
+  --success:#10b981; --warning:#f59e0b; --danger:#ef4444; --info:#3b82f6;
+  --bg:#f1f3f9; --card:#fff; --text:#1e293b; --muted:#64748b;
+  --border:rgba(102,126,234,.1);
+}
+body { background:var(--bg); }
+.db { padding:20px 24px; max-width:1440px; margin:0 auto; }
+
+/* Header */
+.db-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:10px; }
+.db-top h1 { font-size:21px; font-weight:800; color:var(--primary); margin:0; display:flex; align-items:center; gap:8px; }
+.db-top h1 i { color:var(--accent); }
+.db-actions { display:flex; align-items:center; gap:10px; }
+.db-date { font-size:12px; color:var(--muted); }
+.btn-refresh { display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--muted); font-size:12px; cursor:pointer; transition:all .2s; }
+.btn-refresh:hover { border-color:var(--accent); color:var(--accent); }
+
+/* Section */
+.sec-title { font-size:14px; font-weight:800; color:var(--primary); margin:22px 0 12px; display:flex; align-items:center; gap:7px; }
+.sec-title i { color:var(--accent); font-size:13px; }
+
+/* Cards */
+.card { background:var(--card); border-radius:14px; border:1px solid var(--border); box-shadow:0 1px 5px rgba(0,0,0,.04); }
+.card-h { padding:14px 18px 0; display:flex; align-items:center; justify-content:space-between; }
+.card-ttl { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+.card-b { padding:14px 18px 18px; }
+
+/* Stat cards */
+.stat { padding:18px; border-radius:14px; border:1px solid var(--border); background:var(--card); box-shadow:0 1px 5px rgba(0,0,0,.04); transition:transform .15s,box-shadow .15s; }
+.stat:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,.08); }
+.stat .ic { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:17px; margin-bottom:12px; }
+.stat .lbl { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+.stat .val { font-size:28px; font-weight:800; color:var(--text); line-height:1; margin-bottom:9px; }
+.stat .sub { display:flex; flex-wrap:wrap; gap:8px; }
+.stat .sub span { font-size:11px; color:var(--muted); }
+.stat .sub strong { color:var(--text); }
+.stat.feat { background:linear-gradient(135deg,#1e1b4b,#312e81); border:none; }
+.stat.feat .lbl,.stat.feat .sub span { color:rgba(255,255,255,.6); }
+.stat.feat .val,.stat.feat .sub strong { color:#fff; }
+.stat.feat .ic { background:rgba(255,255,255,.15); color:#fff; }
+.ic-bl { background:rgba(59,130,246,.1); color:var(--info); }
+.ic-gr { background:rgba(16,185,129,.1); color:var(--success); }
+.ic-pu { background:rgba(102,126,234,.1); color:var(--accent); }
+.ic-or { background:rgba(245,158,11,.1); color:var(--warning); }
+
+/* Grids */
+.g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.g21 { display:grid; grid-template-columns:2fr 1fr; gap:14px; }
+
+/* Hub cards */
+.hg { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+.hc { padding:14px; border-radius:12px; border:1px solid var(--border); background:var(--card); text-align:center; }
+.hc .hv { font-size:24px; font-weight:800; }
+.hc .hl { font-size:10px; color:var(--muted); margin-top:3px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.hc.gr .hv { color:var(--success); }
+.hc.or .hv { color:var(--warning); }
+.hc.rd .hv { color:var(--danger); }
+.hc.gy .hv { color:var(--muted); }
+
+/* Receita card */
+.receita { background:linear-gradient(135deg,#059669,#10b981); color:#fff; border-radius:14px; padding:18px; }
+.receita .rl { font-size:10px; font-weight:700; opacity:.75; text-transform:uppercase; letter-spacing:.05em; }
+.receita .rv { font-size:26px; font-weight:800; margin:5px 0 4px; }
+.receita .rs { font-size:11px; opacity:.75; }
+
+/* Period tabs */
+.tabs { display:flex; gap:3px; background:var(--bg); border-radius:8px; padding:3px; }
+.tab { padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; border:none; background:none; color:var(--muted); cursor:pointer; transition:all .15s; }
+.tab.on { background:var(--card); color:var(--accent); box-shadow:0 1px 4px rgba(0,0,0,.07); }
+
+/* Conversões */
+.conv { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--bg); }
+.conv:last-child { border:none; }
+.cv-av { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; flex-shrink:0; }
+.cv-inf { flex:1; min-width:0; }
+.cv-nm { font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cv-mt { font-size:11px; color:var(--muted); margin-top:2px; }
+.cv-vl { font-size:13px; font-weight:700; color:var(--success); flex-shrink:0; }
+
+.empty { display:flex; align-items:center; justify-content:center; padding:32px; color:var(--muted); gap:8px; font-size:13px; }
+.spin { animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* Responsive */
+@media(max-width:1100px) { .g4,.hg { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:820px) { .g3,.g21 { grid-template-columns:1fr; } }
+@media(max-width:560px) {
+  .db { padding:10px; }
+  .g4,.g3,.g2,.hg { grid-template-columns:1fr; }
+  .stat .val { font-size:22px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="db">
+
+  <!-- ── Header ────────────────────────────────────────────── -->
+  <div class="db-top">
+    <h1><i class="fas fa-chart-bar"></i> Dashboard</h1>
+    <div class="db-actions">
+      <span class="db-date" id="db-clock"></span>
+      <button class="btn-refresh" onclick="carregarConversoes()">
+        <i class="fas fa-sync-alt" id="ri"></i> Atualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       1. VISÃO GERAL — 4 cards
+  ════════════════════════════════════════════════════════ -->
+  <div class="sec-title"><i class="fas fa-tachometer-alt"></i> Visão Geral</div>
+  <div class="g4" style="margin-bottom:14px">
+
+    <div class="stat">
+      <div class="ic ic-bl"><i class="fas fa-headset"></i></div>
+      <div class="lbl">Atendimentos</div>
+      <div class="val">{{ stats.total_atendimentos }}</div>
+      <div class="sub">
+        <span>Hoje <strong>{{ stats.atend_hoje }}</strong></span>
+        <span>7d <strong>{{ stats.atend_7d }}</strong></span>
+        <span>30d <strong>{{ stats.atend_30d }}</strong></span>
+      </div>
+    </div>
+
+    <div class="stat feat">
+      <div class="ic"><i class="fas fa-users"></i></div>
+      <div class="lbl">Leads</div>
+      <div class="val">{{ stats.total_leads }}</div>
+      <div class="sub">
+        <span>Hoje <strong>{{ stats.leads_hoje }}</strong></span>
+        <span>7d <strong>{{ stats.leads_7d }}</strong></span>
+        <span>30d <strong>{{ stats.leads_30d }}</strong></span>
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="ic ic-pu"><i class="fas fa-user-check"></i></div>
+      <div class="lbl">Clientes Hubsoft</div>
+      <div class="val">{{ stats.total_clientes }}</div>
+      <div class="sub">
+        <span>Ativos <strong>{{ stats.clientes_ativos }}</strong></span>
+        <span>Serviços <strong>{{ stats.total_servicos }}</strong></span>
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="ic ic-gr"><i class="fas fa-wifi"></i></div>
+      <div class="lbl">Habilitados</div>
+      <div class="val">{{ stats.hab }}</div>
+      <div class="sub">
+        <span>Hoje <strong>{{ stats.hab_hoje }}</strong></span>
+        <span>7d <strong>{{ stats.hab_7d }}</strong></span>
+        <span>30d <strong>{{ stats.hab_30d }}</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       2. GRÁFICO DE BARRAS + FUNIL
+  ════════════════════════════════════════════════════════ -->
+  <div class="sec-title"><i class="fas fa-chart-bar"></i> Evolução — Últimos 30 Dias</div>
+  <div class="g21" style="margin-bottom:22px">
+
+    <div class="card">
+      <div class="card-h">
+        <span class="card-ttl">Leads · Atendimentos · Habilitações</span>
+        <div class="tabs" id="chart-tabs">
+          <button class="tab on" onclick="mudarSerie('all',this)">Todos</button>
+          <button class="tab" onclick="mudarSerie('leads',this)">Leads</button>
+          <button class="tab" onclick="mudarSerie('atend',this)">Atend.</button>
+          <button class="tab" onclick="mudarSerie('hab',this)">Hab.</button>
+        </div>
+      </div>
+      <div class="card-b"><canvas id="barChart" height="220"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="card-ttl">Funil de Conversão</span></div>
+      <div class="card-b"><canvas id="funilChart" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       3. ANÁLISE HUBSOFT
+  ════════════════════════════════════════════════════════ -->
+  <div class="sec-title"><i class="fas fa-server"></i> Análise Hubsoft</div>
+
+  <div class="hg">
+    <div class="hc gr"><div class="hv">{{ stats.hab }}</div><div class="hl">Habilitados</div></div>
+    <div class="hc or"><div class="hv">{{ stats.aguardando }}</div><div class="hl">Aguardando Inst.</div></div>
+    <div class="hc rd"><div class="hv">{{ stats.cancelados }}</div><div class="hl">Cancelados</div></div>
+    <div class="hc gy"><div class="hv">{{ stats.suspensos }}</div><div class="hl">Suspensos</div></div>
+  </div>
+
+  <div class="g3" style="margin-bottom:22px">
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="receita">
+        <div class="rl"><i class="fas fa-dollar-sign"></i> Receita Mensal Habilitados</div>
+        <div class="rv">R$ {{ stats.receita_total|floatformat:"2" }}</div>
+        <div class="rs">{{ stats.hab }} clientes ativos</div>
+      </div>
+      <div class="stat" style="flex:1">
+        <div class="ic ic-or"><i class="fas fa-percentage"></i></div>
+        <div class="lbl">Taxa de Conversão</div>
+        <div class="val" style="font-size:24px">{{ stats.taxa_conversao }}%</div>
+        <div class="sub"><span>Leads → Prospectos</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="card-ttl">Serviços por Status</span></div>
+      <div class="card-b"><canvas id="srvChart" height="200"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="card-ttl">Leads por Origem</span></div>
+      <div class="card-b"><canvas id="origemChart" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       4. ÚLTIMAS CONVERSÕES
+  ════════════════════════════════════════════════════════ -->
+  <div class="sec-title"><i class="fas fa-star"></i> Últimas Conversões</div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-b" id="conv-box">
+      <div class="empty"><i class="fas fa-circle-notch spin"></i> Carregando...</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const G = {{ stats.graficos|safe }};
+
+Chart.defaults.font.family = "'Segoe UI',sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.padding  = 10;
+
+const C = ['#0022fa','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6'];
+
+// ── 1. Barras (30 dias) ────────────────────────────────
+let barInst;
+const DS = {
+  all: [
+    { label:'Leads',        data:G.leads_30d, backgroundColor:'rgba(102,126,234,.8)', borderRadius:4 },
+    { label:'Atendimentos', data:G.atend_30d, backgroundColor:'rgba(59,130,246,.7)',  borderRadius:4 },
+    { label:'Habilitações', data:G.hab_30d,   backgroundColor:'rgba(16,185,129,.8)',  borderRadius:4 },
+  ],
+  leads: [{ label:'Leads',        data:G.leads_30d, backgroundColor:'rgba(102,126,234,.85)', borderRadius:4 }],
+  atend: [{ label:'Atendimentos', data:G.atend_30d, backgroundColor:'rgba(59,130,246,.85)',  borderRadius:4 }],
+  hab:   [{ label:'Habilitações', data:G.hab_30d,   backgroundColor:'rgba(16,185,129,.85)',  borderRadius:4 }],
+};
+function mkBar(s) {
+  if (barInst) barInst.destroy();
+  barInst = new Chart(document.getElementById('barChart'), {
+    type:'bar',
+    data:{ labels:G.labels_30d, datasets:DS[s] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display: s==='all', position:'top' } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{maxTicksLimit:10, maxRotation:0} },
+        y:{ grid:{color:'#f1f5f9'}, ticks:{precision:0}, beginAtZero:true },
+      },
+    },
+  });
+}
+mkBar('all');
+function mudarSerie(s, b) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  b.classList.add('on');
+  mkBar(s);
+}
+
+// ── 2. Funil ───────────────────────────────────────────
+if (G.funil && G.funil.length) {
+  new Chart(document.getElementById('funilChart'), {
+    type:'bar',
+    data:{
+      labels: G.funil.map(f=>f.etapa),
+      datasets:[{ label:'Total', data:G.funil.map(f=>f.total),
+        backgroundColor:['#3b82f6','#0022fa','#8b5cf6','#10b981','#f59e0b'],
+        borderRadius:5 }],
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ grid:{color:'#f1f5f9'}, ticks:{precision:0}, beginAtZero:true },
+        y:{ grid:{display:false} },
+      },
+    },
+  });
+}
+
+// ── 3. Serviços por status ─────────────────────────────
+if (G.srv_status && G.srv_status.length) {
+  const top = G.srv_status.slice(0,6);
+  new Chart(document.getElementById('srvChart'), {
+    type:'bar',
+    data:{
+      labels: top.map(s=>s.status.replace(/_/g,' ')),
+      datasets:[{ label:'Qtd', data:top.map(s=>s.total),
+        backgroundColor:['#10b981','#f59e0b','#ef4444','#94a3b8','#3b82f6','#8b5cf6'],
+        borderRadius:5 }],
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{precision:0}, beginAtZero:true, grid:{color:'#f1f5f9'} },
+        y:{ grid:{display:false} },
+      },
+    },
+  });
+}
+
+// ── 4. Leads por origem ────────────────────────────────
+if (G.leads_origem && G.leads_origem.length) {
+  new Chart(document.getElementById('origemChart'), {
+    type:'doughnut',
+    data:{
+      labels: G.leads_origem.map(o=>o.origem||'Outros'),
+      datasets:[{ data:G.leads_origem.map(o=>o.total),
+        backgroundColor:C, hoverOffset:5, borderWidth:2 }],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ position:'bottom' } },
+    },
+  });
+}
+
+// ── Relógio ────────────────────────────────────────────
+function tick() {
+  const n = new Date();
+  document.getElementById('db-clock').textContent =
+    n.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'}) +
+    ' · ' + n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+tick(); setInterval(tick, 60000);
+
+// ── Últimas conversões ─────────────────────────────────
+function carregarConversoes() {
+  const ri = document.getElementById('ri');
+  ri.classList.add('spin');
+  fetch('/api/dashboard/ultimas-conversoes/?limite=8')
+    .then(r => r.json())
+    .then(d => {
+      ri.classList.remove('spin');
+      const box = document.getElementById('conv-box');
+      const list = d.conversoes || [];
+      if (!list.length) {
+        box.innerHTML = '<div class="empty"><i class="fas fa-info-circle"></i> Nenhuma conversão recente.</div>';
+        return;
+      }
+      box.innerHTML = list.map(c => `
+        <div class="conv">
+          <div class="cv-av">${(c.nome||'?')[0].toUpperCase()}</div>
+          <div class="cv-inf">
+            <div class="cv-nm">${c.nome||'—'}</div>
+            <div class="cv-mt">${c.servico_nome||''} · ${c.origem||''}</div>
+          </div>
+          <div class="cv-vl">${c.valor||'—'}</div>
+        </div>`).join('');
+    })
+    .catch(() => {
+      document.getElementById('ri').classList.remove('spin');
+      document.getElementById('conv-box').innerHTML =
+        '<div class="empty">Erro ao carregar.</div>';
+    });
+}
+carregarConversoes();
+setInterval(carregarConversoes, 60000);
+</script>
+{% endblock %}

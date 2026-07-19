@@ -1,0 +1,24 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Central de Ajuda — Megalink One{% endblock %}
+
+{% block custom_css %}{% include 'vendas_web/ajuda/_estilos.html' %}{% endblock %}
+
+{% block content %}
+<div class="aj-hero">
+    <h1><i class="fas fa-circle-question" style="margin-right:10px;"></i>Central de Ajuda</h1>
+    <p>Guias rápidos por perfil para você dominar o Megalink One — do pipeline de vendas
+       aos fluxos automáticos do robô no WhatsApp. Escolha o guia do seu papel na operação.</p>
+</div>
+
+<div class="aj-cards">
+    {% for slug, g in guias.items %}
+    <a class="aj-card" href="{% url 'vendas_web:ajuda_guia' slug %}">
+        {% if slug == sugerido %}<span class="aj-badge">Recomendado pra você</span>{% endif %}
+        <div class="ic"><i class="fas {{ g.icone }}"></i></div>
+        <h3>{{ g.titulo }}</h3>
+        <p>{{ g.desc }}</p>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

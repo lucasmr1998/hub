@@ -1,0 +1,60 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Guia do Auditor — Megalink One{% endblock %}
+{% block custom_css %}{% include 'vendas_web/ajuda/_estilos.html' %}{% endblock %}
+
+{% block content %}
+<div class="aj-wrap">
+    {% include 'vendas_web/ajuda/_nav.html' %}
+
+    <div class="aj-body">
+        <h2><i class="fas fa-magnifying-glass" style="color:var(--primary);margin-right:9px;"></i>Guia do Auditor</h2>
+        <p class="lead">Seu perfil é <b>somente leitura</b>: você enxerga tudo, em todos os pipelines, mas
+           não altera nada. Ideal para revisão, conferência e compliance.</p>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-eye"></i> O que você vê</h3>
+            <p>Diferente dos demais perfis, o seu <b>escopo de dados</b> é sempre <i>todos os registros</i>
+               — você enxerga as oportunidades de todos os vendedores e operadores, em qualquer pipeline
+               liberado para o seu perfil, sem o filtro "só as minhas".</p>
+            <ul>
+                <li>Todas as abas de pipeline que o Administrador liberar para o seu perfil.</li>
+                <li>O histórico completo de mudanças de estágio de cada oportunidade (aba
+                    <b>Hist. Estágios</b>), com data, hora e quem moveu.</li>
+                <li>Notas internas, tarefas e o status do contrato de cada cliente.</li>
+                <li>Relatórios de <b>Desempenho</b> e <b>Retenção</b>, se liberados para o seu perfil.</li>
+            </ul>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-ban"></i> O que você não faz</h3>
+            <p>Nenhum botão de ação funciona para o seu perfil por padrão: mover card no kanban, editar
+               dados de um lead, converter uma indicação em cliente, abrir atendimento/O.S., atribuir
+               responsável. Se você tentar mesmo assim (inclusive digitando um link direto), o sistema
+               bloqueia a ação com um erro de permissão — é esperado, não é falha do sistema.</p>
+            <div class="aj-tip">Se você precisar registrar uma observação sobre algo que auditou, peça a
+            um Gerente ou Operador para adicionar uma nota na oportunidade — ou combine com o
+            Administrador uma capacidade extra específica para o seu caso.</div>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-file-signature"></i> Conferindo contratos</h3>
+            <p>Dentro de uma oportunidade convertida em cliente, o painel mostra o status real do
+               contrato — <b>Aceito</b> (com data) ou <b>Aguardando aceite</b> — direto do HubSoft. Útil
+               para conferir se nenhuma instalação foi agendada antes do aceite (o sistema já impede isso
+               na origem, mas a auditoria confirma).</p>
+        </div>
+
+        <div class="aj-sec">
+            <h3><i class="fas fa-clock-rotate-left"></i> Onde encontrar o histórico</h3>
+            <ul>
+                <li><b>Timeline</b> da oportunidade — todos os contatos e eventos, em ordem cronológica.</li>
+                <li><b>Hist. Estágios</b> — cada transição de coluna no kanban, com responsável e tempo
+                    gasto no estágio anterior.</li>
+                <li><b>Admin Django</b> (se liberado) — registro técnico de cada execução de automação no
+                    HubSoft, com sucesso/falha e mensagem de erro, para investigação mais profunda.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

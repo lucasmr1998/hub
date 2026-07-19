@@ -1,0 +1,1678 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block extra_css %}
+<style>
+  .detalhe-page {
+    background: linear-gradient(135deg, #f0f2ff 0%, #f8f0ff 100%);
+    min-height: calc(100vh - 64px);
+    padding: 24px;
+  }
+
+  /* ---- HEADER ---- */
+  .detalhe-header {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(102,126,234,0.15);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .detalhe-header .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0022fa, #0018b0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .detalhe-header .info { flex: 1; min-width: 200px; }
+  .detalhe-header .info h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e1b4b;
+    margin: 0 0 4px;
+  }
+  .detalhe-header .meta-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .detalhe-header .meta-row span {
+    font-size: 13px;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .estagio-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .prioridade-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .prio-urgente { background: #fee2e2; color: #dc2626; }
+  .prio-alta    { background: #fef3c7; color: #d97706; }
+  .prio-normal  { background: #dbeafe; color: #2563eb; }
+  .prio-baixa   { background: #f3f4f6; color: #6b7280; }
+
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn-action {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+  }
+  .btn-primary { background: linear-gradient(135deg, #0022fa, #0018b0); color: #fff; }
+  .btn-primary:hover { opacity: .9; color: #fff; }
+  .btn-secondary { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+  .btn-secondary:hover { background: #f9fafb; color: #374151; }
+  .btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+  .btn-danger:hover { background: #fecaca; }
+
+  /* ---- LAYOUT GRID ----
+     Cards de resumo (Oportunidade / Dados do Lead / Indicação) ficam em FAIXA
+     HORIZONTAL acima da timeline; o conteúdo principal ocupa a largura toda. */
+  .detalhe-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .sidebar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    align-items: stretch;
+  }
+  .sidebar .card { margin-bottom: 0; height: 100%; display: flex; flex-direction: column; }
+  .sidebar .card .card-body { flex: 1; }
+  /* Cards mais largos → campos internos em 2 colunas (menos altura) */
+  .sidebar .card-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; align-content: start; }
+  .sidebar .detail-field { margin-bottom: 12px; min-width: 0; }
+  .sidebar .detail-field .value { overflow-wrap: anywhere; }
+  /* Campos longos / botões ocupam a linha inteira */
+  .sidebar .detail-field.full,
+  .sidebar .card-body > button,
+  .sidebar .card-body > p { grid-column: 1 / -1; }
+  @media (max-width: 750px) {
+    .sidebar { grid-template-columns: 1fr; }
+  }
+
+  /* ---- CARD genérico ---- */
+  .card {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 14px;
+    border: 1px solid rgba(102,126,234,0.12);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(102,126,234,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-header h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-body { padding: 16px 18px; }
+
+  /* ---- SIDEBAR: campos de detalhe ---- */
+  .detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 14px;
+  }
+  .detail-field label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #9ca3af;
+  }
+  .detail-field .value {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 500;
+  }
+  .detail-field .value a { color: #0022fa; text-decoration: none; }
+  .detail-field .value a:hover { text-decoration: underline; }
+  .value-empty { color: #d1d5db !important; font-style: italic; }
+
+  /* Progress de probabilidade */
+  .prob-bar {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .prob-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #0022fa, #0018b0);
+    transition: width .4s;
+  }
+
+  /* Tags */
+  .tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .tag-chip {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* ---- TIMELINE ---- */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, #0022fa33, #0018b033);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 10px;
+    border: 1px solid rgba(102,126,234,0.08);
+    transition: background .2s;
+  }
+  .tl-item:hover { background: rgba(255,255,255,0.9); }
+  .tl-dot {
+    position: absolute;
+    left: -23px;
+    top: 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #0022fa44;
+  }
+  .tl-dot.dot-estagio   { background: #0022fa; }
+  .tl-dot.dot-contato   { background: #0ea5e9; }
+  .tl-dot.dot-nota      { background: #f59e0b; }
+  .tl-dot.dot-venda     { background: #059669; }
+  .tl-dot.dot-perdido   { background: #e74c3c; }
+  .tl-dot.dot-status    { background: #7c3aed; }
+
+  .tl-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .tl-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e1b4b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tl-date {
+    font-size: 11px;
+    color: #9ca3af;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tl-body {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .tl-meta { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+
+  /* Status de contato */
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.ok   { background: #059669; }
+  .status-dot.bad  { background: #e74c3c; }
+  .status-dot.mid  { background: #f59e0b; }
+
+  /* ---- NOTAS ---- */
+  .nota-item {
+    padding: 12px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    border-left: 3px solid #0022fa;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .nota-item.nota-alerta    { border-left-color: #e74c3c; }
+  .nota-item.nota-importante{ border-left-color: #0018b0; }
+  .nota-item.nota-reuniao   { border-left-color: #059669; }
+  .nota-item.nota-ligacao   { border-left-color: #0ea5e9; }
+  .nota-item.nota-email     { border-left-color: #f59e0b; }
+  .nota-item.nota-fixada    { background: #fffbeb; border-left-color: #f59e0b; }
+  .nota-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .nota-author { font-size: 12px; font-weight: 600; color: #374151; }
+  .nota-date   { font-size: 11px; color: #9ca3af; }
+  .nota-tipo   { font-size: 11px; background: #f3f4f6; padding: 2px 8px; border-radius: 10px; color: #6b7280; }
+  .nota-texto  { font-size: 13px; color: #374151; line-height: 1.6; margin: 0; white-space: pre-wrap; }
+
+  /* ---- FORM NOTA ---- */
+  .nota-form textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color .2s;
+    box-sizing: border-box;
+  }
+  .nota-form textarea:focus { border-color: #0022fa; }
+  .nota-form-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .nota-form-row select {
+    padding: 7px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #fff;
+    outline: none;
+    flex: 1;
+    min-width: 130px;
+  }
+
+  /* ---- HUBSOFT ---- */
+  .hubsoft-servico {
+    padding: 10px 12px;
+    background: rgba(102,126,234,0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(102,126,234,0.1);
+    margin-bottom: 8px;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .hubsoft-servico .servico-nome { font-size: 13px; font-weight: 600; color: #1e1b4b; }
+  .hubsoft-servico .servico-meta {
+    font-size: 12px; color: #6b7280; margin-top: 6px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+    min-width: 0;
+  }
+  .status-servico {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .hubsoft-servico .servico-contrato { font-size: 12px; color: #6b7280; }
+  .status-habilitado   { background: #d1fae5; color: #059669; }
+  .status-aguardando   { background: #dbeafe; color: #2563eb; }
+  .status-suspenso     { background: #fee2e2; color: #dc2626; }
+  .status-cancelado    { background: #f3f4f6; color: #6b7280; }
+
+  /* ---- MODAL MOVER ESTAGIO ---- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    width: min(460px, 95vw);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-box h3 { margin: 0 0 16px; font-size: 16px; color: #1e1b4b; }
+  .modal-box select, .modal-box textarea, .modal-box input[type=text] {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+  }
+  .modal-box select:focus, .modal-box textarea:focus { border-color: #0022fa; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+  /* ---- BREADCRUMB ---- */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #9ca3af;
+    margin-bottom: 16px;
+  }
+  .breadcrumb a { color: #0022fa; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  /* ---- TOAST ---- */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1e1b4b;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all .3s;
+    z-index: 9999;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { background: #dc2626; }
+
+  /* ---- SEÇÃO EMPTY ---- */
+  .empty-state {
+    text-align: center;
+    padding: 24px;
+    color: #9ca3af;
+    font-size: 13px;
+  }
+  .empty-state i { font-size: 28px; margin-bottom: 8px; display: block; }
+
+  /* ---- TABS ---- */
+  .tabs-nav {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid rgba(102,126,234,0.12);
+    padding: 0 18px;
+    background: rgba(255,255,255,0.5);
+  }
+  .tab-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #9ca3af;
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-btn.active { color: #0022fa; border-bottom-color: #0022fa; }
+  .tab-btn .badge {
+    background: #0022fa;
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .tab-panel { display: none; padding: 16px 18px; }
+  .tab-panel.active { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detalhe-page">
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <a href="{% url 'crm:pipeline' %}?pipeline={{ request.GET.pipeline|default:oportunidade.tipo }}"><i class="fas fa-columns"></i> Pipeline</a>
+    <i class="fas fa-chevron-right" style="font-size:10px"></i>
+    <a href="{% url 'crm:oportunidades_lista' %}">Oportunidades</a>
+    <i class="fas fa-chevron-right" style="font-size:10px"></i>
+    <span>{{ lead.nome_razaosocial|default:oportunidade.titulo|truncatechars:40 }}</span>
+  </div>
+
+  <!-- HEADER -->
+  <div class="detalhe-header">
+    <div class="avatar">{{ lead.nome_razaosocial|first|upper }}</div>
+
+    <div class="info">
+      <h1>{{ lead.nome_razaosocial|default:"Lead sem nome" }}</h1>
+      <div class="meta-row">
+        {% if lead.telefone %}
+        <span><i class="fas fa-phone"></i>
+          <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" style="color:#0022fa">
+            {{ lead.telefone }}
+          </a>
+        </span>
+        {% endif %}
+        {% if lead.email %}
+        <span><i class="fas fa-envelope"></i> {{ lead.email }}</span>
+        {% endif %}
+        <span><i class="fas fa-calendar-alt"></i> Cadastro: {{ lead.data_cadastro|date:"d/m/Y" }}</span>
+        {% if lead.origem %}
+        <span><i class="fas fa-tag"></i> {{ lead.get_origem_display }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Estágio atual -->
+      <span class="estagio-badge" style="background:{{ oportunidade.estagio.cor_hex }}">
+        <i class="fas {{ oportunidade.estagio.icone_fa }}"></i>
+        {{ oportunidade.estagio.nome }}
+      </span>
+
+      <!-- Prioridade -->
+      {% if oportunidade.prioridade %}
+      <span class="prioridade-badge prio-{{ oportunidade.prioridade }}">
+        {{ oportunidade.get_prioridade_display }}
+      </span>
+      {% endif %}
+
+      <!-- Botão mover estágio -->
+      <button class="btn-action btn-primary" onclick="abrirModalEstagio()">
+        <i class="fas fa-arrow-right"></i> Mover estágio
+      </button>
+
+      <!-- WhatsApp (com mensagem inicial configurável por pipeline) -->
+      {% if lead.telefone %}
+      <a href="https://wa.me/{{ lead.telefone|cut:'+' }}{% if wa_mensagem %}?text={{ wa_mensagem|urlencode }}{% endif %}"
+         target="_blank" class="btn-action btn-secondary" title="Abrir WhatsApp{% if wa_mensagem %} com mensagem inicial{% endif %}">
+        <i class="fab fa-whatsapp" style="color:#25d366"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- GRID PRINCIPAL -->
+  <div class="detalhe-grid">
+
+    <!-- ===== SIDEBAR ===== -->
+    <div class="sidebar">
+
+      <!-- DADOS CRM -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-briefcase" style="color:#0022fa"></i> Oportunidade</h3>
+        </div>
+        <div class="card-body">
+
+          <div class="detail-field">
+            <label>Valor estimado</label>
+            <div class="value">
+              {% if oportunidade.valor_estimado %}
+                R$ {{ oportunidade.valor_estimado|floatformat:2 }}
+              {% else %}
+                <span class="value-empty">Não informado</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Probabilidade</label>
+            <div class="value">{{ oportunidade.probabilidade }}%</div>
+            <div class="prob-bar">
+              <div class="prob-fill" style="width:{{ oportunidade.probabilidade }}%"></div>
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Responsável</label>
+            <div class="value">
+              {% if oportunidade.responsavel %}
+                <i class="fas fa-user-circle" style="color:#0022fa"></i>
+                {{ oportunidade.responsavel.get_full_name|default:oportunidade.responsavel.username }}
+              {% else %}
+                <span class="value-empty">Não atribuído</span>
+                <button class="btn-action btn-secondary" style="margin-top:6px;font-size:12px;padding:5px 10px"
+                  onclick="abrirModalVendedor()">
+                  <i class="fas fa-user-plus"></i> Atribuir
+                </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Origem CRM</label>
+            <div class="value">{{ oportunidade.get_origem_crm_display }}</div>
+          </div>
+
+          <div class="detail-field">
+            <label>Entrada no estágio</label>
+            <div class="value">{{ oportunidade.data_entrada_estagio|date:"d/m/Y H:i" }}</div>
+          </div>
+
+          {% if oportunidade.data_fechamento_previsto %}
+          <div class="detail-field">
+            <label>Fechamento previsto</label>
+            <div class="value">{{ oportunidade.data_fechamento_previsto|date:"d/m/Y" }}</div>
+          </div>
+          {% endif %}
+
+          {% if oportunidade.data_fechamento_real %}
+          <div class="detail-field">
+            <label>Fechamento real</label>
+            <div class="value" style="color:#059669;font-weight:700">
+              <i class="fas fa-check-circle"></i> {{ oportunidade.data_fechamento_real|date:"d/m/Y" }}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if oportunidade.tags.all %}
+          <div class="detail-field full">
+            <label>Tags</label>
+            <div class="tags-row">
+              {% for tag in oportunidade.tags.all %}
+              <span class="tag-chip" style="background:{{ tag.cor_hex }}">{{ tag.nome }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if oportunidade.motivo_perda %}
+          <div class="detail-field">
+            <label>Motivo da perda</label>
+            <div class="value" style="color:#e74c3c">{{ oportunidade.motivo_perda }}</div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- DADOS DO LEAD -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-user" style="color:#0022fa"></i> Dados do Lead</h3>
+        </div>
+        <div class="card-body">
+
+          {% if lead.cpf_cnpj %}
+          <div class="detail-field">
+            <label>CPF/CNPJ</label>
+            <div class="value">{{ lead.cpf_cnpj }}</div>
+          </div>
+          {% endif %}
+
+          {% if lead.data_nascimento %}
+          <div class="detail-field">
+            <label>Nascimento</label>
+            <div class="value">{{ lead.data_nascimento|date:"d/m/Y" }}</div>
+          </div>
+          {% endif %}
+
+          {% if lead.rua or lead.endereco %}
+          <div class="detail-field full">
+            <label>Endereço</label>
+            <div class="value" style="font-size:13px">
+              {% if lead.rua %}
+                {{ lead.rua }}{% if lead.numero_residencia %}, {{ lead.numero_residencia }}{% endif %}
+                {% if lead.bairro %} — {{ lead.bairro }}{% endif %}<br>
+                {% if lead.cidade %}{{ lead.cidade }}{% if lead.estado %}/{{ lead.estado }}{% endif %}{% endif %}
+                {% if lead.cep %} — CEP {{ lead.cep }}{% endif %}
+              {% else %}
+                {{ lead.endereco }}
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="detail-field">
+            <label>Status API</label>
+            <div class="value">
+              <span class="status-servico
+                {% if lead.status_api == 'processado' %}status-habilitado
+                {% elif lead.status_api == 'processamento_manual' %}status-aguardando
+                {% elif lead.status_api == 'erro' %}status-suspenso
+                {% else %}status-cancelado{% endif %}">
+                {{ lead.get_status_api_display|default:lead.status_api }}
+              </span>
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Documentação</label>
+            <div class="value">
+              {% if lead.documentacao_validada %}
+                <span style="color:#059669"><i class="fas fa-check-circle"></i> Validada</span>
+              {% elif lead.documentacao_completa %}
+                <span style="color:#f59e0b"><i class="fas fa-clock"></i> Aguardando validação</span>
+              {% else %}
+                <span style="color:#e74c3c"><i class="fas fa-times-circle"></i> Incompleta</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if lead.score_qualificacao %}
+          <div class="detail-field">
+            <label>Score de qualificação</label>
+            <div class="value">{{ lead.score_qualificacao }}/10</div>
+          </div>
+          {% endif %}
+
+          {% if lead.tentativas_contato %}
+          <div class="detail-field">
+            <label>Tentativas de contato</label>
+            <div class="value">{{ lead.tentativas_contato }}</div>
+          </div>
+          {% endif %}
+
+          {% if lead.observacoes %}
+          <div class="detail-field full">
+            <label>Observações</label>
+            <div class="value" style="font-size:13px;color:#6b7280">{{ lead.observacoes }}</div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      {% if oportunidade.tipo == 'indicacao' %}
+      <!-- INDICAÇÃO — atalho p/ o modal de ações -->
+      <div class="card" id="cardIndicacao">
+        <div class="card-header">
+          <h3><i class="fas fa-lightbulb" style="color:#8b5cf6"></i> Indicação</h3>
+        </div>
+        <div class="card-body">
+          <div class="detail-field">
+            <label>ID do Indicador</label>
+            <div class="value">{{ lead.id_indicador|default:"—" }}</div>
+          </div>
+          <button class="btn-action" onclick="abrirModalIndicacao()"
+            style="width:100%;margin-top:14px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;justify-content:center;">
+            <i class="fas fa-bolt"></i> Ações do Operador
+          </button>
+          <p style="font-size:12px;color:#9ca3af;margin:10px 0 0;text-align:center;line-height:1.5;">
+            Completar dados · converter em cliente · abrir atendimento e O.S.
+          </p>
+        </div>
+      </div>
+      {% elif oportunidade.tipo == 'wifeed' %}
+      <!-- WIFEED — atalho p/ o modal de ações -->
+      <div class="card" id="cardIndicacao">
+        <div class="card-header">
+          <h3><i class="fas fa-wifi" style="color:#06b6d4"></i> Wifeed</h3>
+        </div>
+        <div class="card-body">
+          <div class="detail-field">
+            <label>Origem do lead</label>
+            <div class="value">Portal WiFi{% if lead.id_origem_servico %} · local {{ lead.id_origem_servico }}{% endif %}</div>
+          </div>
+          <button class="btn-action" onclick="abrirModalIndicacao()"
+            style="width:100%;margin-top:14px;background:linear-gradient(135deg,#06b6d4,#0891b2);color:#fff;justify-content:center;">
+            <i class="fas fa-bolt"></i> Ações do Operador
+          </button>
+          <p style="font-size:12px;color:#9ca3af;margin:10px 0 0;text-align:center;line-height:1.5;">
+            Completar dados · converter em cliente · abrir atendimento e O.S.
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- HUBSOFT -->
+      {% if cliente_hubsoft %}
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-network-wired" style="color:#0ea5e9"></i> Hubsoft</h3>
+        </div>
+        <div class="card-body">
+          {% if cliente_hubsoft.servicos.all %}
+            {% for servico in cliente_hubsoft.servicos.all %}
+            <div class="hubsoft-servico">
+              <div class="servico-nome">{{ servico.nome_plano|default:"Serviço" }}</div>
+              <div class="servico-meta">
+                <span class="status-servico
+                  {% if 'habilit' in servico.status_prefixo %}status-habilitado
+                  {% elif 'aguardando' in servico.status_prefixo %}status-aguardando
+                  {% elif 'suspen' in servico.status_prefixo %}status-suspenso
+                  {% else %}status-cancelado{% endif %}">
+                  <i class="fas fa-circle" style="font-size:6px;flex-shrink:0"></i>
+                  {{ servico.status|default:servico.status_prefixo|default:"—" }}
+                </span>
+                {% if servico.data_fim_contrato %}
+                  <span class="servico-contrato">Contrato: {{ servico.data_fim_contrato }}</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p style="font-size:13px;color:#9ca3af;margin:0">Nenhum serviço encontrado.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+    <!-- fim sidebar -->
+
+    <!-- ===== COLUNA PRINCIPAL ===== -->
+    <div class="main-col">
+
+      <!-- TABS -->
+      <div class="card" style="margin-bottom:16px;overflow:visible">
+        <div class="tabs-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-timeline')">
+            <i class="fas fa-stream"></i> Timeline
+            <span class="badge">{{ timeline_total }}</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-notas')">
+            <i class="fas fa-sticky-note"></i> Notas
+            <span class="badge" id="notas-count">{{ oportunidade.notas.count }}</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-historico')">
+            <i class="fas fa-history"></i> Hist. Estágios
+            <span class="badge">{{ historico_estagios|length }}</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-historico-status')">
+            <i class="fas fa-exchange-alt"></i> Hist. Status
+            <span class="badge">{{ historico_status|length }}</span>
+          </button>
+          {% if cliente_hubsoft %}
+          <button class="tab-btn" onclick="switchTab(this,'tab-hubsoft-os'); carregarHubsoftDados();">
+            <i class="fas fa-tools"></i> Atendimentos & O.S
+          </button>
+          {% endif %}
+        </div>
+
+        <!-- TAB: TIMELINE MESCLADA -->
+        <div id="tab-timeline" class="tab-panel active">
+          {% if timeline_itens %}
+          <div class="timeline">
+
+            {% for item in timeline_itens %}
+            {% if item.tipo == 'contato' %}
+            {% with hc=item.obj %}
+            <div class="tl-item">
+              <div class="tl-dot
+                {% if hc.converteu_venda %}dot-venda
+                {% elif hc.sucesso %}dot-contato
+                {% elif hc.status == 'chamada_perdida' or hc.status == 'nao_atendeu' %}dot-perdido
+                {% else %}dot-contato{% endif %}">
+              </div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <i class="fas fa-phone" style="color:#0ea5e9;font-size:12px"></i>
+                  {% if hc.converteu_venda %}
+                    <span style="color:#059669">Venda confirmada</span>
+                  {% elif hc.status == 'transferido_humano' %}
+                    Transferido para humano
+                  {% elif hc.status == 'fluxo_finalizado' %}
+                    Fluxo finalizado
+                  {% else %}
+                    {{ hc.get_status_display|default:hc.status }}
+                  {% endif %}
+                </div>
+                <span class="tl-date">{{ hc.data_hora_contato|date:"d/m H:i" }}</span>
+              </div>
+              {% if hc.observacoes %}
+              <p class="tl-body">{{ hc.observacoes|truncatechars:200 }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                {% if hc.duracao_segundos %}
+                  <i class="fas fa-clock"></i> {{ hc.duracao_segundos }}s
+                {% endif %}
+                {% if hc.nome_contato %}· {{ hc.nome_contato }}{% endif %}
+              </div>
+            </div>
+            {% endwith %}
+            {% elif item.tipo == 'estagio' %}
+            {% with he=item.obj %}
+            <div class="tl-item">
+              <div class="tl-dot
+                {% if he.estagio_novo.is_final_ganho %}dot-venda
+                {% elif he.estagio_novo.is_final_perdido %}dot-perdido
+                {% else %}dot-estagio{% endif %}">
+              </div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <i class="fas fa-arrow-right" style="color:#0022fa;font-size:11px"></i>
+                  {% if he.estagio_anterior %}
+                    {{ he.estagio_anterior.nome }} → <strong>{{ he.estagio_novo.nome }}</strong>
+                  {% else %}
+                    Entrada: <strong>{{ he.estagio_novo.nome }}</strong>
+                  {% endif %}
+                </div>
+                <span class="tl-date">{{ he.data_transicao|date:"d/m H:i" }}</span>
+              </div>
+              {% if he.motivo %}
+              <p class="tl-body">{{ he.motivo }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                {% if he.movido_por %}por {{ he.movido_por.get_full_name|default:he.movido_por.username }}{% endif %}
+                {% if he.tempo_no_estagio_horas %}
+                  &nbsp;· {{ he.tempo_no_estagio_horas|floatformat:1 }}h no estágio anterior
+                {% endif %}
+              </div>
+            </div>
+            {% endwith %}
+            {% elif item.tipo == 'status' %}
+            {% with hs=item.obj %}
+            <div class="tl-item">
+              <div class="tl-dot dot-status"></div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <i class="fas fa-exchange-alt" style="color:#7c3aed;font-size:11px"></i>
+                  {% if hs.status_anterior %}
+                    <span class="estagio-badge" style="background:#9ca3af;font-size:11px;padding:2px 8px">{{ hs.status_anterior }}</span>
+                    <i class="fas fa-arrow-right" style="color:#9ca3af;font-size:11px;margin:0 4px"></i>
+                  {% endif %}
+                  <span class="estagio-badge" style="background:#7c3aed;font-size:11px;padding:2px 8px">{{ hs.status_novo }}</span>
+                </div>
+                <span class="tl-date">{{ hs.data_alteracao|date:"d/m H:i" }}</span>
+              </div>
+              {% if hs.observacao %}
+              <p class="tl-body">{{ hs.observacao }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                <i class="fas fa-tag" style="font-size:10px"></i> {{ hs.origem }}
+                {% if hs.alterado_por %}
+                  &nbsp;· <i class="fas fa-user" style="font-size:10px"></i>
+                  {{ hs.alterado_por.get_full_name|default:hs.alterado_por.username }}
+                {% endif %}
+              </div>
+            </div>
+            {% endwith %}
+            {% endif %}
+            {% endfor %}
+
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fas fa-stream"></i>
+            Nenhuma atividade registrada ainda.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- TAB: NOTAS -->
+        <div id="tab-notas" class="tab-panel">
+
+          <!-- Form nova nota -->
+          <div class="nota-form" style="margin-bottom:20px">
+            <textarea id="nota-texto" placeholder="Adicionar uma nota, observação ou registro de contato..."></textarea>
+            <div class="nota-form-row">
+              <select id="nota-tipo">
+                <option value="geral">📝 Geral</option>
+                <option value="ligacao">📞 Ligação</option>
+                <option value="reuniao">🤝 Reunião</option>
+                <option value="email">✉️ E-mail</option>
+                <option value="importante">⭐ Importante</option>
+                <option value="alerta">⚠️ Alerta</option>
+              </select>
+              <button class="btn-action btn-primary" onclick="salvarNota()">
+                <i class="fas fa-paper-plane"></i> Salvar
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista de notas -->
+          <div id="notas-lista">
+            {% for nota in oportunidade.notas.all %}
+            <div class="nota-item nota-{{ nota.tipo }}{% if nota.is_fixada %} nota-fixada{% endif %}">
+              <div class="nota-header">
+                {% if nota.is_fixada %}<i class="fas fa-thumbtack" style="color:#f59e0b"></i>{% endif %}
+                <span class="nota-author">{{ nota.autor.get_full_name|default:nota.autor.username }}</span>
+                <span class="nota-date">{{ nota.data_criacao|date:"d/m/Y H:i" }}</span>
+                <span class="nota-tipo">{{ nota.get_tipo_display }}</span>
+              </div>
+              <p class="nota-texto">{{ nota.conteudo }}</p>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+              <i class="fas fa-sticky-note"></i>
+              Nenhuma nota ainda. Adicione a primeira acima.
+            </div>
+            {% endfor %}
+          </div>
+
+        </div>
+
+        <!-- TAB: HISTÓRICO DE ESTÁGIOS -->
+        <div id="tab-historico" class="tab-panel">
+          {% if historico_estagios %}
+          <div class="timeline">
+            {% for he in historico_estagios %}
+            <div class="tl-item">
+              <div class="tl-dot
+                {% if he.estagio_novo.is_final_ganho %}dot-venda
+                {% elif he.estagio_novo.is_final_perdido %}dot-perdido
+                {% else %}dot-estagio{% endif %}">
+              </div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <span class="estagio-badge" style="background:{{ he.estagio_novo.cor_hex }};font-size:11px;padding:2px 8px">
+                    {{ he.estagio_novo.nome }}
+                  </span>
+                </div>
+                <span class="tl-date">{{ he.data_transicao|date:"d/m/Y H:i" }}</span>
+              </div>
+              {% if he.estagio_anterior %}
+              <p class="tl-body">
+                <i class="fas fa-arrow-right" style="color:#9ca3af;font-size:11px"></i>
+                Veio de: <strong>{{ he.estagio_anterior.nome }}</strong>
+              </p>
+              {% endif %}
+              {% if he.motivo %}
+              <p class="tl-body">{{ he.motivo }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                {% if he.movido_por %}
+                  <i class="fas fa-user" style="font-size:10px"></i>
+                  {{ he.movido_por.get_full_name|default:he.movido_por.username }}
+                {% endif %}
+                {% if he.tempo_no_estagio_horas %}
+                  &nbsp;· Ficou {{ he.tempo_no_estagio_horas|floatformat:0 }}h no estágio anterior
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fas fa-history"></i>
+            Nenhuma transição registrada.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- TAB: HISTÓRICO DE STATUS (status_api) -->
+        <div id="tab-historico-status" class="tab-panel">
+          {% if historico_status %}
+          <div class="timeline">
+            {% for hs in historico_status %}
+            <div class="tl-item">
+              <div class="tl-dot dot-status"></div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  {% if hs.status_anterior %}
+                    <span class="estagio-badge" style="background:#9ca3af;font-size:11px;padding:2px 8px">{{ hs.status_anterior }}</span>
+                    <i class="fas fa-arrow-right" style="color:#9ca3af;font-size:11px;margin:0 4px"></i>
+                  {% endif %}
+                  <span class="estagio-badge" style="background:#7c3aed;font-size:11px;padding:2px 8px">{{ hs.status_novo }}</span>
+                </div>
+                <span class="tl-date">{{ hs.data_alteracao|date:"d/m/Y H:i" }}</span>
+              </div>
+              {% if hs.observacao %}
+              <p class="tl-body">{{ hs.observacao }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                <i class="fas fa-tag" style="font-size:10px"></i> {{ hs.origem }}
+                {% if hs.alterado_por %}
+                  &nbsp;· <i class="fas fa-user" style="font-size:10px"></i>
+                  {{ hs.alterado_por.get_full_name|default:hs.alterado_por.username }}
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fas fa-exchange-alt"></i>
+            Nenhuma mudança de status registrada.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- TAB: HUBSOFT OS / ATENDIMENTOS -->
+        {% if cliente_hubsoft %}
+        <div id="tab-hubsoft-os" class="tab-panel">
+          <div id="hub-loading" style="text-align:center;padding:32px;color:#6b7280">
+            <i class="fas fa-circle-notch fa-spin" style="font-size:20px"></i>
+            <div style="margin-top:10px;font-size:13px">Carregando dados do Hubsoft...</div>
+          </div>
+
+          <div id="hub-content" style="display:none">
+            <!-- Sub-tabs Atendimentos / OS -->
+            <div style="display:flex;gap:4px;background:#f1f5f9;border-radius:8px;padding:3px;margin-bottom:14px">
+              <button class="hub-subtab on" onclick="mostrarSubtab('atendimentos',this)" style="padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;border:none;background:#fff;color:#0022fa;cursor:pointer;flex:1">
+                <i class="fas fa-headset"></i> Atendimentos <span id="count-atend" style="font-size:10px;opacity:.7"></span>
+              </button>
+              <button class="hub-subtab" onclick="mostrarSubtab('os',this)" style="padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;border:none;background:transparent;color:#64748b;cursor:pointer;flex:1">
+                <i class="fas fa-tools"></i> Ordens de Serviço <span id="count-os" style="font-size:10px;opacity:.7"></span>
+              </button>
+            </div>
+
+            <div id="sub-atendimentos" class="hub-subpanel"></div>
+            <div id="sub-os" class="hub-subpanel" style="display:none"></div>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+      <!-- fim card tabs -->
+
+    </div>
+    <!-- fim main-col -->
+
+  </div>
+  <!-- fim grid -->
+
+</div>
+
+<!-- ===== MODAL: MOVER ESTÁGIO ===== -->
+<div class="modal-overlay" id="modal-estagio">
+  <div class="modal-box">
+    <h3><i class="fas fa-arrow-right" style="color:#0022fa"></i> Mover para estágio</h3>
+    <select id="sel-estagio">
+      {% for e in estagios %}
+      <option value="{{ e.pk }}" {% if e.pk == oportunidade.estagio.pk %}selected{% endif %}>
+        {{ e.nome }}
+      </option>
+      {% endfor %}
+    </select>
+    <textarea id="motivo-estagio" placeholder="Motivo da mudança (opcional)..." rows="3"></textarea>
+    <div class="modal-footer">
+      <button class="btn-action btn-secondary" onclick="fecharModal('modal-estagio')">Cancelar</button>
+      <button class="btn-action btn-primary" onclick="confirmarMoverEstagio()">
+        <i class="fas fa-check"></i> Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: ATRIBUIR VENDEDOR ===== -->
+<div class="modal-overlay" id="modal-vendedor">
+  <div class="modal-box">
+    <h3><i class="fas fa-user-plus" style="color:#0022fa"></i> Atribuir responsável</h3>
+    <select id="sel-vendedor">
+      <option value="">— Sem responsável —</option>
+      {% for v in vendedores %}
+      <option value="{{ v.pk }}" {% if oportunidade.responsavel and oportunidade.responsavel.pk == v.pk %}selected{% endif %}>
+        {{ v.get_full_name|default:v.username }}
+      </option>
+      {% endfor %}
+    </select>
+    <div class="modal-footer">
+      <button class="btn-action btn-secondary" onclick="fecharModal('modal-vendedor')">Cancelar</button>
+      <button class="btn-action btn-primary" onclick="confirmarVendedor()">
+        <i class="fas fa-check"></i> Atribuir
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if oportunidade.tipo == 'indicacao' or oportunidade.tipo == 'wifeed' %}
+<!-- ===== MODAL: AÇÕES DO OPERADOR (Indicação / Wifeed) ===== -->
+<div class="modal-overlay" id="modal-indicacao">
+  <div class="modal-box ind-modal">
+    <div class="ind-modal-head">
+      {% if oportunidade.tipo == 'wifeed' %}
+      <h3 style="margin:0;"><i class="fas fa-wifi" style="color:#06b6d4"></i> Ações do Lead Wifeed</h3>
+      {% else %}
+      <h3 style="margin:0;"><i class="fas fa-lightbulb" style="color:#8b5cf6"></i> Ações da Indicação</h3>
+      {% endif %}
+      <button class="ind-x" onclick="fecharModal('modal-indicacao')" aria-label="Fechar">&times;</button>
+    </div>
+    {% if oportunidade.tipo == 'wifeed' %}
+    <p class="ind-sub">Lead do portal WiFi — complete os dados e conduza até virar cliente.</p>
+    {% else %}
+    <p class="ind-sub">Indicado por <strong>{{ lead.id_indicador|default:"—" }}</strong> — complete os dados e conduza a indicação até virar cliente.</p>
+    {% endif %}
+
+    <div class="ind-steps">
+      <div class="ind-step" data-step="dados"><span class="ind-step-n">1</span><span>Dados</span></div>
+      <div class="ind-step-sep"></div>
+      <div class="ind-step" data-step="cliente"><span class="ind-step-n">2</span><span>Cliente</span></div>
+      <div class="ind-step-sep"></div>
+      <div class="ind-step" data-step="contrato"><span class="ind-step-n">3</span><span>Contrato</span></div>
+      <div class="ind-step-sep"></div>
+      <div class="ind-step" data-step="instalacao"><span class="ind-step-n">4</span><span>Instalação</span></div>
+    </div>
+
+    <!-- Seção 1 — dados -->
+    <div class="ind-section">
+      <div class="ind-section-title"><i class="fas fa-user-pen" style="color:#0022fa"></i> Dados do cliente</div>
+      <div class="ind-grid">
+        <label>Nome<input id="ed_nome" value="{{ lead.nome_razaosocial|default:'' }}"></label>
+        <label>CPF/CNPJ<input id="ed_cpf" value="{{ lead.cpf_cnpj|default:'' }}"></label>
+        <label>E-mail<input id="ed_email" value="{{ lead.email|default:'' }}"></label>
+        <label>Nascimento<input id="ed_nasc" type="date" value="{{ lead.data_nascimento|date:'Y-m-d' }}"></label>
+        <label>Plano
+          <select id="ed_plano">
+            <option value="">— selecione —</option>
+            {% for p in planos_ind %}<option value="{{ p.id_rp }}" {% if lead.id_plano_rp == p.id_rp %}selected{% endif %}>{{ p.label }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Dia venc.
+          <select id="ed_venc">
+            <option value="">— selecione —</option>
+            {% for v in vencimentos_ind %}<option value="{{ v.id }}" {% if lead.id_dia_vencimento == v.id %}selected{% endif %}>Dia {{ v.dia }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>CEP<input id="ed_cep" value="{{ lead.cep|default:'' }}"></label>
+        <label>Cidade<input id="ed_cidade" value="{{ lead.cidade|default:'' }}"></label>
+        <label>Bairro<input id="ed_bairro" value="{{ lead.bairro|default:'' }}"></label>
+        <label>Rua<input id="ed_rua" value="{{ lead.rua|default:'' }}"></label>
+        <label>Número<input id="ed_numero" value="{{ lead.numero_residencia|default:'' }}"></label>
+        <label>UF<input id="ed_estado" maxlength="2" value="{{ lead.estado|default:'' }}"></label>
+      </div>
+      <div style="text-align:right;margin-top:12px;">
+        <button class="btn-action btn-primary" onclick="salvarDadosLead()"><i class="fas fa-save"></i> Salvar dados</button>
+      </div>
+    </div>
+
+    <!-- Seção 2 — converter -->
+    <div class="ind-section">
+      <div class="ind-section-title"><i class="fas fa-id-card" style="color:#8b5cf6"></i> Converter em cliente</div>
+      <p class="ind-hint">Cria o prospecto e converte em cliente no HubSoft. Requer os dados obrigatórios preenchidos (nome, CPF, telefone, endereço e plano).</p>
+      <button class="ind-btn-convert" id="btnConverter" onclick="converterIndicacao()">
+        <i class="fas fa-user-check"></i> Converter em cliente
+      </button>
+    </div>
+
+    <!-- Seção 3 — contrato (monitoramento) -->
+    <div class="ind-section">
+      <div class="ind-section-title"><i class="fas fa-file-signature" style="color:#0ea5e9"></i> Contrato</div>
+      <p class="ind-hint">O aceite é feito pelo <strong>próprio cliente no app</strong> da Megalink. Acompanhe o status aqui — o atendimento e a O.S. só liberam <strong>após o aceite</strong>.</p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span id="contratoBadge" class="ind-badge ind-badge-idle">—</span>
+        <span id="contratoInfo" style="font-size:12px;color:#6b7280;flex:1;min-width:140px;"></span>
+        <button class="ind-btn-refresh" id="btnAtualizarContrato" onclick="atualizarContrato()"><i class="fas fa-rotate"></i> Atualizar status</button>
+      </div>
+    </div>
+
+    <!-- Seção 4 — agendar -->
+    <div class="ind-section">
+      <div class="ind-section-title"><i class="fas fa-screwdriver-wrench" style="color:#fd7e14"></i> Abrir atendimento + O.S.</div>
+      <p class="ind-hint" id="agHint">Disponível após a conversão em cliente.</p>
+      <div class="ind-ag-row">
+        <label>Turno<select id="ag_turno"><option value="manha">Manhã</option><option value="tarde">Tarde</option></select></label>
+        <label>Data<input id="ag_data" type="date"></label>
+        <button class="ind-btn-ag" id="btnAgendar" onclick="agendarIndicacao()">
+          <i class="fas fa-calendar-check"></i> Abrir atendimento + O.S.
+        </button>
+      </div>
+    </div>
+
+    <div id="ind_acao_msg" class="ind-msg"></div>
+    <div class="modal-footer">
+      <button class="btn-action btn-secondary" onclick="fecharModal('modal-indicacao')">Fechar</button>
+    </div>
+  </div>
+</div>
+<style>
+  .ind-modal { width: min(760px, 96vw); max-height: 92vh; overflow-y: auto; text-align: left; }
+  .ind-modal-head { display:flex; align-items:center; justify-content:space-between; }
+  .ind-x { background:none; border:none; font-size:28px; line-height:1; color:#9ca3af; cursor:pointer; padding:0 4px; }
+  .ind-x:hover { color:#374151; }
+  .ind-sub { font-size:13px; color:#6b7280; margin:4px 0 18px; }
+  .ind-steps { display:flex; align-items:center; gap:6px; margin-bottom:18px; }
+  .ind-step { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; background:#f3f4f6; color:#9ca3af; font-size:13px; font-weight:700; }
+  .ind-step-n { width:22px; height:22px; border-radius:50%; background:#e5e7eb; color:#6b7280; display:inline-flex; align-items:center; justify-content:center; font-size:12px; }
+  .ind-step.active { background:#ede9fe; color:#6d28d9; }
+  .ind-step.active .ind-step-n { background:#8b5cf6; color:#fff; }
+  .ind-step.done { background:#dcfce7; color:#15803d; }
+  .ind-step.done .ind-step-n { background:#22c55e; color:#fff; }
+  .ind-step-sep { flex:1; height:2px; background:#e5e7eb; border-radius:2px; }
+  .ind-section { border:1px solid #eef0f4; border-radius:12px; padding:16px; margin-bottom:14px; }
+  .ind-section-title { font-size:13px; font-weight:800; color:#1e1b4b; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .ind-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
+  .ind-grid label, .ind-ag-row label { display:block; font-size:12px; color:#6b7280; font-weight:700; }
+  .ind-grid input, .ind-grid select, .ind-ag-row input, .ind-ag-row select {
+    width:100%; margin-top:5px; padding:9px 11px; border:1px solid #d1d5db; border-radius:8px;
+    font-size:13px; font-family:inherit; box-sizing:border-box; outline:none; background:#fff;
+  }
+  .ind-grid input:focus, .ind-grid select:focus, .ind-ag-row input:focus, .ind-ag-row select:focus { border-color:#8b5cf6; box-shadow:0 0 0 3px #8b5cf622; }
+  .ind-grid .ind-inval, .ind-grid input.ind-inval, .ind-grid select.ind-inval { border-color:#dc3545 !important; box-shadow:0 0 0 3px #dc354522; }
+  .ind-hint { font-size:12px; color:#9ca3af; margin:0 0 12px; line-height:1.5; }
+  .ind-btn-convert { width:100%; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; border:none; border-radius:10px; padding:12px; font-weight:800; font-size:14px; cursor:pointer; }
+  .ind-btn-convert:hover { opacity:.92; }
+  .ind-btn-convert:disabled, .ind-btn-ag:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; opacity:1; }
+  .ind-ag-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+  .ind-ag-row label { flex:1; min-width:120px; }
+  .ind-btn-ag { background:linear-gradient(135deg,#fd7e14,#e8590c); color:#fff; border:none; border-radius:10px; padding:11px 18px; font-weight:800; font-size:14px; cursor:pointer; white-space:nowrap; }
+  .ind-btn-ag:hover { opacity:.92; }
+  .ind-msg { font-size:13px; margin:4px 0 12px; min-height:18px; font-weight:600; }
+  .ind-badge { padding:6px 12px; border-radius:20px; font-size:13px; font-weight:800; white-space:nowrap; }
+  .ind-badge-ok { background:#dcfce7; color:#15803d; }
+  .ind-badge-pending { background:#fef3c7; color:#b45309; }
+  .ind-badge-idle { background:#f3f4f6; color:#6b7280; }
+  .ind-btn-refresh { background:#fff; color:#374151; border:1px solid #d1d5db; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .ind-btn-refresh:hover { background:#f9fafb; }
+  .ind-btn-refresh:disabled { opacity:.6; cursor:default; }
+</style>
+{% endif %}
+
+<!-- TOAST -->
+<div id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const OP_PK = {{ oportunidade.pk }};
+const URLS = {
+  mover:       "{% url 'crm:api_mover_oportunidade' %}",
+  atribuir:    "{% url 'crm:api_atribuir_responsavel' oportunidade.pk %}",
+  notas_get:   "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
+  notas_post:  "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
+};
+const CSRF = "{{ csrf_token }}";
+
+{% if oportunidade.tipo == 'indicacao' or oportunidade.tipo == 'wifeed' %}
+// ---- INDICAÇÃO / WIFEED — ações do operador (mesmo fluxo; slugs por prefixo) ----
+const IND_PIPE = "{{ oportunidade.tipo }}";
+const IND_PREFIX = IND_PIPE === 'wifeed' ? 'wf' : 'ind';
+// Endpoints escolhidos pelo tipo do pipeline (lead-editar é compartilhado).
+const URL_CONTRATO = "{% if oportunidade.tipo == 'wifeed' %}{% url 'crm:api_wifeed_contrato_status' %}{% else %}{% url 'crm:api_indicacao_contrato_status' %}{% endif %}";
+const URL_CONVERTER = "{% if oportunidade.tipo == 'wifeed' %}{% url 'crm:api_wifeed_converter' %}{% else %}{% url 'crm:api_indicacao_converter' %}{% endif %}";
+const URL_AGENDAR = "{% if oportunidade.tipo == 'wifeed' %}{% url 'crm:api_wifeed_agendar' %}{% else %}{% url 'crm:api_indicacao_agendar' %}{% endif %}";
+const IND_ETAPA = "{{ oportunidade.estagio.slug }}";
+const IND_HUBSOFT_OK = {% if lead.id_hubsoft %}true{% else %}false{% endif %};
+const IND_CONVERTIDO = IND_HUBSOFT_OK || [IND_PREFIX+'_apto', IND_PREFIX+'_cliente', IND_PREFIX+'_agendado', IND_PREFIX+'_concluido'].includes(IND_ETAPA);
+const IND_AGENDADO = [IND_PREFIX+'_agendado', IND_PREFIX+'_concluido'].includes(IND_ETAPA);
+let IND_CONTRATO = { tem_contrato:false, aceito:false, numero:'', data_aceito:'' };
+
+function abrirModalIndicacao(){
+  document.getElementById('modal-indicacao').classList.add('open');
+  _indAtualizarEstado();
+  if(IND_CONVERTIDO) atualizarContrato();   // monitora o aceite do contrato
+}
+function _indAtualizarEstado(){
+  const s = sel => document.querySelector('.ind-step[data-step='+sel+']');
+  const aceito = IND_CONTRATO.aceito;
+  s('dados').className = 'ind-step done';
+  s('cliente').className = 'ind-step ' + (IND_CONVERTIDO ? 'done' : 'active');
+  s('contrato').className = 'ind-step ' + (!IND_CONVERTIDO ? '' : (aceito ? 'done' : 'active'));
+  s('instalacao').className = 'ind-step ' + (IND_AGENDADO ? 'done' : ((IND_CONVERTIDO && aceito) ? 'active' : ''));
+  const bc = document.getElementById('btnConverter');
+  if(IND_CONVERTIDO){ bc.disabled = true; bc.innerHTML = '<i class="fas fa-check"></i> Cliente já criado'; }
+  const ba = document.getElementById('btnAgendar'), hint = document.getElementById('agHint');
+  if(!IND_CONVERTIDO){ ba.disabled = true; hint.textContent = 'Disponível após a conversão em cliente.'; }
+  else if(IND_AGENDADO){ ba.disabled = true; hint.textContent = 'Atendimento e O.S. já foram abertos.'; }
+  else if(!aceito){ ba.disabled = true; hint.textContent = 'Aguardando o aceite do contrato pelo cliente (no app). Só libera após o aceite.'; }
+  else { ba.disabled = false; hint.textContent = 'Contrato aceito ✓ — escolha turno e data para abrir o atendimento e a O.S.'; }
+}
+async function atualizarContrato(){
+  const badge = document.getElementById('contratoBadge'), info = document.getElementById('contratoInfo');
+  const btn = document.getElementById('btnAtualizarContrato');
+  if(!badge) return;
+  badge.className = 'ind-badge ind-badge-idle'; badge.textContent = 'Consultando…';
+  if(btn) btn.disabled = true;
+  try {
+    const r = await fetch(URL_CONTRATO + "?oportunidade_id=" + OP_PK);
+    const d = await r.json().catch(() => ({ ok:false }));
+    if(btn) btn.disabled = false;
+    if(d.ok && d.contrato){
+      IND_CONTRATO = d.contrato;
+      const dtBR = IND_CONTRATO.data_aceito ? IND_CONTRATO.data_aceito.split('-').reverse().join('/') : '';
+      if(!IND_CONTRATO.tem_contrato){ badge.className='ind-badge ind-badge-idle'; badge.textContent='Sem contrato'; info.textContent='Converta em cliente primeiro.'; }
+      else if(IND_CONTRATO.aceito){ badge.className='ind-badge ind-badge-ok'; badge.textContent='✓ Aceito'; info.textContent = (IND_CONTRATO.numero ? ('Contrato nº '+IND_CONTRATO.numero) : '') + (dtBR ? (' · aceito em '+dtBR) : ''); }
+      else { badge.className='ind-badge ind-badge-pending'; badge.textContent='⏳ Aguardando aceite'; info.textContent = (IND_CONTRATO.numero ? ('Contrato nº '+IND_CONTRATO.numero+' · ') : '') + 'aguardando o cliente aceitar no app.'; }
+      if(d.movido && [IND_PREFIX+'_apto', IND_PREFIX+'_cliente', IND_PREFIX+'_agendado'].includes(IND_ETAPA)){
+        _msgAcao('Estágio atualizado — recarregando…', true);
+        setTimeout(()=>location.reload(), 800);
+      }
+    } else { badge.className='ind-badge ind-badge-idle'; badge.textContent='—'; info.textContent='Não foi possível consultar.'; }
+  } catch(e){ if(btn) btn.disabled=false; badge.className='ind-badge ind-badge-idle'; badge.textContent='—'; info.textContent='Erro ao consultar.'; }
+  _indAtualizarEstado();
+}
+function _msgAcao(txt, ok){ const m=document.getElementById('ind_acao_msg'); if(!m) return; m.style.color = ok ? '#059669' : '#dc3545'; m.textContent = txt; }
+function _gind(id){ const el=document.getElementById(id); return el ? (el.value||'').trim() : ''; }
+// Campos obrigatórios p/ o cadastro no HubSoft + conversão (id do campo → rótulo).
+const IND_REQ = { ed_nome:'Nome', ed_cpf:'CPF/CNPJ', ed_nasc:'Nascimento', ed_plano:'Plano',
+                  ed_venc:'Dia venc.', ed_cep:'CEP', ed_cidade:'Cidade', ed_bairro:'Bairro',
+                  ed_rua:'Rua', ed_numero:'Número' };
+const IND_MAP_SRV = { nome_razaosocial:'ed_nome', cpf_cnpj:'ed_cpf', data_nascimento:'ed_nasc',
+                      id_plano_rp:'ed_plano', id_dia_vencimento:'ed_venc', cep:'ed_cep',
+                      cidade:'ed_cidade', bairro:'ed_bairro', rua:'ed_rua', numero_residencia:'ed_numero' };
+function _payloadLead(){
+  return { oportunidade_id: OP_PK,
+    nome_razaosocial:_gind('ed_nome'), cpf_cnpj:_gind('ed_cpf'), email:_gind('ed_email'),
+    data_nascimento:_gind('ed_nasc'), id_plano_rp:_gind('ed_plano'), id_dia_vencimento:_gind('ed_venc'),
+    cep:_gind('ed_cep'), cidade:_gind('ed_cidade'), bairro:_gind('ed_bairro'),
+    rua:_gind('ed_rua'), numero_residencia:_gind('ed_numero'), estado:_gind('ed_estado') };
+}
+function _validarInd(){
+  const faltam = [];
+  for(const id in IND_REQ){
+    const el = document.getElementById(id); if(!el) continue;
+    if(!(el.value||'').trim()){ el.classList.add('ind-inval'); faltam.push(IND_REQ[id]); }
+    else el.classList.remove('ind-inval');
+  }
+  return faltam;
+}
+async function _salvarLead(){
+  const r = await fetch("{% url 'crm:api_lead_editar' %}", { method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body:JSON.stringify(_payloadLead()) });
+  return r.json();
+}
+async function salvarDadosLead(){
+  try { const d = await _salvarLead(); _validarInd(); _msgAcao(d.ok ? 'Dados salvos.' : (d.erro||'Erro ao salvar'), d.ok); }
+  catch(e){ _msgAcao('Erro de conexão.', false); }
+}
+async function converterIndicacao(){
+  const faltam = _validarInd();
+  if(faltam.length){ _msgAcao('Preencha os campos obrigatórios em vermelho: ' + faltam.join(', '), false); return; }
+  if(!confirm('Converter em cliente no HubSoft? Isso salva os dados, cria o prospecto e converte em cliente.')) return;
+  const bc = document.getElementById('btnConverter'); bc.disabled = true;
+  _msgAcao('Salvando dados e convertendo… pode levar alguns segundos.', true);
+  try {
+    const s = await _salvarLead();
+    if(!s.ok){ bc.disabled = false; _msgAcao(s.erro || 'Erro ao salvar os dados antes de converter.', false); return; }
+    const r = await fetch(URL_CONVERTER, { method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body:JSON.stringify({ oportunidade_id: OP_PK }) });
+    const d = await r.json().catch(() => ({ ok:false, erro:'Erro no servidor ('+r.status+').' }));
+    if(d.ok){ _msgAcao('✅ Cliente criado! Recarregando…', true); setTimeout(()=>location.reload(), 1200); }
+    else {
+      bc.disabled = false;
+      (d.faltando||[]).forEach(f => { const el = document.getElementById(IND_MAP_SRV[f]); if(el) el.classList.add('ind-inval'); });
+      _msgAcao(d.erro || 'Falha na conversão.', false);
+    }
+  } catch(e){ bc.disabled = false; _msgAcao('Erro de conexão.', false); }
+}
+async function agendarIndicacao(){
+  const turno = document.getElementById('ag_turno').value, data = document.getElementById('ag_data').value;
+  if(!data){ _msgAcao('Escolha a data.', false); return; }
+  const ba = document.getElementById('btnAgendar'); ba.disabled = true;
+  _msgAcao('Abrindo atendimento + O.S.… pode levar alguns segundos.', true);
+  try {
+    const r = await fetch(URL_AGENDAR, { method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body:JSON.stringify({ oportunidade_id: OP_PK, turno, data_instalacao: data }) });
+    const d = await r.json().catch(() => ({ ok:false, erro:'Erro no servidor ('+r.status+').' }));
+    if(d.ok){ _msgAcao('✅ Atendimento + O.S. abertos! Recarregando…', true); setTimeout(()=>location.reload(), 1200); }
+    else {
+      if(d.contrato){ atualizarContrato(); } else { ba.disabled = false; }
+      _msgAcao(d.erro || 'Falha ao abrir atendimento/O.S.', false);
+    }
+  } catch(e){ ba.disabled = false; _msgAcao('Erro de conexão.', false); }
+}
+if([IND_PREFIX+'_apto', IND_PREFIX+'_cliente', IND_PREFIX+'_agendado'].includes(IND_ETAPA) && IND_CONVERTIDO){
+  setInterval(atualizarContrato, 45000);
+}
+{% endif %}
+
+// ---- TABS ----
+function switchTab(btn, panelId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ---- HUBSOFT ATENDIMENTOS / OS ----
+{% if cliente_hubsoft %}
+let hubDadosCarregados = false;
+const CLIENTE_HUB_PK = {{ cliente_hubsoft.pk }};
+
+function carregarHubsoftDados() {
+  if (hubDadosCarregados) return;
+  hubDadosCarregados = true;
+
+  Promise.all([
+    fetch(`/integracoes/api/cliente/atendimentos/?cliente_id=${CLIENTE_HUB_PK}`).then(r => r.json()),
+    fetch(`/integracoes/api/cliente/ordens-servico/?cliente_id=${CLIENTE_HUB_PK}`).then(r => r.json()),
+  ]).then(([atendResp, osResp]) => {
+    document.getElementById('hub-loading').style.display = 'none';
+    document.getElementById('hub-content').style.display = 'block';
+
+    const atendimentos = atendResp.success ? (atendResp.atendimentos || []) : [];
+    const ordens = osResp.success ? (osResp.ordens_servico || []) : [];
+
+    document.getElementById('count-atend').textContent = `(${atendimentos.length})`;
+    document.getElementById('count-os').textContent = `(${ordens.length})`;
+
+    renderAtendimentos(atendimentos);
+    renderOrdensServico(ordens);
+  }).catch(err => {
+    console.error(err);
+    document.getElementById('hub-loading').innerHTML =
+      '<div style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar dados do Hubsoft.</div>';
+  });
+}
+
+function mostrarSubtab(tipo, btn) {
+  document.querySelectorAll('.hub-subtab').forEach(b => {
+    b.classList.remove('on');
+    b.style.background = 'transparent';
+    b.style.color = '#64748b';
+  });
+  btn.classList.add('on');
+  btn.style.background = '#fff';
+  btn.style.color = '#0022fa';
+  document.getElementById('sub-atendimentos').style.display = tipo === 'atendimentos' ? 'block' : 'none';
+  document.getElementById('sub-os').style.display = tipo === 'os' ? 'block' : 'none';
+}
+
+function statusBadge(status) {
+  const s = (status || '').toLowerCase();
+  let cor = '#64748b', bg = 'rgba(100,116,139,.1)';
+  if (s.includes('resolvido') || s.includes('finaliz') || s.includes('concluid')) { cor = '#059669'; bg = 'rgba(16,185,129,.1)'; }
+  else if (s.includes('pendente') || s.includes('aberto')) { cor = '#d97706'; bg = 'rgba(245,158,11,.12)'; }
+  else if (s.includes('cancel')) { cor = '#dc2626'; bg = 'rgba(239,68,68,.1)'; }
+  else if (s.includes('andamento') || s.includes('execu')) { cor = '#4f46e5'; bg = 'rgba(102,126,234,.12)'; }
+  return `<span style="display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:${bg};color:${cor};text-transform:uppercase;letter-spacing:.03em">${status || '—'}</span>`;
+}
+
+function renderAtendimentos(lista) {
+  const el = document.getElementById('sub-atendimentos');
+  if (!lista.length) {
+    el.innerHTML = '<div style="text-align:center;padding:28px;color:#9ca3af;font-size:13px"><i class="fas fa-inbox" style="font-size:28px;opacity:.3;display:block;margin-bottom:8px"></i>Nenhum atendimento encontrado.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(a => {
+    const descricao = (a.descricao_abertura || '').replace(/\s+/g, ' ').substring(0, 300);
+    const qtdOs = (a.ordens_servico || []).length;
+    return `
+      <div style="border:1px solid rgba(102,126,234,.12);border-radius:10px;padding:14px;margin-bottom:10px;background:#fff">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#1e1b4b">${a.tipo_atendimento || 'Atendimento'}</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;font-family:monospace">Protocolo: ${a.protocolo || '—'}</div>
+          </div>
+          ${statusBadge(a.status)}
+        </div>
+        <div style="font-size:12px;color:#4b5563;line-height:1.5;margin-bottom:8px">${descricao}${descricao.length >= 300 ? '...' : ''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#6b7280;padding-top:8px;border-top:1px solid #f3f4f6">
+          <span><i class="fas fa-calendar"></i> ${a.data_cadastro || '—'}</span>
+          ${a.data_fechamento ? `<span><i class="fas fa-check"></i> Fechado: ${a.data_fechamento}</span>` : ''}
+          ${a.usuario_responsavel ? `<span><i class="fas fa-user"></i> ${a.usuario_responsavel}</span>` : ''}
+          ${qtdOs > 0 ? `<span style="color:#4f46e5"><i class="fas fa-tools"></i> ${qtdOs} O.S vinculada(s)</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderOrdensServico(lista) {
+  const el = document.getElementById('sub-os');
+  if (!lista.length) {
+    el.innerHTML = '<div style="text-align:center;padding:28px;color:#9ca3af;font-size:13px"><i class="fas fa-tools" style="font-size:28px;opacity:.3;display:block;margin-bottom:8px"></i>Nenhuma ordem de serviço encontrada.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(o => {
+    const descricao = (o.descricao_servico || o.descricao_abertura || '').replace(/\s+/g, ' ').substring(0, 250);
+    const tecnicos = (o.tecnicos || []).map(t => t.nome || t).join(', ');
+    return `
+      <div style="border:1px solid rgba(102,126,234,.12);border-radius:10px;padding:14px;margin-bottom:10px;background:#fff">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#1e1b4b">${o.tipo || 'Ordem de Serviço'}</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;font-family:monospace">N° ${o.numero_ordem_servico || o.id_ordem_servico || '—'}</div>
+          </div>
+          ${statusBadge(o.status)}
+        </div>
+        ${descricao ? `<div style="font-size:12px;color:#4b5563;line-height:1.5;margin-bottom:8px">${descricao}${descricao.length >= 250 ? '...' : ''}</div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#6b7280;padding-top:8px;border-top:1px solid #f3f4f6">
+          <span><i class="fas fa-calendar"></i> Cadastro: ${o.data_cadastro || '—'}</span>
+          ${o.data_inicio_programado ? `<span><i class="fas fa-clock"></i> Início: ${o.data_inicio_programado}</span>` : ''}
+          ${o.data_termino_executado ? `<span><i class="fas fa-check"></i> Concluído: ${o.data_termino_executado}</span>` : ''}
+          ${tecnicos ? `<span><i class="fas fa-user-cog"></i> ${tecnicos}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+{% endif %}
+
+// ---- MODAIS ----
+function abrirModalEstagio()  { document.getElementById('modal-estagio').classList.add('open'); }
+function abrirModalVendedor() { document.getElementById('modal-vendedor').classList.add('open'); }
+function fecharModal(id)      { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ---- TOAST ----
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (err ? ' error' : '');
+  setTimeout(() => el.className = '', 2800);
+}
+
+// ---- MOVER ESTÁGIO ----
+async function confirmarMoverEstagio() {
+  const estagio_id = document.getElementById('sel-estagio').value;
+  const motivo     = document.getElementById('motivo-estagio').value.trim();
+  try {
+    const res = await fetch(URLS.mover, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ oportunidade_id: OP_PK, estagio_id, motivo }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast('Estágio atualizado!');
+      fecharModal('modal-estagio');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      toast(data.erro || 'Erro ao mover.', true);
+    }
+  } catch { toast('Falha na requisição.', true); }
+}
+
+// ---- ATRIBUIR VENDEDOR ----
+async function confirmarVendedor() {
+  const responsavel_id = document.getElementById('sel-vendedor').value || null;
+  try {
+    const res = await fetch(URLS.atribuir, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ responsavel_id }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast('Responsável atualizado!');
+      fecharModal('modal-vendedor');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      toast(data.erro || 'Erro.', true);
+    }
+  } catch { toast('Falha na requisição.', true); }
+}
+
+// ---- SALVAR NOTA ----
+async function salvarNota() {
+  const conteudo = document.getElementById('nota-texto').value.trim();
+  const tipo     = document.getElementById('nota-tipo').value;
+  if (!conteudo) { toast('Escreva algo antes de salvar.', true); return; }
+
+  try {
+    const res = await fetch(URLS.notas_post, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ conteudo, tipo }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('nota-texto').value = '';
+      toast('Nota salva!');
+      await carregarNotas();
+    } else {
+      toast(data.erro || 'Erro ao salvar.', true);
+    }
+  } catch { toast('Falha na requisição.', true); }
+}
+
+// ---- CARREGAR NOTAS ----
+async function carregarNotas() {
+  try {
+    const res  = await fetch(URLS.notas_get);
+    const data = await res.json();
+    const lista = document.getElementById('notas-lista');
+    const count = document.getElementById('notas-count');
+    count.textContent = data.notas.length;
+
+    if (!data.notas.length) {
+      lista.innerHTML = `<div class="empty-state"><i class="fas fa-sticky-note"></i> Nenhuma nota ainda.</div>`;
+      return;
+    }
+
+    lista.innerHTML = data.notas.map(n => `
+      <div class="nota-item nota-${n.tipo}${n.is_fixada ? ' nota-fixada' : ''}">
+        <div class="nota-header">
+          ${n.is_fixada ? '<i class="fas fa-thumbtack" style="color:#f59e0b"></i>' : ''}
+          <span class="nota-author">${n.autor}</span>
+          <span class="nota-date">${n.data}</span>
+          <span class="nota-tipo">${n.tipo_label}</span>
+        </div>
+        <p class="nota-texto">${n.conteudo.replace(/</g,'&lt;')}</p>
+      </div>
+    `).join('');
+  } catch { /* silently fail */ }
+}
+</script>
+{% endblock %}

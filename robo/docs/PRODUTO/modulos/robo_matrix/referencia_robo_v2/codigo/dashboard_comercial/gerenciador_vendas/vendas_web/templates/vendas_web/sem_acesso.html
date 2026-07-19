@@ -1,0 +1,25 @@
+{% extends 'vendas_web/base.html' %}
+{% block page_title %}Acesso pendente{% endblock %}
+
+{% block content %}
+<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:30px;">
+  <div style="background:#fff;border:1px solid #eef0f4;border-radius:16px;max-width:520px;
+              padding:40px 44px;text-align:center;">
+    <div style="width:72px;height:72px;border-radius:50%;background:#ede9fe;display:flex;
+                align-items:center;justify-content:center;margin:0 auto 18px;">
+      <i class="fas fa-user-lock" style="font-size:30px;color:#6d28d9;"></i>
+    </div>
+    <h2 style="margin:0 0 8px;color:#0b2a4a;font-size:20px;">Seu acesso ainda não foi liberado</h2>
+    <p style="margin:0 0 6px;color:#6b7280;font-size:14px;line-height:1.6;">
+      Você entrou com sua conta do <b>Portal TecHub</b>
+      (<b>{{ request.user.get_full_name|default:request.user.username }}</b>), mas um
+      administrador ainda precisa atribuir um <b>Perfil de Acesso</b> para você usar
+      esta ferramenta.
+    </p>
+    <p style="margin:0;color:#9ca3af;font-size:12.5px;">
+      Solicite a liberação ao administrador do sistema. Assim que o perfil for
+      atribuído, é só recarregar esta página.
+    </p>
+  </div>
+</div>
+{% endblock %}

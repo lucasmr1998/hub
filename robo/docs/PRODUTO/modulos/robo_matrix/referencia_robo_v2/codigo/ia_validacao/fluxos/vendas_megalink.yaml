@@ -1,0 +1,252 @@
+nome: "Vendas Megalink Internet"
+descricao: "Fluxo completo: qualificação → cadastro → documentação → agendamento"
+versao: "2.0"
+
+persona:
+  nome: "Aurora"
+  empresa: "Megalink"
+  tom: "amigavel_profissional"
+  regiao: "piaui"
+
+config:
+  max_tentativas_padrao: 3
+  permite_transbordo: true
+  mensagem_transbordo: "Vou transferir você para um de nossos atendentes humanos. Aguarde um momentinho!"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Etapas — campos opcionais:
+#   tipo: pergunta (default) | confirmacao | coleta_imagem | aguarda_hubsoft
+#         escolha_turno | escolha_data | agendamento_final | fim | transbordo
+#   pergunta: texto exibido ao cliente
+#   extractor: cpf|cep|nome|telefone|data_nascimento (regex/parse local)
+#   instrucoes_ia: texto extra pro system prompt
+#   proxima: id da próxima etapa
+#   permite_pular: cliente pode pular
+#   on_invalid / on_max_tentativas: mensagens
+#   acoes_pos_etapa: lista de ações ao concluir
+#     - tipo: atualizar_status, valor: aguardando_assinatura
+#     - tipo: adicionar_tags, tags: [Comercial]
+#     - tipo: registrar_imagem, descricao: selfie_com_doc
+#     - tipo: registrar_historico, status: fluxo_inicializado
+# ─────────────────────────────────────────────────────────────────────────
+
+etapas:
+  - id: cumprimento
+    tipo: pergunta
+    pergunta: "Oi! Eu sou a Aurora, da Megalink ##1f680## Como posso te ajudar hoje?"
+    instrucoes_ia: |
+      Identifique a intenção do cliente:
+      - contratar internet → proxima: tipo_imovel (intencao: contratar)
+      - dúvida sobre plano/preço → proxima: tipo_imovel
+      - suporte/problema → proxima: transbordo_humano (intencao: suporte)
+      - cancelamento → proxima: transbordo_humano (intencao: cancelar)
+    proxima: tipo_imovel
+    acoes_pos_etapa:
+      - tipo: registrar_historico
+        status: fluxo_inicializado
+
+  - id: tipo_imovel
+    tipo: pergunta
+    pergunta: "Perfeito! ##263A## A internet será para sua *casa* ou para sua *empresa*?"
+    instrucoes_ia: |
+      Identifique: casa/residencial → tipo_imovel=casa, empresa/comercial → tipo_imovel=empresa.
+      dados_extraidos: {tipo_imovel}
+    proxima: coleta_cep
+
+  - id: coleta_cep
+    tipo: pergunta
+    pergunta: "Você pode me passar o CEP da sua residência? ##1f3e0## (Exemplo: 64000-000)"
+    extractor: cep
+    proxima: coleta_numero
+    on_invalid: "Esse CEP parece estar incorreto. Pode conferir? São 8 dígitos."
+    on_max_tentativas: "Sem problema, vou pedir o endereço completo então."
+    acoes_pos_etapa:
+      - tipo: adicionar_tags
+        tags: ["Endereço"]
+
+  - id: coleta_numero
+    tipo: pergunta
+    pergunta: "Certo! Agora digite apenas o número da residência (Exemplo: 1500). Se for sem número, envie s/n."
+    instrucoes_ia: |
+      Extraia o número da casa. Aceita: número, "S/N", "sem numero".
+      dados_extraidos: {numero_residencia}
+    proxima: coleta_ponto_referencia
+
+  - id: coleta_ponto_referencia
+    tipo: pergunta
+    pergunta: "Só pra ajudar nosso time na instalação ##263A## Tem algum ponto de referência perto da sua casa?"
+    instrucoes_ia: |
+      Extraia o ponto de referência. Se cliente disser "não tem"/"nenhum", aceitar com ponto_referencia=""
+      dados_extraidos: {ponto_referencia}
+    proxima: coleta_nome
+    permite_pular: true
+
+  - id: coleta_nome
+    tipo: pergunta
+    pergunta: "Pra continuar, qual seu nome completo?"
+    extractor: nome
+    proxima: coleta_cpf
+    on_invalid: "Preciso do nome completo, com sobrenome. Pode me passar?"
+    acoes_pos_etapa:
+      - tipo: adicionar_tags
+        tags: ["Comercial"]
+
+  - id: coleta_cpf
+    tipo: pergunta
+    pergunta: "Agora me passa seu CPF, por favor. (Exemplo: 999.999.999-99)"
+    extractor: cpf
+    proxima: coleta_rg
+    on_invalid: "Esse CPF está incorreto. Pode conferir e mandar de novo?"
+    max_tentativas: 3
+
+  - id: coleta_rg
+    tipo: pergunta
+    pergunta: "Agora me passa seu RG, por favor."
+    instrucoes_ia: |
+      Aceite RG em qualquer formato. Cliente pode dizer "não tem"/"depois" → válido com rg=""
+      dados_extraidos: {rg}
+    proxima: coleta_data_nascimento
+    permite_pular: true
+
+  - id: coleta_data_nascimento
+    tipo: pergunta
+    pergunta: "Informe sua data de nascimento. (No formato: 01/01/2000)"
+    extractor: data_nascimento
+    proxima: coleta_email
+    on_invalid: "Pode me passar no formato dia/mês/ano? Ex: 15/03/1990"
+
+  - id: coleta_email
+    tipo: pergunta
+    pergunta: "Pode me informar seu e-mail, por favor? ##263A## (Exemplo: exemplo@email.com)"
+    instrucoes_ia: |
+      Extraia o email. Se inválido ou cliente não tem, aceitar e seguir com email=""
+      dados_extraidos: {email}
+    proxima: escolha_plano
+    permite_pular: true
+
+  - id: escolha_plano
+    tipo: pergunta
+    pergunta: "Temos planos de *300MB*, *620MB*, *1 Giga* e *2 Giga*. Qual te interessa?"
+    instrucoes_ia: |
+      Identifique o plano: "300" → 300, "620" → 620, "1g/1giga/1000" → 1g, "2g/2giga/2000" → 2g.
+      dados_extraidos: {plano_velocidade}
+    proxima: dia_vencimento
+    on_invalid: "As opções são: 300MB, 620MB, 1 Giga ou 2 Giga. Qual prefere?"
+
+  - id: dia_vencimento
+    tipo: pergunta
+    pergunta: "Qual dia do mês prefere para vencimento da fatura? (5, 10, 15, 20 ou 25)"
+    instrucoes_ia: |
+      Aceite apenas: 1, 5, 10, 15, 20, 25.
+      dados_extraidos: {dia_vencimento} (como número inteiro)
+    proxima: confirmacao_dados
+    on_invalid: "Os dias disponíveis são: 5, 10, 15, 20 ou 25. Qual prefere?"
+
+  - id: confirmacao_dados
+    tipo: confirmacao
+    pergunta: |
+      *Confirme seus dados, por favor:*
+
+      📦 Plano: {plano_titulo}
+      💰 Valor: R$ {valor_plano}
+      📅 Vencimento: Dia {dia_vencimento}
+
+      👤 Nome: {nome}
+      🆔 CPF: {cpf}
+      📞 Telefone: {telefone}
+      🎂 Nascimento: {data_nascimento}
+
+      🏠 Endereço: {rua}, Nº {numero_residencia}, {bairro}, {cidade}-{estado}, CEP {cep}
+
+      Está tudo certo?
+    instrucoes_ia: |
+      Detecte confirmação positiva (sim, ok, pode, confirmo) ou negativa (não, corrigir, voltar).
+      dados_extraidos: {confirmacao}
+    proxima: documentacao_selfie
+    acoes_pos_etapa:
+      - tipo: atualizar_status
+        valor: aguardando_assinatura
+      - tipo: adicionar_tags
+        tags: ["Assinado"]
+
+  - id: documentacao_selfie
+    tipo: coleta_imagem
+    pergunta: |
+      Já estamos quase finalizando ##263A##
+
+      Para garantir a segurança da sua contratação, preciso de 3 fotos:
+      📸 *Foto 1:* Selfie sua segurando seu documento de identidade ao lado do rosto.
+    descricao_imagem: selfie_com_doc
+    proxima: documentacao_frente_doc
+
+  - id: documentacao_frente_doc
+    tipo: coleta_imagem
+    pergunta: "📸 *Foto 2:* Agora a frente do seu documento (RG ou CNH), garantindo que as informações estejam legíveis."
+    descricao_imagem: frente_doc
+    proxima: documentacao_verso_doc
+
+  - id: documentacao_verso_doc
+    tipo: coleta_imagem
+    pergunta: "📸 *Foto 3:* Última etapa, foto da parte de trás do seu RG/CNH."
+    descricao_imagem: verso_doc
+    proxima: aguarda_documentacao
+
+  - id: aguarda_documentacao
+    tipo: aguarda_hubsoft
+    pergunta: "Pronto! Recebi tudo. Vou validar sua documentação aqui, é rapidinho ##1F60A##"
+    proxima: escolha_turno
+    intervalo_polling_segundos: 20
+    max_tentativas_polling: 90
+
+  - id: escolha_turno
+    tipo: pergunta
+    pergunta: "Perfeito! Para a instalação, qual é o melhor período pra você: *manhã* ou *tarde*?"
+    instrucoes_ia: |
+      Identifique manhã ou tarde.
+      Mapeamento: manhã=manha, tarde=tarde.
+      dados_extraidos: {turno_instalacao}
+    proxima: escolha_data
+    on_invalid: "Pode escolher *manhã* ou *tarde*?"
+
+  - id: escolha_data
+    tipo: escolha_data
+    pergunta: "Escolha a melhor data para instalação:\n1️⃣ {data_1}\n2️⃣ {data_2}\n3️⃣ {data_3}"
+    instrucoes_ia: |
+      Identifique se cliente escolheu 1, 2 ou 3 (ou disse a data direto).
+      dados_extraidos: {data_escolhida} (no formato dd/mm/yyyy)
+    proxima: confirmacao_agendamento
+    on_invalid: "Pode escolher uma das 3 datas: 1, 2 ou 3?"
+
+  - id: confirmacao_agendamento
+    tipo: agendamento_final
+    pergunta: |
+      Perfeito! ##1f680##
+
+      Sua instalação foi agendada com sucesso para *{data_escolhida}* no turno *{turno_instalacao}*.
+
+      Nossa equipe técnica irá até o local dentro do turno e data escolhida.
+    proxima: encerramento
+    acoes_pos_etapa:
+      - tipo: atualizar_status
+        valor: pendente
+      - tipo: registrar_historico
+        status: fluxo_finalizado
+
+  - id: encerramento
+    tipo: fim
+    pergunta: "Obrigada pela escolha! Em breve nosso especialista entra em contato para confirmar a instalação. ##1f680##"
+    proxima: fim
+
+  - id: transbordo_humano
+    tipo: transbordo
+    pergunta: "Aguarde um momento que vou te transferir para um de nossos atendentes ##1f465##"
+    proxima: fim
+    acoes_pos_etapa:
+      - tipo: registrar_historico
+        status: transferido_humano
+
+  - id: livre
+    tipo: pergunta
+    pergunta: ""
+    instrucoes_ia: "Etapa fallback. Analise a mensagem e tente inferir intenção."
+    proxima: ""

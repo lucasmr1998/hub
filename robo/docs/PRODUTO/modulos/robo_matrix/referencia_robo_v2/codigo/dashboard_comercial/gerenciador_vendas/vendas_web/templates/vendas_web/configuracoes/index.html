@@ -1,0 +1,249 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Configurações - Dashboard Megalink{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+    <!-- Header -->
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: #333; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
+            ⚙️ Configurações do Sistema
+        </h1>
+        <p style="color: #666; font-size: 1rem; margin: 0;">
+            Gerencie as configurações e parâmetros do sistema
+        </p>
+    </div>
+
+    <!-- Cards de Configurações -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        
+        <!-- Gerenciamento de Usuários -->
+        <div class="config-card" onclick="window.location.href='{% url 'vendas_web:configuracoes_usuarios' %}'">
+            <div class="config-icon">👥</div>
+            <h3>Gerenciar Usuários</h3>
+            <p>Crie, edite e gerencie usuários do sistema, permissões e grupos de acesso</p>
+            <div class="config-actions">
+                <span class="config-btn">Gerenciar →</span>
+            </div>
+        </div>
+
+        <!-- Sistema de Notificações -->
+        <div class="config-card" onclick="window.location.href='{% url 'vendas_web:configuracoes_notificacoes' %}'">
+            <div class="config-icon">🔔</div>
+            <h3>Sistema de Notificações</h3>
+            <p>Configure notificações, templates, preferências e visualize estatísticas completas</p>
+            <div class="config-actions">
+                <span class="config-btn">Configurar →</span>
+            </div>
+        </div>
+
+
+        <!-- Configurações de Cadastro -->
+        <div class="config-card" onclick="window.location.href='{% url 'vendas_web:configuracoes_cadastro' %}'">
+            <div class="config-icon">📝</div>
+            <h3>Configurações de Cadastro</h3>
+            <p>Configure as páginas de cadastro de clientes, campos obrigatórios e validações</p>
+            <div class="config-actions">
+                <span class="config-btn">Configurar →</span>
+            </div>
+        </div>
+
+        <!-- Fluxos de Atendimento -->
+        <div class="config-card" style="opacity: 0.6; cursor: not-allowed;">
+            <div class="config-icon">🔄</div>
+            <h3>Fluxos de Atendimento</h3>
+            <p>Crie e gerencie fluxos de atendimento automatizados para qualificação e vendas</p>
+            <div class="config-actions">
+                <span class="config-btn" style="background: #95a5a6;">Em breve</span>
+            </div>
+        </div>
+
+        <!-- Questões do Fluxo -->
+        <div class="config-card" style="opacity: 0.6; cursor: not-allowed;">
+            <div class="config-icon">❓</div>
+            <h3>Questões do Fluxo</h3>
+            <p>Configure as questões e validações dos fluxos de atendimento</p>
+            <div class="config-actions">
+                <span class="config-btn" style="background: #95a5a6;">Em breve</span>
+            </div>
+        </div>
+
+        <!-- Planos de Internet -->
+        <div class="config-card" onclick="window.location.href='{% url 'vendas_web:planos_internet' %}'">
+            <div class="config-icon">🌐</div>
+            <h3>Planos de Internet</h3>
+            <p>Gerencie os planos de internet disponíveis para venda</p>
+            <div class="config-actions">
+                <span class="config-btn">Configurar →</span>
+            </div>
+        </div>
+
+        <!-- Opções de Vencimento -->
+        <div class="config-card" onclick="window.location.href='{% url 'vendas_web:opcoes_vencimento' %}'">
+            <div class="config-icon">📅</div>
+            <h3>Opções de Vencimento</h3>
+            <p>Configure os dias de vencimento disponíveis para os clientes</p>
+            <div class="config-actions">
+                <span class="config-btn">Configurar →</span>
+            </div>
+        </div>
+
+        <!-- Campanhas de Tráfego -->
+        <div class="config-card" onclick="window.location.href='{% url 'vendas_web:campanhas_trafego' %}'">
+            <div class="config-icon">📢</div>
+            <h3>Campanhas de Tráfego</h3>
+            <p>Gerencie campanhas de marketing e rastreie a origem dos leads</p>
+            <div class="config-actions">
+                <span class="config-btn">Configurar →</span>
+            </div>
+        </div>
+
+        <!-- Configurações Gerais -->
+        <div class="config-card" style="opacity: 0.6; cursor: not-allowed;">
+            <div class="config-icon">⚙️</div>
+            <h3>Configurações Gerais</h3>
+            <p>Configurações gerais do sistema e integrações</p>
+            <div class="config-actions">
+                <span class="config-btn" style="background: #95a5a6;">Em breve</span>
+            </div>
+        </div>
+
+        {% if request.user.is_superuser %}
+        <!-- CRM -->
+        <div class="config-card" onclick="window.location.href='{% url 'crm:configuracoes' %}'"
+             style="border-left: 4px solid #0022fa;">
+            <div class="config-icon">🗂️</div>
+            <h3>CRM — Pipeline e Vendas</h3>
+            <p>Configure estágios do pipeline, equipes de vendas, SLA, automações e webhooks N8N do CRM</p>
+            <div class="config-actions">
+                <span class="config-btn" style="background: linear-gradient(135deg,#0022fa,#0018b0);">Configurar →</span>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Estatísticas Rápidas -->
+    <div style="margin-top: 3rem; padding: 2rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e0e0e0;">
+        <h3 style="color: #333; font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">
+            📊 Estatísticas do Sistema
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div class="stat-item">
+                <div class="stat-number" id="totalConfiguracoes">-</div>
+                <div class="stat-label">Configurações Ativas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalFluxos">-</div>
+                <div class="stat-label">Fluxos Ativos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalQuestoes">-</div>
+                <div class="stat-label">Questões Configuradas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalPlanos">-</div>
+                <div class="stat-label">Planos Disponíveis</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.config-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.config-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #1F3D59;
+}
+
+.config-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.config-card h3 {
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.config-card p {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin: 0 0 1rem 0;
+}
+
+.config-actions {
+    margin-top: auto;
+}
+
+.config-btn {
+    background: #1F3D59;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-block;
+    transition: background 0.2s ease;
+}
+
+.config-card:hover .config-btn {
+    background: #2c5282;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1F3D59;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Carregar estatísticas do sistema
+    carregarEstatisticas();
+});
+
+async function carregarEstatisticas() {
+    try {
+        // Simulação de dados - você pode implementar APIs específicas para isso
+        document.getElementById('totalConfiguracoes').textContent = '5';
+        document.getElementById('totalFluxos').textContent = '3';
+        document.getElementById('totalQuestoes').textContent = '15';
+        document.getElementById('totalPlanos').textContent = '4';
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+    }
+}
+</script>
+{% endblock %}

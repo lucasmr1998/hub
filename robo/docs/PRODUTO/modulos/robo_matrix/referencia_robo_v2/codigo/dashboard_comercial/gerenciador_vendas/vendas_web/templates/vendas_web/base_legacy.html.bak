@@ -1,0 +1,1888 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard - Megalink{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* Reset e Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Header Styles */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 64px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            background: {{ empresa_cor_primaria }};
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .logo-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .logo-text {
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-left: 2rem;
+            overflow: visible;
+            min-width: 0;
+            flex-shrink: 1;
+        }
+
+        .nav-item {
+            position: relative;
+            padding: 0 1.5rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .nav-item.active {
+            color: {{ empresa_cor_primaria }};
+            border-bottom-color: {{ empresa_cor_primaria }};
+        }
+
+        .nav-item i {
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        /* Dropdown Menu */
+        .nav-item.has-dropdown {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 220px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            margin-top: -1px;
+            width: auto;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #333;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dropdown-item.active {
+            color: {{ empresa_cor_primaria }};
+            background-color: #eef3f7;
+        }
+
+        /* Ocultar elementos vazios no dropdown */
+        .dropdown-item:empty,
+        .dropdown-item:blank {
+            display: none !important;
+        }
+
+        /* Ocultar elementos com apenas espaços em branco */
+        .dropdown-item:not(:empty):not(:blank) {
+            display: block;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+            min-width: 0;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .user-section:hover {
+            background-color: #f5f5f5;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .user-name {
+            color: #333;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .user-company {
+            color: #666;
+            font-size: 0.75rem;
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: 0.5rem;
+        }
+
+        .chip-icon {
+            border: none;
+            background: #e8f8f5;
+            color: #2c3e50;
+            border-radius: 16px;
+            padding: 6px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .chip-icon:hover {
+            background: #d1f2eb;
+        }
+
+        .chip-icon:active {
+            transform: scale(0.98);
+        }
+
+        /* Notification Bell Badge */
+        .notification-bell {
+            position: relative;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 5px;
+            border-radius: 10px;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* Sidebar de Notificações - v2.0 - Clean Design */
+        .notification-sidebar {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            box-shadow: -4px 0 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notification-sidebar.show {
+            right: 0;
+        }
+
+        .notification-sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            flex-shrink: 0;
+        }
+
+        .notification-sidebar-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        .notification-sidebar-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #666;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .notification-sidebar-close:hover {
+            background-color: #e9ecef;
+        }
+
+        .notification-sidebar-content {
+            padding: 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .notification-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1.5rem;
+            color: #6b7280;
+        }
+
+        .notification-loading i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #9ca3af;
+        }
+
+        .notification-loading p {
+            margin: 0;
+            font-size: 0.85rem;
+        }
+
+        .notification-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1.5rem;
+            color: #9ca3af;
+            text-align: center;
+        }
+
+        .notification-empty i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #e5e7eb;
+        }
+
+        .notification-empty p {
+            margin: 0;
+            font-size: 0.85rem;
+        }
+
+        .notification-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notification-item {
+            background: white;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 1rem;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .notification-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .notification-item-icon.urgente {
+            color: #ef4444;
+        }
+
+        .notification-item-icon.alta {
+            color: #f59e0b;
+        }
+
+        .notification-item-icon.normal {
+            color: #3b82f6;
+        }
+
+        .notification-item-icon.baixa {
+            color: #9ca3af;
+        }
+
+        .notification-item-content {
+            flex: 1;
+            margin-left: 0.75rem;
+        }
+
+        .notification-item-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .notification-item-type {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+            text-transform: uppercase;
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .notification-item-message {
+            color: #6b7280;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-item-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+        }
+
+        .notification-item-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .notification-item-status {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .notification-item-status.enviada {
+            color: #059669;
+        }
+
+        .notification-item-status.pendente {
+            color: #d97706;
+        }
+
+        .notification-item-status.falhou {
+            color: #dc2626;
+        }
+
+        .notification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .notification-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Responsive para notificações */
+        @media (max-width: 768px) {
+            .notification-sidebar {
+                width: 100%;
+                right: -100%;
+            }
+        }
+
+        /* Sidebar de Configurações */
+        .config-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            box-shadow: -4px 0 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .config-sidebar.show {
+            right: 0;
+        }
+
+        .config-sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+        }
+
+        .config-sidebar-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        .config-sidebar-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #666;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .config-sidebar-close:hover {
+            background-color: #e9ecef;
+        }
+
+        .config-sidebar-content {
+            padding: 1.5rem;
+        }
+
+        .config-section {
+            margin-bottom: 2rem;
+        }
+
+        .config-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .config-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            color: #333;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+        }
+
+        .config-item:hover {
+            background-color: #f8f9fa;
+            color: {{ empresa_cor_primaria }};
+        }
+
+        .config-item i {
+            font-size: 1rem;
+            color: {{ empresa_cor_primaria }};
+            width: 20px;
+            text-align: center;
+        }
+
+        .config-item.active {
+            background-color: #eef3f7;
+            color: {{ empresa_cor_primaria }};
+        }
+
+        .config-item.logout-item {
+            color: #e74c3c;
+        }
+
+        .config-item.logout-item:hover {
+            background-color: #fdf2f2;
+            color: #c0392b;
+        }
+
+        .config-item.logout-item i {
+            color: #e74c3c;
+        }
+
+        /* Overlay para fechar sidebar */
+        .config-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .config-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Main Content */
+        .main-container {
+            min-height: calc(100vh - 64px);
+            background: #f8f9fa;
+        }
+
+        /* Menu Hambúrguer */
+        .mobile-menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 40px;
+            height: 40px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 1rem;
+        }
+
+        .hamburger-line {
+            width: 24px;
+            height: 3px;
+            background: #333;
+            margin: 2px 0;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .mobile-menu-toggle.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .mobile-menu-toggle.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+
+        .mobile-menu-toggle.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+
+        /* Menu Mobile */
+        .mobile-menu {
+            position: fixed;
+            top: 64px;
+            left: -100%;
+            width: 100%;
+            height: calc(100vh - 64px);
+            background: white;
+            z-index: 999;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .mobile-menu.show {
+            left: 0;
+        }
+
+        .mobile-menu-content {
+            padding: 1rem;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-nav-item:hover {
+            background: #f8f9fa;
+            color: #1F3D59;
+        }
+
+        .mobile-nav-item.active {
+            background: #eef3f7;
+            color: #1F3D59;
+        }
+
+        .mobile-nav-item i {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .mobile-nav-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .mobile-nav-section-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            color: #666;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .mobile-nav-section-title i {
+            font-size: 1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .mobile-nav-subitem {
+            display: block;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-nav-subitem:hover {
+            background: #f8f9fa;
+            color: #1F3D59;
+        }
+
+        .mobile-nav-subitem.active {
+            background: #eef3f7;
+            color: #1F3D59;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 0 0.75rem;
+                gap: 0.5rem;
+            }
+
+            .header-left {
+                flex: 1;
+                min-width: 0;
+                justify-content: space-between;
+            }
+
+            .logo-section {
+                gap: 0.5rem;
+                flex-shrink: 0;
+            }
+
+            .logo-text {
+                font-size: 1rem;
+            }
+
+            /* Ocultar menu desktop e mostrar hambúrguer */
+            .desktop-menu {
+                display: none;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
+            .header-right {
+                flex-shrink: 0;
+            }
+
+            .user-section {
+                gap: 0.5rem;
+                padding: 0.25rem;
+            }
+
+            .user-info {
+                display: none;
+            }
+
+            .user-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 0.7rem;
+            }
+
+            .chip-icon {
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                padding: 0 0.5rem;
+                gap: 0.25rem;
+            }
+
+            .logo-text {
+                font-size: 0.9rem;
+            }
+
+            .user-avatar {
+                width: 24px;
+                height: 24px;
+                font-size: 0.65rem;
+            }
+
+            .chip-icon {
+                padding: 3px 6px;
+                font-size: 0.75rem;
+            }
+
+            .mobile-menu-toggle {
+                width: 36px;
+                height: 36px;
+                margin-left: 0.5rem;
+            }
+
+            .hamburger-line {
+                width: 20px;
+                height: 2px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .header-content {
+                padding: 0 0.25rem;
+            }
+
+            .logo-text {
+                font-size: 0.85rem;
+            }
+
+            .mobile-menu-toggle {
+                width: 32px;
+                height: 32px;
+                margin-left: 0.25rem;
+            }
+
+            .hamburger-line {
+                width: 18px;
+                height: 2px;
+            }
+        }
+    </style>
+    {% block custom_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <div class="logo-section">
+                    {% if empresa_logo %}
+                        <img src="{{ empresa_logo.url }}" alt="{{ empresa_nome }}" class="logo-img">
+                    {% else %}
+                        <div class="logo">
+                            <svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Letra A estilizada -->
+                                <path d="M24 8 L32 32 L28 32 L26.5 28 L21.5 28 L20 32 L16 32 L24 8 Z" fill="white" stroke="white" stroke-width="0.5"/>
+                                <path d="M22.5 22 L25.5 22 L24 16 L22.5 22 Z" fill="rgba(31,61,89,0.8)"/>
+                            </svg>
+                        </div>
+                    {% endif %}
+                    <div class="logo-text">MegaLink</div>
+                </div>
+                
+                <!-- Menu Desktop -->
+                <nav class="nav-menu desktop-menu">
+                    <a href="{% url 'vendas_web:dashboard_unificado' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard_unificado' %}active{% endif %}">
+                        Dashboard
+                    </a>
+                    <a href="{% url 'vendas_web:leads' %}" class="nav-item {% if request.resolver_match.url_name == 'leads' %}active{% endif %}">
+                        Leads
+                    </a>
+                    <a href="{% url 'vendas_web:vendas' %}" class="nav-item {% if request.resolver_match.url_name == 'vendas' %}active{% endif %}">
+                        Vendas
+                    </a>
+                    <a href="{% url 'vendas_web:relatorios' %}" class="nav-item {% if request.resolver_match.url_name == 'relatorios' %}active{% endif %}">
+                        Análises
+                    </a>
+                    <div class="nav-item has-dropdown {% if 'crm' in request.path %}active{% endif %}" style="cursor:pointer;position:relative;">
+                        <a href="{% url 'crm:pipeline' %}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
+                            <i class="fas fa-stream" style="font-size:13px;"></i> CRM
+                            <i class="fas fa-chevron-down" style="font-size:10px;margin-left:2px;"></i>
+                        </a>
+                        <div class="dropdown-menu" style="min-width:180px;">
+                            <a href="{% url 'crm:pipeline' %}" class="dropdown-item {% if request.resolver_match.url_name == 'pipeline' or request.resolver_match.url_name == 'pipeline_view' %}active{% endif %}">
+                                <i class="fas fa-columns" style="margin-right:6px;color:#667eea;"></i> Pipeline Kanban
+                            </a>
+                            <a href="{% url 'crm:oportunidades_lista' %}" class="dropdown-item {% if request.resolver_match.url_name == 'oportunidades_lista' %}active{% endif %}">
+                                <i class="fas fa-briefcase" style="margin-right:6px;color:#764ba2;"></i> Oportunidades
+                            </a>
+                            <a href="{% url 'crm:tarefas_lista' %}" class="dropdown-item {% if request.resolver_match.url_name == 'tarefas_lista' %}active{% endif %}">
+                                <i class="fas fa-tasks" style="margin-right:6px;color:#f39c12;"></i> Tarefas
+                            </a>
+                            <a href="{% url 'crm:desempenho' %}" class="dropdown-item {% if request.resolver_match.url_name == 'desempenho' %}active{% endif %}">
+                                <i class="fas fa-chart-bar" style="margin-right:6px;color:#059669;"></i> Desempenho
+                            </a>
+                            <a href="{% url 'crm:retencao' %}" class="dropdown-item {% if request.resolver_match.url_name == 'retencao' %}active{% endif %}">
+                                <i class="fas fa-shield-alt" style="margin-right:6px;color:#e74c3c;"></i> Retenção
+                            </a>
+                            <a href="{% url 'crm:metas' %}" class="dropdown-item {% if request.resolver_match.url_name == 'metas' %}active{% endif %}">
+                                <i class="fas fa-bullseye" style="margin-right:6px;color:#764ba2;"></i> Metas
+                            </a>
+                            <a href="{% url 'crm:segmentos_lista' %}" class="dropdown-item {% if request.resolver_match.url_name == 'segmentos_lista' or request.resolver_match.url_name == 'segmento_detalhe' %}active{% endif %}">
+                                <i class="fas fa-layer-group" style="margin-right:6px;color:#0ea5e9;"></i> Segmentos
+                            </a>
+                            {% if request.user.is_superuser %}
+                            <div style="border-top:1px solid rgba(102,126,234,.1);margin:4px 0;"></div>
+                            <a href="{% url 'crm:configuracoes' %}" class="dropdown-item {% if request.resolver_match.url_name == 'configuracoes' %}active{% endif %}">
+                                <i class="fas fa-cog" style="margin-right:6px;color:#9ca3af;"></i> Configurações
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Menu Hambúrguer Mobile -->
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                </button>
+            </div>
+            
+            <div class="header-right">
+                <div class="user-section">
+                    {% if user.is_authenticated %}
+                        <div class="user-avatar">{{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper|default:"" }}</div>
+                        <div class="user-info">
+                            <div class="user-name">{{ user.first_name|default:user.username }} {{ user.last_name|default:"" }}</div>
+                            <div class="user-company">{{ empresa_nome }}</div>
+                        </div>
+                    {% else %}
+                        <div class="user-avatar">?</div>
+                        <div class="user-info">
+                            <div class="user-name">Visitante</div>
+                            <div class="user-company">Não logado</div>
+                        </div>
+                    {% endif %}
+                    <div class="user-actions">
+                        <button class="chip-icon notification-bell" title="Notificações" id="notificationBtn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                        </button>
+                        <button class="chip-icon" title="Configurações" id="configBtn">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Menu Mobile -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <a href="{% url 'vendas_web:dashboard_unificado' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'dashboard_unificado' %}active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                Dashboard
+            </a>
+            <a href="{% url 'vendas_web:leads' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'leads' %}active{% endif %}">
+                <i class="fas fa-users"></i>
+                Leads
+            </a>
+            <a href="{% url 'vendas_web:vendas' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'vendas' %}active{% endif %}">
+                <i class="fas fa-shopping-cart"></i>
+                Vendas
+            </a>
+            <a href="{% url 'vendas_web:relatorios' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'relatorios' %}active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                Análises
+            </a>
+        </div>
+    </div>
+
+    <!-- Sidebar de Notificações -->
+    <div class="notification-overlay" id="notificationOverlay"></div>
+    <div class="notification-sidebar" id="notificationSidebar">
+        <div class="notification-sidebar-header">
+            <h3 class="notification-sidebar-title">Notificações</h3>
+            <button class="notification-sidebar-close" id="notificationSidebarClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="notification-sidebar-content" id="notificationSidebarContent">
+            <div class="notification-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Carregando notificações...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar de Configurações -->
+    <div class="config-overlay" id="configOverlay"></div>
+    <div class="config-sidebar" id="configSidebar">
+        <div class="config-sidebar-header">
+            <h3 class="config-sidebar-title">Configurações</h3>
+            <button class="config-sidebar-close" id="configSidebarClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="config-sidebar-content">
+            <div class="config-section">
+                <h4 class="config-section-title">Painel Principal</h4>
+                <a href="{% url 'vendas_web:configuracoes' %}" class="config-item {% if request.resolver_match.url_name == 'configuracoes' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Painel Principal</span>
+                </a>
+            </div>
+            
+            
+            {% if user.is_authenticated %}
+            <div class="config-section">
+                <h4 class="config-section-title">Conta</h4>
+                <a href="{% url 'vendas_web:logout' %}" class="config-item logout-item" id="logoutLink">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair da Conta</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Base JavaScript -->
+    <script>
+        // Dropdown functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const analisarMenu = document.getElementById('analisarMenu');
+            const analisarDropdown = document.getElementById('analisarDropdown');
+            let dropdownTimeout;
+
+            // Remover elementos vazios do dropdown
+            if (analisarDropdown) {
+                const dropdownItems = analisarDropdown.querySelectorAll('.dropdown-item');
+                dropdownItems.forEach(item => {
+                    // Verificar se o elemento está vazio ou contém apenas espaços em branco
+                    const textContent = item.textContent.trim();
+                    if (!textContent || textContent === '' || textContent.length === 0) {
+                        console.log('Removendo elemento vazio do dropdown:', item);
+                        item.remove();
+                    }
+                });
+
+                // Verificar se há elementos <a> vazios sem classe dropdown-item
+                const allLinks = analisarDropdown.querySelectorAll('a');
+                allLinks.forEach(link => {
+                    const textContent = link.textContent.trim();
+                    if (!textContent || textContent === '' || textContent.length === 0) {
+                        console.log('Removendo link vazio do dropdown:', link);
+                        link.remove();
+                    }
+                });
+            }
+
+            if (analisarMenu && analisarDropdown) {
+                analisarMenu.addEventListener('mouseenter', () => {
+                    clearTimeout(dropdownTimeout);
+                    analisarDropdown.classList.add('show');
+                });
+
+                analisarMenu.addEventListener('mouseleave', () => {
+                    dropdownTimeout = setTimeout(() => {
+                        analisarDropdown.classList.remove('show');
+                    }, 200);
+                });
+
+                analisarDropdown.addEventListener('mouseenter', () => {
+                    clearTimeout(dropdownTimeout);
+                });
+
+                analisarDropdown.addEventListener('mouseleave', () => {
+                    dropdownTimeout = setTimeout(() => {
+                        analisarDropdown.classList.remove('show');
+                    }, 200);
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!analisarMenu.contains(e.target) && !analisarDropdown.contains(e.target)) {
+                        analisarDropdown.classList.remove('show');
+                    }
+                });
+            }
+
+            // Mobile menu functionality
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+
+            function toggleMobileMenu() {
+                if (mobileMenuToggle && mobileMenu) {
+                    const isOpen = mobileMenu.classList.contains('show');
+                    
+                    if (isOpen) {
+                        mobileMenu.classList.remove('show');
+                        mobileMenuToggle.classList.remove('active');
+                        document.body.style.overflow = '';
+                    } else {
+                        mobileMenu.classList.add('show');
+                        mobileMenuToggle.classList.add('active');
+                        document.body.style.overflow = 'hidden';
+                    }
+                }
+            }
+
+            function closeMobileMenu() {
+                if (mobileMenuToggle && mobileMenu) {
+                    mobileMenu.classList.remove('show');
+                    mobileMenuToggle.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+
+            if (mobileMenuToggle && mobileMenu) {
+                // Toggle menu
+                mobileMenuToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleMobileMenu();
+                });
+
+                // Close menu when clicking on menu items
+                const mobileNavItems = mobileMenu.querySelectorAll('.mobile-nav-item, .mobile-nav-subitem');
+                mobileNavItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        closeMobileMenu();
+                    });
+                });
+
+                // Close menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!mobileMenu.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+                        closeMobileMenu();
+                    }
+                });
+
+                // Close menu on window resize to desktop
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth > 768) {
+                        closeMobileMenu();
+                    }
+                });
+            }
+
+            // Notification sidebar functionality
+            const notificationBtn = document.getElementById('notificationBtn');
+            const notificationSidebar = document.getElementById('notificationSidebar');
+            const notificationOverlay = document.getElementById('notificationOverlay');
+            const notificationSidebarClose = document.getElementById('notificationSidebarClose');
+            const notificationBadge = document.getElementById('notificationBadge');
+
+            function openNotificationSidebar() {
+                // Fechar menu de configurações se estiver aberto
+                if (configSidebar && configSidebar.classList.contains('show')) {
+                    closeConfigSidebar();
+                }
+                notificationSidebar.classList.add('show');
+                notificationOverlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                loadNotifications();
+            }
+
+            function closeNotificationSidebar() {
+                notificationSidebar.classList.remove('show');
+                notificationOverlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            function loadNotifications() {
+                const contentDiv = document.getElementById('notificationSidebarContent');
+                
+                // Mostrar loading
+                contentDiv.innerHTML = `
+                    <div class="notification-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Carregando notificações...</p>
+                    </div>
+                `;
+
+                // Buscar notificações da API
+                fetch('/api/notificacoes/listar/?page=1&per_page=5')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.notificacoes && data.notificacoes.length > 0) {
+                            renderNotifications(data.notificacoes);
+                        } else {
+                            contentDiv.innerHTML = `
+                                <div class="notification-empty">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>Nenhuma notificação recente</p>
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao carregar notificações:', error);
+                        contentDiv.innerHTML = `
+                            <div class="notification-empty">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <p>Erro ao carregar notificações</p>
+                            </div>
+                        `;
+                    });
+            }
+
+            function renderNotifications(notifications) {
+                const contentDiv = document.getElementById('notificationSidebarContent');
+                
+                const notificationsHtml = notifications.map(notif => {
+                    const icon = getNotificationIcon(notif.tipo, notif.prioridade);
+                    const timeAgo = getTimeAgo(notif.data_criacao);
+                    const typeLabel = getTipoLabel(notif.tipo);
+                    
+                    return `
+                        <div class="notification-item">
+                            <div class="notification-item-header">
+                                <div class="notification-item-icon ${notif.prioridade}">
+                                    ${icon}
+                                </div>
+                                <div class="notification-item-content">
+                                    <div class="notification-item-title">
+                                        ${notif.titulo}
+                                        <span class="notification-item-type">${typeLabel}</span>
+                                    </div>
+                                    <div class="notification-item-message">
+                                        ${notif.mensagem}
+                                    </div>
+                                    <div class="notification-item-footer">
+                                        <div class="notification-item-time">
+                                            <i class="far fa-clock"></i>
+                                            ${timeAgo}
+                                        </div>
+                                        <span class="notification-item-status ${notif.status}">
+                                            ${getStatusLabel(notif.status)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                contentDiv.innerHTML = `<div class="notification-list">${notificationsHtml}</div>`;
+            }
+
+            function getNotificationIcon(tipo, prioridade) {
+                const icons = {
+                    'lead_novo': '<i class="fas fa-user-plus"></i>',
+                    'lead_convertido': '<i class="fas fa-check-circle"></i>',
+                    'venda_aprovada': '<i class="fas fa-thumbs-up"></i>',
+                    'venda_rejeitada': '<i class="fas fa-times-circle"></i>',
+                    'prospecto_aguardando': '<i class="fas fa-clock"></i>'
+                };
+                return icons[tipo] || '<i class="fas fa-bell"></i>';
+            }
+
+            function getTipoLabel(tipo) {
+                const labels = {
+                    'lead_novo': 'Novo Lead',
+                    'lead_convertido': 'Lead Convertido',
+                    'venda_aprovada': 'Venda Aprovada',
+                    'venda_rejeitada': 'Venda Rejeitada',
+                    'prospecto_aguardando': 'Aguardando'
+                };
+                return labels[tipo] || tipo;
+            }
+
+            function getStatusLabel(status) {
+                const labels = {
+                    'enviada': 'Enviada',
+                    'pendente': 'Pendente',
+                    'falhou': 'Falhou',
+                    'enviando': 'Enviando',
+                    'cancelada': 'Cancelada'
+                };
+                return labels[status] || status;
+            }
+
+            function getTimeAgo(dateString) {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffInSeconds = Math.floor((now - date) / 1000);
+
+                if (diffInSeconds < 60) {
+                    return 'Agora mesmo';
+                } else if (diffInSeconds < 3600) {
+                    const minutes = Math.floor(diffInSeconds / 60);
+                    return `Há ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
+                } else if (diffInSeconds < 86400) {
+                    const hours = Math.floor(diffInSeconds / 3600);
+                    return `Há ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+                } else {
+                    const days = Math.floor(diffInSeconds / 86400);
+                    return `Há ${days} ${days === 1 ? 'dia' : 'dias'}`;
+                }
+            }
+
+            function updateNotificationBadge() {
+                fetch('/api/notificacoes/listar/?page=1&per_page=10')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.notificacoes) {
+                            // Contar notificações recentes (últimos 5 minutos)
+                            const now = new Date();
+                            const recentNotifications = data.notificacoes.filter(notif => {
+                                const notifDate = new Date(notif.data_criacao);
+                                const diffMinutes = (now - notifDate) / 1000 / 60;
+                                return diffMinutes <= 5 && notif.status === 'enviada';
+                            });
+
+                            if (recentNotifications.length > 0) {
+                                notificationBadge.textContent = recentNotifications.length;
+                                notificationBadge.style.display = 'flex';
+                            } else {
+                                notificationBadge.style.display = 'none';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao atualizar badge:', error);
+                    });
+            }
+
+            if (notificationBtn && notificationSidebar && notificationOverlay && notificationSidebarClose) {
+                // Abrir sidebar
+                notificationBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openNotificationSidebar();
+                    // Limpar badge ao abrir
+                    notificationBadge.style.display = 'none';
+                });
+
+                // Fechar sidebar
+                notificationSidebarClose.addEventListener('click', () => {
+                    closeNotificationSidebar();
+                });
+
+                // Fechar ao clicar no overlay
+                notificationOverlay.addEventListener('click', () => {
+                    closeNotificationSidebar();
+                });
+
+                // Fechar com ESC
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && notificationSidebar.classList.contains('show')) {
+                        closeNotificationSidebar();
+                    }
+                });
+
+                // Atualizar badge ao carregar a página
+                updateNotificationBadge();
+
+                // Atualizar badge a cada 30 segundos
+                setInterval(updateNotificationBadge, 30000);
+            }
+
+            // Config sidebar functionality
+            const configBtn = document.getElementById('configBtn');
+            const configSidebar = document.getElementById('configSidebar');
+            const configOverlay = document.getElementById('configOverlay');
+            const configSidebarClose = document.getElementById('configSidebarClose');
+
+            function openConfigSidebar() {
+                // Fechar menu de notificações se estiver aberto
+                if (notificationSidebar && notificationSidebar.classList.contains('show')) {
+                    closeNotificationSidebar();
+                }
+                configSidebar.classList.add('show');
+                configOverlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeConfigSidebar() {
+                configSidebar.classList.remove('show');
+                configOverlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            if (configBtn && configSidebar && configOverlay && configSidebarClose) {
+                // Abrir sidebar
+                configBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openConfigSidebar();
+                });
+
+                // Fechar sidebar
+                configSidebarClose.addEventListener('click', () => {
+                    closeConfigSidebar();
+                });
+
+                // Fechar ao clicar no overlay
+                configOverlay.addEventListener('click', () => {
+                    closeConfigSidebar();
+                });
+
+                // Fechar com ESC
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && configSidebar.classList.contains('show')) {
+                        closeConfigSidebar();
+                    }
+                });
+            }
+
+            // Logout functionality
+            const logoutLink = document.getElementById('logoutLink');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (confirm('Tem certeza que deseja sair?')) {
+                        // Fechar sidebar primeiro
+                        closeConfigSidebar();
+                        // Redirecionar para logout
+                        window.location.href = this.href;
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- Sistema de Notificações em Tempo Real -->
+    <div id="notification-system" class="notification-system">
+        <div class="notification-container" id="notificationContainer"></div>
+    </div>
+
+    <!-- CSS para Notificações -->
+    <style>
+        .notification-system {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .notification-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .notification {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 16px;
+            border-left: 4px solid #667eea;
+            pointer-events: auto;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notification.hide {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        .notification.success {
+            border-left-color: #10b981;
+        }
+
+        .notification.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .notification.error {
+            border-left-color: #ef4444;
+        }
+
+        .notification.info {
+            border-left-color: #3b82f6;
+        }
+
+        .notification-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .notification-close:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .notification-message {
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        .notification-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: #667eea;
+            transition: width linear;
+        }
+
+        .notification.success .notification-progress {
+            background: #10b981;
+        }
+
+        .notification.warning .notification-progress {
+            background: #f59e0b;
+        }
+
+        .notification.error .notification-progress {
+            background: #ef4444;
+        }
+
+        .notification.info .notification-progress {
+            background: #3b82f6;
+        }
+
+        @media (max-width: 768px) {
+            .notification-system {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+            }
+
+            .notification-container {
+                max-width: none;
+            }
+
+            .notification {
+                padding: 12px;
+            }
+
+            .notification-title {
+                font-size: 13px;
+            }
+
+            .notification-message {
+                font-size: 12px;
+            }
+        }
+    </style>
+
+    <!-- JavaScript para Notificações -->
+    <script>
+        class NotificationSystem {
+            constructor() {
+                this.container = document.getElementById('notificationContainer');
+                this.notifications = new Map();
+                this.maxNotifications = 5;
+                this.defaultDuration = 5000;
+            }
+
+            show(message, type = 'info', options = {}) {
+                const id = this.generateId();
+                const duration = options.duration || this.defaultDuration;
+                const title = options.title || this.getDefaultTitle(type);
+                const icon = options.icon || this.getDefaultIcon(type);
+                const persistent = options.persistent || false;
+
+                const notification = this.createNotification(id, title, message, type, icon, persistent);
+                this.container.appendChild(notification);
+
+                // Animar entrada
+                setTimeout(() => {
+                    notification.classList.add('show');
+                }, 10);
+
+                // Auto-remover se não for persistente
+                if (!persistent && duration > 0) {
+                    this.autoRemove(id, duration);
+                }
+
+                // Limitar número de notificações
+                this.limitNotifications();
+
+                return id;
+            }
+
+            createNotification(id, title, message, type, icon, persistent) {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.dataset.id = id;
+
+                notification.innerHTML = `
+                    <div class="notification-header">
+                        <div class="notification-title">
+                            <i class="${icon}"></i>
+                            ${title}
+                        </div>
+                        <button class="notification-close" onclick="notificationSystem.remove('${id}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="notification-message">${message}</div>
+                    ${!persistent ? '<div class="notification-progress"></div>' : ''}
+                `;
+
+                // Adicionar progress bar se não for persistente
+                if (!persistent) {
+                    const progressBar = notification.querySelector('.notification-progress');
+                    if (progressBar) {
+                        progressBar.style.width = '100%';
+                        progressBar.style.transitionDuration = `${this.defaultDuration}ms`;
+                        setTimeout(() => {
+                            progressBar.style.width = '0%';
+                        }, 10);
+                    }
+                }
+
+                return notification;
+            }
+
+            remove(id) {
+                const notification = this.container.querySelector(`[data-id="${id}"]`);
+                if (notification) {
+                    notification.classList.add('hide');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                        this.notifications.delete(id);
+                    }, 300);
+                }
+            }
+
+            autoRemove(id, duration) {
+                setTimeout(() => {
+                    this.remove(id);
+                }, duration);
+            }
+
+            limitNotifications() {
+                const notifications = this.container.querySelectorAll('.notification');
+                if (notifications.length > this.maxNotifications) {
+                    const oldest = notifications[0];
+                    const id = oldest.dataset.id;
+                    this.remove(id);
+                }
+            }
+
+            getDefaultTitle(type) {
+                const titles = {
+                    success: 'Sucesso',
+                    warning: 'Atenção',
+                    error: 'Erro',
+                    info: 'Informação'
+                };
+                return titles[type] || 'Notificação';
+            }
+
+            getDefaultIcon(type) {
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    error: 'fas fa-times-circle',
+                    info: 'fas fa-info-circle'
+                };
+                return icons[type] || 'fas fa-bell';
+            }
+
+            generateId() {
+                return 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            // Métodos de conveniência
+            success(message, options = {}) {
+                return this.show(message, 'success', options);
+            }
+
+            warning(message, options = {}) {
+                return this.show(message, 'warning', options);
+            }
+
+            error(message, options = {}) {
+                return this.show(message, 'error', options);
+            }
+
+            info(message, options = {}) {
+                return this.show(message, 'info', options);
+            }
+
+            // Limpar todas as notificações
+            clear() {
+                const notifications = this.container.querySelectorAll('.notification');
+                notifications.forEach(notification => {
+                    const id = notification.dataset.id;
+                    this.remove(id);
+                });
+            }
+        }
+
+        // Inicializar sistema de notificações
+        const notificationSystem = new NotificationSystem();
+
+        // Função global para mostrar notificações
+        window.showNotification = function(message, type = 'info', options = {}) {
+            return notificationSystem.show(message, type, options);
+        };
+
+        // Verificar notificações pendentes ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar se há notificações pendentes
+            checkPendingNotifications();
+            
+            // Configurar polling para novas notificações (a cada 30 segundos)
+            setInterval(checkPendingNotifications, 30000);
+        });
+
+        function checkPendingNotifications() {
+            fetch('/api/notificacoes/listar/?page=1&per_page=5')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.notificacoes) {
+                        // Verificar se há notificações não lidas
+                        const unreadNotifications = data.notificacoes.filter(notif => 
+                            notif.status === 'enviada' && 
+                            !localStorage.getItem(`notif_read_${notif.id}`)
+                        );
+
+                        unreadNotifications.forEach(notif => {
+                            // Marcar como lida no localStorage
+                            localStorage.setItem(`notif_read_${notif.id}`, 'true');
+                            
+                            // Mostrar notificação
+                            notificationSystem.show(
+                                notif.mensagem,
+                                getNotificationType(notif.prioridade),
+                                {
+                                    title: notif.titulo,
+                                    duration: 8000,
+                                    persistent: false
+                                }
+                            );
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao verificar notificações:', error);
+                });
+        }
+
+        function getNotificationType(prioridade) {
+            const types = {
+                'urgente': 'error',
+                'alta': 'warning',
+                'normal': 'info',
+                'baixa': 'info'
+            };
+            return types[prioridade] || 'info';
+        }
+
+        // Exemplo de uso para testes (pode ser removido em produção)
+        // window.testNotifications = function() {
+        //     notificationSystem.success('Operação realizada com sucesso!');
+        //     setTimeout(() => notificationSystem.warning('Atenção: Verifique os dados inseridos.'), 1000);
+        //     setTimeout(() => notificationSystem.error('Erro: Não foi possível salvar os dados.'), 2000);
+        //     setTimeout(() => notificationSystem.info('Informação: Sistema atualizado com sucesso.'), 3000);
+        // };
+    </script>
+
+    <!-- Chart.js para gráficos (local) -->
+    <script src="{% static 'vendas_web/js/chart.min.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

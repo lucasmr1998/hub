@@ -1,0 +1,162 @@
+{% extends 'vendas_web/base.html' %}
+{% block page_title %}Fontes Wifeed{% endblock %}
+
+{% block extra_css %}
+<style>
+  .wf-wrap { max-width:960px; padding:20px 24px; }
+  .wf-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .wf-status { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 18px; }
+  .wf-chip { font-size:12px; font-weight:700; padding:5px 11px; border-radius:20px; }
+  .wf-chip.ok { background:#dcfce7; color:#166534; }
+  .wf-chip.warn { background:#fef3c7; color:#92400e; }
+  .wf-chip.off { background:#f3f4f6; color:#6b7280; }
+  .wf-btn { border:none; border-radius:9px; padding:9px 16px; font-weight:700; font-size:13px; cursor:pointer; }
+  .wf-btn.sync { background:#06b6d4; color:#fff; }
+  .wf-btn.save { background:#0022fa; color:#fff; }
+  .wf-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .wf-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .wf-grid { grid-template-columns:1fr; } }
+  .wf-card { background:#fff; border:1px solid #eef0f4; border-radius:14px; padding:16px; }
+  .wf-card h3 { margin:0 0 4px; color:#0b2a4a; font-size:15px; display:flex; align-items:center; gap:8px; }
+  .wf-sub { color:#6b7280; font-size:12px; margin:0 0 10px; }
+  .wf-search { width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:9px; font-size:13px; box-sizing:border-box; margin-bottom:10px; }
+  .wf-list { max-height:420px; overflow:auto; display:flex; flex-direction:column; gap:2px; }
+  .wf-row { display:flex; align-items:center; gap:10px; padding:8px 8px; border-radius:8px; font-size:13px; }
+  .wf-row:hover { background:#f8fafc; }
+  .wf-row input { width:16px; height:16px; cursor:pointer; }
+  .wf-row .nm { font-weight:600; color:#0b2a4a; }
+  .wf-row .id { color:#9ca3af; font-size:11px; }
+  .wf-row .inativa { font-size:10px; font-weight:700; color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:10px; }
+  .wf-toolbar { display:flex; align-items:center; gap:12px; margin-top:16px; }
+  .wf-mini { font-size:12px; color:#6b7280; cursor:pointer; text-decoration:underline; }
+  .wf-empty { color:#9ca3af; font-size:13px; padding:16px; text-align:center; }
+  #wf_status_msg { font-size:13px; font-weight:600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wf-wrap">
+  <div class="wf-head">
+    <div>
+      <h2 style="margin:0 0 4px;color:#0b2a4a;"><i class="fas fa-wifi" style="color:#06b6d4"></i> Fontes Wifeed</h2>
+      <p style="margin:0;color:#6b7280;font-size:13px;max-width:640px;">
+        Selecione de quais <b>locais</b> (pontos WiFi) e <b>campanhas</b> o robô deve puxar leads para o
+        pipeline Wifeed. Só as fontes marcadas viram lead — o resto do WiFi é ignorado.
+      </p>
+    </div>
+    <button class="wf-btn sync" id="btnSync" onclick="sincronizar()"><i class="fas fa-rotate"></i> Sincronizar catálogo</button>
+  </div>
+
+  <div class="wf-status">
+    {% if wifeed_enabled %}<span class="wf-chip ok">Poller ativo</span>{% else %}<span class="wf-chip off">Poller desativado (WIFEED_ENABLED=false)</span>{% endif %}
+    {% if creds_ok %}<span class="wf-chip ok">Credenciais OK</span>{% else %}<span class="wf-chip warn">Sem credenciais (WIFEED_CLIENT_ID/SECRET)</span>{% endif %}
+    <span class="wf-chip off">Locais ativos: <b id="cnt_local">{{ n_local_ativo }}</b>/{{ locais|length }}</span>
+    <span class="wf-chip off">Campanhas ativas: <b id="cnt_camp">{{ n_camp_ativo }}</b>/{{ campanhas|length }}</span>
+    {% if ultima_sync %}<span class="wf-chip off">Catálogo: {{ ultima_sync|date:"d/m/Y H:i" }}</span>{% endif %}
+  </div>
+
+  {% if not locais and not campanhas %}
+  <div class="wf-card">
+    <div class="wf-empty">
+      Catálogo vazio. Clique em <b>Sincronizar catálogo</b> para carregar os locais e campanhas do Wifeed.
+    </div>
+  </div>
+  {% else %}
+  <div class="wf-grid">
+    <!-- LOCAIS -->
+    <div class="wf-card">
+      <h3><i class="fas fa-store" style="color:#06b6d4"></i> Locais (pontos WiFi)</h3>
+      <p class="wf-sub">Fonte: cadastros do formulário do WiFi.</p>
+      <input class="wf-search" placeholder="Filtrar locais…" oninput="filtrar(this,'list_local')">
+      <div class="wf-list" id="list_local">
+        {% for f in locais %}
+        <label class="wf-row" data-nome="{{ f.nome|lower }}">
+          <input type="checkbox" class="wf-fonte" data-tipo="local" value="{{ f.pk }}" {% if f.ativo %}checked{% endif %}>
+          <span class="nm">{{ f.nome|default:"(sem nome)" }}</span>
+          <span class="id">#{{ f.externo_id }}</span>
+          {% if not f.ativo_wifeed %}<span class="inativa">inativa no Wifeed</span>{% endif %}
+        </label>
+        {% empty %}<div class="wf-empty">Nenhum local no catálogo.</div>{% endfor %}
+      </div>
+    </div>
+
+    <!-- CAMPANHAS -->
+    <div class="wf-card">
+      <h3><i class="fas fa-bullhorn" style="color:#8b5cf6"></i> Campanhas</h3>
+      <p class="wf-sub">Fonte: acessos da campanha (traz CPF quando o formulário pede).</p>
+      <input class="wf-search" placeholder="Filtrar campanhas…" oninput="filtrar(this,'list_camp')">
+      <div class="wf-list" id="list_camp">
+        {% for f in campanhas %}
+        <label class="wf-row" data-nome="{{ f.nome|lower }}">
+          <input type="checkbox" class="wf-fonte" data-tipo="campanha" value="{{ f.pk }}" {% if f.ativo %}checked{% endif %}>
+          <span class="nm">{{ f.nome|default:"(sem nome)" }}</span>
+          <span class="id">#{{ f.externo_id }}</span>
+          {% if not f.ativo_wifeed %}<span class="inativa">inativa no Wifeed</span>{% endif %}
+        </label>
+        {% empty %}<div class="wf-empty">Nenhuma campanha no catálogo.</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-toolbar">
+    <button class="wf-btn save" id="btnSave" onclick="salvar()"><i class="fas fa-save"></i> Salvar seleção</button>
+    <label style="font-size:13px;color:#374151;display:inline-flex;align-items:center;gap:6px;">
+      Sincronizar a cada
+      <input type="number" id="wf_intervalo" min="1" max="1440" value="{{ intervalo_minutos }}"
+             style="width:70px;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+      min
+    </label>
+    <span class="wf-mini" onclick="marcar('list_local',true)">marcar locais</span>
+    <span class="wf-mini" onclick="marcar('list_local',false)">limpar locais</span>
+    <span id="wf_status_msg"></span>
+  </div>
+  <p style="margin:10px 2px 0;color:#9ca3af;font-size:12px;">
+    Ao salvar, os leads das fontes marcadas são buscados na hora (aparecem no pipeline em instantes)
+    e cada card recebe a tag do seu local/campanha. O poller continua trazendo novos leads no intervalo definido.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+function filtrar(inp, listId){
+  const q = (inp.value||'').toLowerCase();
+  document.querySelectorAll('#'+listId+' .wf-row').forEach(r => {
+    r.style.display = (r.dataset.nome||'').includes(q) ? 'flex' : 'none';
+  });
+}
+function marcar(listId, val){
+  document.querySelectorAll('#'+listId+' .wf-fonte').forEach(c => { if(c.closest('.wf-row').style.display!=='none') c.checked = val; });
+}
+function _msg(txt, ok){ const m=document.getElementById('wf_status_msg'); if(!m) return; m.style.color = ok ? '#059669' : '#dc3545'; m.textContent = txt; }
+function _recontar(){
+  document.getElementById('cnt_local').textContent = document.querySelectorAll('#list_local .wf-fonte:checked').length;
+  const cc = document.getElementById('cnt_camp'); if(cc) cc.textContent = document.querySelectorAll('#list_camp .wf-fonte:checked').length;
+}
+async function sincronizar(){
+  const b = document.getElementById('btnSync'); b.disabled = true; _msg('Sincronizando catálogo…', true);
+  try {
+    const r = await fetch("{% url 'crm:api_wifeed_fontes_sincronizar' %}", {method:'POST', headers:{'X-CSRFToken':CSRF}});
+    const d = await r.json().catch(()=>({ok:false,erro:'Erro no servidor.'}));
+    if(d.ok){ _msg('✓ Catálogo atualizado ('+d.locais+' locais, '+d.campanhas+' campanhas). Recarregando…', true); setTimeout(()=>location.reload(), 900); }
+    else { b.disabled=false; _msg(d.erro||'Erro ao sincronizar.', false); }
+  } catch(e){ b.disabled=false; _msg('Erro de conexão.', false); }
+}
+async function salvar(){
+  const ids = Array.from(document.querySelectorAll('.wf-fonte:checked')).map(c => c.value);
+  const intervalo_minutos = parseInt(document.getElementById('wf_intervalo').value || '15', 10);
+  const b = document.getElementById('btnSave'); b.disabled = true; _msg('Salvando e buscando leads…', true);
+  try {
+    const r = await fetch("{% url 'crm:api_wifeed_fontes_salvar' %}", {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body:JSON.stringify({ids, intervalo_minutos})});
+    const d = await r.json().catch(()=>({ok:false,erro:'Erro no servidor.'}));
+    b.disabled = false;
+    if(d.ok){ _recontar(); _msg('✓ '+(d.mensagem||'Seleção salva.')+' ('+d.ativos+' fontes ativas)', true); setTimeout(()=>_msg('',true), 6000); }
+    else { _msg(d.erro||'Erro ao salvar.', false); }
+  } catch(e){ b.disabled=false; _msg('Erro de conexão.', false); }
+}
+document.addEventListener('change', e => { if(e.target.classList.contains('wf-fonte')) _recontar(); });
+</script>
+{% endblock %}

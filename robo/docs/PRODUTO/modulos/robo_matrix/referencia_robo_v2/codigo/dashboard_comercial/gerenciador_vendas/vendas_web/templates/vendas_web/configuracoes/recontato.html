@@ -1,0 +1,380 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Configurações de Recontato - Dashboard Megalink{% endblock %}
+
+{% block content %}
+
+<div class="settings-container">
+    <div class="settings-card">
+        <div class="card-header">
+            <h2>Configurações de Recontato Automático</h2>
+            <p>Configure a mensagem e o tempo para recontatar clientes que abandonaram o cadastro.</p>
+        </div>
+        
+        <form id="formConfiguracoesRecontato" onsubmit="salvarConfiguracoesRecontato(event)">
+            <div class="card-body">
+                <div class="form-group form-group-toggle">
+                    <label for="ativo" class="toggle-label">Ativar recontato automático</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="ativo" name="ativo" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mensagem">Mensagem de recontato</label>
+                    <textarea 
+                        id="mensagem" 
+                        name="mensagem" 
+                        rows="4"
+                        placeholder="Ex: Olá! Vimos que você iniciou seu cadastro mas não concluiu. Precisa de ajuda para continuar?">Olá, notamos que você ainda não terminou o cadastro, gostaria de continuar?</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tempo_recontato">Tempo para recontato (em minutos)</label>
+                    <div class="input-group">
+                        <input 
+                            type="number" 
+                            id="tempo_recontato" 
+                            name="tempo_recontato" 
+                            placeholder="Ex: 2"
+                            value="15"
+                            min="1">
+                        <span class="input-group-text">Minutos</span>
+                    </div>
+                    <p class="form-text">Tempo após o abandono do cadastro para enviar a mensagem.</p>
+                </div>
+            </div>
+            
+            <div class="card-footer"> 
+                <button type="submit" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save" viewBox="0 0 16 16">
+                        <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v4.5h2a.5.5 0 0 1 .354.854l-2.5 2.5a.5.5 0 0 1-.708 0l-2.5-2.5A.5.5 0 0 1 5.5 6.5h2V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1z"/>
+                    </svg>
+                    <span id="btnSalvarTexto">Salvar Configurações</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* === Estilos Gerais e Layout === */
+    :root {
+        --primary-color: #1F3D59;
+        --light-gray: #f4f7f9;
+        --border-color: #e0e0e0;
+        --text-color: #333;
+        --text-light: #666;
+        --success-color: #28a745;
+        --white-color: #fff;
+    }
+
+    /* Remove o padding do div original para não duplicar */
+    .settings-container {
+        padding: 2rem 1rem;
+        background-color: var(--light-gray);
+        min-height: 100vh;
+    }
+
+    .settings-card {
+        max-width: 800px;
+        margin: 0 auto;
+        background: var(--white-color);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+    /* === Cabeçalho e Rodapé do Card === */
+    .card-header, .card-body, .card-footer {
+        padding: 1.5rem 2rem;
+    }
+
+    .card-header {
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .card-header h2 {
+        margin: 0 0 0.25rem 0;
+        color: var(--text-color);
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .card-header p {
+        margin: 0;
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+    
+    .card-footer {
+        background-color: var(--light-gray);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    /* === Estilos do Formulário === */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-color);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        box-sizing: border-box; /* Garante que padding não afete a largura total */
+    }
+
+    .form-group input[type="text"]:focus,
+    .form-group input[type="number"]:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.15);
+    }
+    
+    textarea {
+        resize: vertical;
+        font-family: inherit;
+    }
+    
+    .form-text {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        margin-top: 0.5rem;
+    }
+    
+    /* === Toggle Switch === */
+    .form-group-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f9fafb;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .form-group-toggle .toggle-label {
+        margin-bottom: 0;
+    }
+    
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 28px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: var(--success-color);
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(22px);
+    }
+
+    /* === Input Group para Unidades === */
+    .input-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .input-group input {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right: 0;
+    }
+    
+    .input-group-text {
+        padding: 0.75rem 1rem;
+        background-color: var(--light-gray);
+        border: 1px solid #ccc;
+        border-left: none;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+        color: var(--text-light);
+    }
+
+    /* === Estilos do Botão === */
+    .btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn:hover {
+        opacity: 0.9;
+    }
+    
+    .btn:active {
+        transform: scale(0.98);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        color: var(--white-color);
+    }
+    
+    /* === Estilos do Modal (Mantidos como no original) === */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        color: #333;
+        font-size: 1.3rem;
+        font-weight: 600;
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #666;
+        padding: 0.5rem;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #1F3D59;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style> 
+
+
+<script>
+    async function salvarConfiguracoesRecontato(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(event.target);
+        const data = {
+            ativo: formData.get('ativo') === 'on',
+            mensagem: formData.get('mensagem'),
+            tempo_recontato: formData.get('tempo_recontato')
+        };
+
+        alert('Ativo: ' + data.ativo + '\nMensagem: ' + data.mensagem + '\nTempo: ' + data.tempo_recontato);
+        /*
+        
+        try {
+            const response = await fetch('/api/configuracoes/recontato/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert(result.message); 
+                carregarConfiguracoesRecontato();
+            } else {
+                throw new Error(result.error || 'Erro ao salvar configurações de recontato');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao salvar configurações de recontato: ' + error.message);
+        }*/
+    }
+</script>
+
+{% endblock %}

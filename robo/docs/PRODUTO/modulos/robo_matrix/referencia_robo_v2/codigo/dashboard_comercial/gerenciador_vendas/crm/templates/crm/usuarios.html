@@ -1,0 +1,205 @@
+{% extends 'vendas_web/base.html' %}
+{% block page_title %}Gestão de Usuários{% endblock %}
+
+{% block extra_css %}
+<style>
+  .us-wrap { padding:20px 24px; max-width:1100px; }
+  .us-top { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+  .us-title { font-size:22px; font-weight:800; color:#0b2a4a; }
+  .us-title i { color:#0022fa; }
+  .us-sub { color:#6b7280; font-size:13px; margin-top:4px; }
+
+  .us-kpis { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .us-kpi { background:#fff; border:1px solid #eef0f4; border-radius:12px; padding:10px 18px; }
+  .us-kpi .n { font-size:22px; font-weight:800; color:#0b2a4a; }
+  .us-kpi .l { font-size:11px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+
+  .us-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .us-busca { flex:1; min-width:240px; position:relative; }
+  .us-busca i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:13px; }
+  .us-busca input { width:100%; box-sizing:border-box; padding:10px 12px 10px 34px; border:1px solid #d1d5db;
+    border-radius:10px; font-size:13.5px; }
+  .us-busca input:focus { outline:none; border-color:#0022fa; box-shadow:0 0 0 3px #0022fa18; }
+  .us-filtro { background:#f3f4f6; border:1px solid #eef0f4; color:#374151; border-radius:999px;
+    padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; }
+  .us-filtro.on { background:#0022fa; border-color:#0022fa; color:#fff; }
+  .btn-sync { background:#6d28d9; color:#fff; border:none; border-radius:9px; padding:9px 15px;
+    font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-sync:hover { opacity:.92; }
+
+  .us-lista { background:#fff; border:1px solid #eef0f4; border-radius:14px; overflow:visible; }
+  .us-row { display:flex; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid #f3f4f6; }
+  .us-row:last-child { border-bottom:none; }
+  .us-avatar { width:38px; height:38px; border-radius:50%; background:#eef2ff; color:#4f46e5;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex:none; }
+  .us-info { min-width:0; width:250px; }
+  .us-nome { font-weight:700; color:#0b2a4a; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .us-mail { font-size:11.5px; color:#9ca3af; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .us-perfis { flex:1; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .us-chip { display:inline-flex; align-items:center; gap:6px; color:#fff; border-radius:999px;
+    padding:3px 10px; font-size:11.5px; font-weight:700; }
+  .us-chip b { cursor:pointer; opacity:.75; font-weight:900; }
+  .us-chip b:hover { opacity:1; }
+  .us-badge { font-size:11px; font-weight:800; padding:3px 10px; border-radius:999px; flex:none; }
+  .b-admin { background:#fef3c7; color:#b45309; }
+  .b-ok { background:#d1fae5; color:#047857; }
+  .b-pend { background:#fee2e2; color:#b91c1c; }
+
+  .us-add { position:relative; }
+  .us-addbtn { background:#eef2ff; color:#4f46e5; border:1px dashed #c7d2fe; border-radius:999px;
+    padding:3px 12px; font-size:11.5px; font-weight:800; cursor:pointer; }
+  .us-addbtn:hover { background:#e0e7ff; }
+  .us-menu { position:absolute; top:110%; left:0; z-index:30; background:#fff; border:1px solid #e5e7eb;
+    border-radius:10px; box-shadow:0 10px 26px rgba(0,0,0,.12); min-width:190px; padding:6px; display:none; }
+  .us-menu.aberto { display:block; }
+  .us-menu button { display:flex; align-items:center; gap:8px; width:100%; background:none; border:none;
+    text-align:left; padding:8px 10px; border-radius:8px; font-size:12.5px; font-weight:600; color:#374151; cursor:pointer; }
+  .us-menu button:hover { background:#f3f4f6; }
+  .us-dot { width:9px; height:9px; border-radius:50%; flex:none; }
+  .us-vazio { padding:34px; text-align:center; color:#9ca3af; font-size:13.5px; display:none; }
+  #syncStatus { font-size:12px; color:#6b7280; margin-top:6px; text-align:right; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="us-wrap">
+  <div class="us-top">
+    <div>
+      <div class="us-title"><i class="fas fa-users-gear"></i> Gestão de Usuários</div>
+      <div class="us-sub">Usuários do <b>Portal TecHub</b>. O acesso é liberado ao atribuir um <b>perfil</b> — sem perfil, a pessoa vê "acesso pendente".</div>
+    </div>
+    <div>
+      <button class="btn-sync" onclick="sincronizar(this)"><i class="fas fa-rotate"></i> Sincronizar usuários do portal</button>
+      <div id="syncStatus"></div>
+    </div>
+  </div>
+
+  <div class="us-kpis">
+    <div class="us-kpi"><div class="n">{{ stats.total }}</div><div class="l">Usuários</div></div>
+    <div class="us-kpi"><div class="n" style="color:#047857">{{ stats.liberados }}</div><div class="l">Com acesso</div></div>
+    <div class="us-kpi"><div class="n" style="color:#b91c1c">{{ stats.pendentes }}</div><div class="l">Pendentes</div></div>
+    <div class="us-kpi"><div class="n" style="color:#b45309">{{ stats.admins }}</div><div class="l">Admins</div></div>
+  </div>
+
+  <div class="us-bar">
+    <div class="us-busca"><i class="fas fa-search"></i>
+      <input id="busca" type="text" placeholder="Buscar por nome, usuário ou e-mail…" oninput="filtrar()">
+    </div>
+    <button class="us-filtro on" data-f="todos" onclick="setFiltro(this)">Todos</button>
+    <button class="us-filtro" data-f="pendentes" onclick="setFiltro(this)">Pendentes</button>
+    <button class="us-filtro" data-f="liberados" onclick="setFiltro(this)">Com acesso</button>
+    <button class="us-filtro" data-f="admins" onclick="setFiltro(this)">Admins</button>
+  </div>
+
+  <div class="us-lista" id="lista"></div>
+  <div class="us-vazio" id="vazio">Nenhum usuário encontrado para esse filtro.</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+const USUARIOS = {{ usuarios_json|safe }};
+const PERFIS = {{ perfis_json|safe }};
+let filtroAtivo = 'todos';
+
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iniciais = n => n.split(' ').filter(Boolean).slice(0,2).map(p=>p[0].toUpperCase()).join('');
+
+function statusDe(u){
+  if (u.is_superuser) return ['b-admin','Admin'];
+  if (u.perfis.length) return ['b-ok','Liberado'];
+  return ['b-pend','Pendente'];
+}
+
+function chipsDe(u){
+  const chips = u.perfis.map(p =>
+    `<span class="us-chip" style="background:${p.cor||'#0022fa'}">${esc(p.nome)}
+       <b title="Remover perfil" onclick="mudarPerfil(${u.id}, ${p.id}, 'remover')">×</b></span>`).join('');
+  const disponiveis = PERFIS.filter(p => !u.perfis.some(x => x.id === p.id));
+  const menu = disponiveis.map(p =>
+    `<button onclick="mudarPerfil(${u.id}, ${p.id}, 'adicionar')">
+       <span class="us-dot" style="background:${p.cor||'#0022fa'}"></span>${esc(p.nome)}</button>`).join('')
+    || '<button disabled style="color:#9ca3af">Todos os perfis já atribuídos</button>';
+  const rotulo = u.perfis.length ? '+ perfil' : '+ Liberar acesso';
+  return `${chips}
+    <span class="us-add">
+      <button class="us-addbtn" onclick="toggleMenu(event, this)">${rotulo}</button>
+      <span class="us-menu">${menu}</span>
+    </span>`;
+}
+
+function renderizar(){
+  const lista = document.getElementById('lista');
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  const visiveis = USUARIOS.filter(u => {
+    const [cls] = statusDe(u);
+    if (filtroAtivo === 'pendentes' && cls !== 'b-pend') return false;
+    if (filtroAtivo === 'liberados' && cls !== 'b-ok') return false;
+    if (filtroAtivo === 'admins' && cls !== 'b-admin') return false;
+    if (termo && !(`${u.nome} ${u.username} ${u.email}`.toLowerCase().includes(termo))) return false;
+    return true;
+  });
+  lista.innerHTML = visiveis.map(u => {
+    const [cls, rot] = statusDe(u);
+    return `<div class="us-row" id="row-${u.id}">
+      <div class="us-avatar">${esc(iniciais(u.nome))}</div>
+      <div class="us-info">
+        <div class="us-nome" title="${esc(u.username)}">${esc(u.nome)}</div>
+        <div class="us-mail">${esc(u.email || u.username)}</div>
+      </div>
+      <div class="us-perfis">${chipsDe(u)}</div>
+      <span class="us-badge ${cls}">${rot}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('vazio').style.display = visiveis.length ? 'none' : 'block';
+}
+
+function setFiltro(btn){
+  document.querySelectorAll('.us-filtro').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  filtroAtivo = btn.dataset.f;
+  renderizar();
+}
+function filtrar(){ renderizar(); }
+
+function toggleMenu(ev, btn){
+  ev.stopPropagation();
+  const menu = btn.nextElementSibling;
+  const aberto = menu.classList.contains('aberto');
+  document.querySelectorAll('.us-menu.aberto').forEach(m => m.classList.remove('aberto'));
+  if (!aberto) menu.classList.add('aberto');
+}
+document.addEventListener('click', () => document.querySelectorAll('.us-menu.aberto').forEach(m => m.classList.remove('aberto')));
+
+async function mudarPerfil(userId, perfilId, acao){
+  try {
+    const r = await fetch("{% url 'crm:api_usuario_perfil' %}", {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify({user_id:userId, perfil_id:perfilId, acao})});
+    const d = await r.json();
+    if (!d.ok) { alert(d.erro || 'Erro ao alterar perfil.'); return; }
+    const u = USUARIOS.find(x => x.id === userId);
+    u.perfis = d.perfis;
+    renderizar();
+  } catch(e){ alert('Erro de conexão.'); }
+}
+
+async function sincronizar(btn){
+  const st = document.getElementById('syncStatus');
+  btn.disabled = true; st.style.color = '#6b7280'; st.textContent = 'Sincronizando com o portal…';
+  try {
+    const r = await fetch("{% url 'crm:api_usuarios_sincronizar' %}", {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body:'{}'});
+    const d = await r.json();
+    if (d.ok) {
+      st.style.color = '#059669';
+      st.textContent = `✓ ${d.total_portal} no portal — ${d.criados} novos. Recarregando…`;
+      setTimeout(() => location.reload(), 1200);
+    } else { st.style.color = '#dc3545'; st.textContent = d.erro || 'Erro.'; btn.disabled = false; }
+  } catch(e){ st.style.color = '#dc3545'; st.textContent = 'Erro de conexão.'; btn.disabled = false; }
+}
+
+renderizar();
+</script>
+{% endblock %}
