@@ -11,7 +11,7 @@ Estrutura (algumas views são stubs na fase 1, completam nas próximas PRs):
 """
 from django.urls import path
 
-from apps.workspace.views import agentes, dashboard, documentos, projetos, propostas, tarefas, api as api_views
+from apps.workspace.views import agentes, checklists, dashboard, documentos, projetos, propostas, tarefas, api as api_views
 
 app_name = 'workspace'
 
@@ -29,6 +29,17 @@ urlpatterns = [
     path('api/agentes/chat/', agentes.chat_api, name='agentes_chat'),
     path('api/agentes/salvar/', agentes.salvar, name='agente_salvar'),
     path('api/agentes/<int:pk>/excluir/', agentes.excluir, name='agente_excluir'),
+
+    # Checklists — roteiros de pergunta que o bot (Matrix) ou um humano conduz
+    # pra preencher dados de um lead/oportunidade passo a passo
+    path('checklists/', checklists.lista, name='checklists_lista'),
+    path('checklists/novo/', checklists.editar_page, name='checklist_novo'),
+    path('checklists/<int:pk>/editar/', checklists.editar_page, name='checklist_editar'),
+    path('api/checklists/salvar/', checklists.salvar, name='checklist_salvar'),
+    path('api/checklists/<int:pk>/excluir/', checklists.excluir, name='checklist_excluir'),
+    path('api/checklists/<int:pk>/itens/salvar/', checklists.item_salvar, name='checklist_item_salvar'),
+    path('api/checklists/itens/<int:pk>/excluir/', checklists.item_excluir, name='checklist_item_excluir'),
+    path('api/checklists/<int:pk>/itens/ordenar/', checklists.itens_ordenar, name='checklist_itens_ordenar'),
 
     # Propostas — fila de aprovacao humana das acoes dos agentes
     path('propostas/', propostas.lista, name='propostas_lista'),

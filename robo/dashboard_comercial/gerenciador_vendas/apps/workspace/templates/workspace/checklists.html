@@ -1,0 +1,76 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  {% url 'workspace:checklist_novo' as url_checklist_novo %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace</p>
+        <h1 class="page-title">Checklists</h1>
+        <p class="page-subtitle">Roteiros de pergunta que o bot (ou um humano) conduz pra preencher dados de um lead/oportunidade passo a passo.</p>
+      </div>
+      {% if pode_editar %}
+        <a href="{{ url_checklist_novo }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo checklist</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if checklists %}
+  <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); margin-top: var(--sp-5); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+      <thead>
+        <tr style="text-align: left; color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;">
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Checklist</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Contexto</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Preenchimento</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Alvo</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Itens</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Status</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in checklists %}
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: var(--sp-3);">
+              {% if pode_editar %}
+                <a href="{% url 'workspace:checklist_editar' c.pk %}" style="color: inherit; text-decoration: none; font-weight: 600;">{{ c.nome }}</a>
+              {% else %}
+                <span style="font-weight: 600;">{{ c.nome }}</span>
+              {% endif %}
+              <div style="font-size: 0.76rem; color: var(--color-text-muted);">{{ c.slug }}</div>
+            </td>
+            <td style="padding: var(--sp-3);">{% include "components/badge.html" with variant="info" label=c.get_contexto_display %}</td>
+            <td style="padding: var(--sp-3); color: var(--color-text-muted);">{{ c.get_modo_preenchimento_display }}</td>
+            <td style="padding: var(--sp-3); color: var(--color-text-muted);">{{ c.get_entidade_alvo_display }}</td>
+            <td style="padding: var(--sp-3); color: var(--color-text-muted);">{{ c.total_itens }}</td>
+            <td style="padding: var(--sp-3);">
+              {% if c.ativo %}
+                {% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Inativo" dot=True %}
+              {% endif %}
+            </td>
+            <td style="padding: var(--sp-3); text-align: right;">
+              {% if pode_editar %}
+                <a href="{% url 'workspace:checklist_editar' c.pk %}" style="color: var(--color-accent);">editar</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% else %}
+    {% if pode_editar %}
+      {% include "components/empty_state.html" with icon="bi-list-check" text="Nenhum checklist ainda" subtext="Crie o primeiro roteiro pra o bot conduzir com o cliente." cta_label="Novo checklist" cta_href=url_checklist_novo %}
+    {% else %}
+      {% include "components/empty_state.html" with icon="bi-list-check" text="Nenhum checklist ainda" %}
+    {% endif %}
+  {% endif %}
+{% endblock %}

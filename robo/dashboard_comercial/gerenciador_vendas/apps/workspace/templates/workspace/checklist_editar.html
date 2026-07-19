@@ -1,0 +1,560 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}
+  {% include "workspace/_workspace_styles.html" %}
+  <style>
+    .ck-sec { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4); }
+    .ck-sec h2 { margin: 0 0 var(--sp-3); font-size: 0.95rem; font-weight: 600; }
+    .ck-label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 4px; color: var(--color-text-muted); }
+    .ck-input { width: 100%; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); font: inherit; }
+    .ck-input:focus { outline: none; border-color: var(--color-accent); }
+    textarea.ck-input { resize: vertical; line-height: 1.5; }
+    .ck-check { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); cursor: pointer; }
+    .ck-helper { font-size: 0.74rem; color: var(--color-text-muted); margin: 4px 0 0; }
+
+    .ck-item-row { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+    .ck-item-row + .ck-item-row { margin-top: var(--sp-2); }
+    .ck-item-row.dragging { opacity: 0.4; }
+    .ck-item-grip { color: var(--color-text-muted); cursor: grab; }
+    .ck-item-ordem { min-width: 22px; color: var(--color-text-muted); font-size: 0.8rem; }
+    .ck-item-main { flex: 1; min-width: 0; }
+    .ck-item-pergunta { font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ck-item-meta { display: flex; gap: var(--sp-2); margin-top: 4px; flex-wrap: wrap; }
+    .ck-item-actions { display: flex; gap: var(--sp-2); flex-shrink: 0; }
+
+    .ck-opcoes-list { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-2); }
+    .ck-opcao-row { display: flex; gap: var(--sp-2); align-items: center; }
+    .ck-opcao-row .field-input { margin: 0; }
+    .ck-opcoes-aviso { font-size: 0.78rem; padding: var(--sp-2) var(--sp-3); border-radius: var(--radius); margin-top: var(--sp-2); display: none; }
+    .ck-opcoes-aviso.show { display: block; }
+    .ck-opcoes-aviso.warn { background: var(--color-warning-soft); color: var(--color-warning); }
+    .ck-opcoes-aviso.danger { background: var(--color-danger-soft); color: var(--color-danger); }
+    .ck-modal-erro { display: none; background: var(--color-danger-soft); color: var(--color-danger); padding: var(--sp-3); border-radius: var(--radius); margin-bottom: var(--sp-3); font-size: 0.85rem; }
+  </style>
+{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace · Checklists</p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+      </div>
+      <a href="{% url 'workspace:checklists_lista' %}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
+
+  <form id="form-checklist" style="display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-5); max-width: 900px;">
+    <input type="hidden" name="id" value="{{ checklist.pk|default:'' }}">
+
+    <section class="ck-sec">
+      <h2>Dados do checklist</h2>
+      <div style="display: grid; gap: var(--sp-3);">
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--sp-3);">
+          <label>
+            <span class="ck-label">Nome *</span>
+            <input name="nome" id="ck-nome" required value="{{ checklist.nome|default:'' }}" class="ck-input">
+          </label>
+          <label>
+            <span class="ck-label">Slug (identificador usado pelo bot) *</span>
+            <input name="slug" id="ck-slug" required value="{{ checklist.slug|default:'' }}" class="ck-input">
+          </label>
+        </div>
+        <label>
+          <span class="ck-label">Descricao</span>
+          <textarea name="descricao" rows="2" class="ck-input">{{ checklist.descricao|default:'' }}</textarea>
+        </label>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3);">
+          <label>
+            <span class="ck-label">Contexto</span>
+            <select name="contexto" class="ck-input">
+              {% for val, lab in contexto_choices %}
+                <option value="{{ val }}" {% if checklist.contexto == val or not checklist and val == 'bot_vendas' %}selected{% endif %}>{{ lab }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span class="ck-label">Modo de preenchimento</span>
+            <select name="modo_preenchimento" class="ck-input">
+              {% for val, lab in modo_choices %}
+                <option value="{{ val }}" {% if checklist.modo_preenchimento == val or not checklist and val == 'ia' %}selected{% endif %}>{{ lab }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span class="ck-label">Entidade alvo</span>
+            <select name="entidade_alvo" class="ck-input">
+              {% for val, lab in entidade_choices %}
+                <option value="{{ val }}" {% if checklist.entidade_alvo == val or not checklist and val == 'lead' %}selected{% endif %}>{{ lab }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
+          <label class="ck-check">
+            <input type="checkbox" name="ativo" {% if not checklist or checklist.ativo %}checked{% endif %}>
+            <span>Ativo</span>
+          </label>
+          <label class="ck-check">
+            <input type="checkbox" name="bloqueia_avanco" {% if checklist.bloqueia_avanco %}checked{% endif %}>
+            <span>
+              Bloqueia avanco de estagio sem checklist completo
+              <span class="ck-helper">v2 — hoje so sugere, o pipeline nao trava sem resposta.</span>
+            </span>
+          </label>
+        </div>
+      </div>
+      <div style="display: flex; gap: var(--sp-3); align-items: center; margin-top: var(--sp-4);">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        {% if checklist %}
+          <button type="button" id="btn-excluir" class="btn btn-ghost" style="color: var(--color-danger);">Excluir checklist</button>
+        {% endif %}
+        <span id="form-msg" style="color: var(--color-text-muted); font-size: 0.85rem;"></span>
+      </div>
+    </section>
+
+    {% if checklist %}
+    <section class="ck-sec">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2);">
+        <h2 style="margin: 0;">Itens do roteiro ({{ itens|length }})</h2>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-novo-item"><i class="bi bi-plus-lg"></i> Novo item</button>
+      </div>
+      <p class="ck-helper" style="margin-bottom: var(--sp-3);">Arraste pelo <i class="bi bi-grip-vertical"></i> pra reordenar — é a ordem em que o bot pergunta.</p>
+
+      <div id="itens-lista">
+        {% for item in itens %}
+          <div class="ck-item-row" draggable="true" data-id="{{ item.pk }}">
+            <i class="bi bi-grip-vertical ck-item-grip"></i>
+            <span class="ck-item-ordem">{{ forloop.counter }}</span>
+            <div class="ck-item-main">
+              <span class="ck-item-pergunta">{{ item.pergunta|truncatechars:90 }}</span>
+              <div class="ck-item-meta">
+                {% include "components/badge.html" with variant="neutral" label=item.get_tipo_resposta_display size="sm" %}
+                {% if item.tipo_validacao != 'nenhuma' %}
+                  {% include "components/badge.html" with variant="info" label=item.get_tipo_validacao_display size="sm" %}
+                {% endif %}
+                {% if item.obrigatorio %}
+                  {% include "components/badge.html" with variant="warning" label="Obrigatorio" size="sm" %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="ck-item-actions">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="editarItem({{ item.pk }})" title="Editar"><i class="bi bi-pencil"></i></button>
+              <button type="button" class="btn btn-ghost btn-sm" style="color: var(--color-danger);" onclick="excluirItem({{ item.pk }}, '{{ item.chave|escapejs }}')" title="Excluir"><i class="bi bi-trash"></i></button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% if not itens %}
+        {% include "components/empty_state.html" with icon="bi-chat-square-text" text="Nenhum item ainda" subtext="Clique em Novo item pra montar o roteiro de perguntas." size="sm" %}
+      {% endif %}
+    </section>
+    {% else %}
+      <div class="ck-sec" style="text-align: center; color: var(--color-text-muted);">
+        Salve o checklist primeiro pra adicionar os itens do roteiro.
+      </div>
+    {% endif %}
+  </form>
+
+  {% if checklist %}
+  <!-- Modal de item -->
+  <div id="modal-item" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-item-title" hidden>
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-item-title" class="modal-title">Novo item</h3>
+        <button type="button" class="modal-close" aria-label="Fechar" onclick="fecharModal('modal-item')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mi-id">
+        <div id="mi-erro" class="ck-modal-erro"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+          <div class="field">
+            <label class="field-label" for="mi-chave">Chave <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input id="mi-chave" type="text" class="field-input" placeholder="ex: cep"></div>
+            <p class="field-helper">Identificador unico dentro do checklist (usado em condicoes de outros itens).</p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="mi-tipo-resposta">Tipo de resposta</label>
+            <div class="field-input-wrap">
+              <select id="mi-tipo-resposta" class="field-input" onchange="miAtualizarVisibilidade()">
+                {% for val, lab in tipo_resposta_choices %}<option value="{{ val }}">{{ lab }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="mi-pergunta">Pergunta <span class="field-required">*</span></label>
+          <div class="field-input-wrap"><textarea id="mi-pergunta" class="field-input" rows="2" placeholder="O que o bot pergunta pro cliente"></textarea></div>
+        </div>
+
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="mi-ajuda">Texto de ajuda</label>
+          <div class="field-input-wrap"><input id="mi-ajuda" type="text" class="field-input" placeholder="Opcional, aparece junto da pergunta"></div>
+        </div>
+
+        <div id="mi-opcoes-wrap" style="margin-top: var(--sp-4); display: none;">
+          <label class="field-label">Opcoes de resposta</label>
+          <div id="mi-opcoes-list" class="ck-opcoes-list"></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="miAdicionarOpcao()" style="margin-top: var(--sp-2);"><i class="bi bi-plus-lg"></i> Adicionar opcao</button>
+          <div id="mi-opcoes-aviso" class="ck-opcoes-aviso"></div>
+
+          <div class="field" style="margin-top: var(--sp-3);">
+            <label class="field-label" for="mi-ura-titulo">Titulo URA (imagem fixa no Matrix)</label>
+            <div class="field-input-wrap">
+              <select id="mi-ura-titulo" class="field-input">
+                {% for val, lab in ura_titulo_choices %}<option value="{{ val }}">{{ lab }}</option>{% endfor %}
+              </select>
+            </div>
+            <p class="field-helper">Esses titulos fazem o Matrix mostrar uma imagem fixa de menu do lado da pergunta (asset publicado nos dois sistemas). Deixe "Nenhum" se a pergunta nao tem imagem.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-top: var(--sp-4);">
+          <div class="field">
+            <label class="field-label" for="mi-tipo-validacao">Validacao</label>
+            <div class="field-input-wrap">
+              <select id="mi-tipo-validacao" class="field-input" onchange="miAtualizarVisibilidade()">
+                {% for val, lab in tipo_validacao_choices %}<option value="{{ val }}">{{ lab }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="field" id="mi-regex-wrap" style="display: none;">
+            <label class="field-label" for="mi-regex">Regex</label>
+            <div class="field-input-wrap"><input id="mi-regex" type="text" class="field-input" placeholder="ex: ^[0-9]{5}-?[0-9]{3}$"></div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); margin-top: var(--sp-3);">
+          <label class="ck-check" style="align-self: end;">
+            <input type="checkbox" id="mi-obrigatorio" checked>
+            <span>Obrigatorio</span>
+          </label>
+          <div class="field">
+            <label class="field-label" for="mi-max-tentativas">Max. tentativas</label>
+            <div class="field-input-wrap"><input id="mi-max-tentativas" type="number" min="1" class="field-input" value="3"></div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="mi-estrategia-erro">Se errar sempre</label>
+            <div class="field-input-wrap">
+              <select id="mi-estrategia-erro" class="field-input">
+                {% for val, lab in estrategia_erro_choices %}<option value="{{ val }}">{{ lab }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="mi-mensagem-erro">Mensagem de erro</label>
+          <div class="field-input-wrap"><textarea id="mi-mensagem-erro" class="field-input" rows="2" placeholder="Opcional"></textarea></div>
+        </div>
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="mi-mensagem-sucesso">Mensagem de sucesso</label>
+          <div class="field-input-wrap"><textarea id="mi-mensagem-sucesso" class="field-input" rows="2" placeholder="Opcional"></textarea></div>
+        </div>
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="mi-mensagem-recontato">Mensagem de recontato</label>
+          <div class="field-input-wrap"><textarea id="mi-mensagem-recontato" class="field-input" rows="2" placeholder="Opcional"></textarea></div>
+        </div>
+
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="mi-campo">Campo customizado (opcional)</label>
+          <div class="field-input-wrap">
+            <select id="mi-campo" class="field-input">
+              <option value="">— nao grava em dados personalizados —</option>
+              {% for c in campos %}<option value="{{ c.pk }}">{{ c.get_entidade_display }} · {{ c.nome }}</option>{% endfor %}
+            </select>
+          </div>
+          <p class="field-helper">Quando setado, a resposta tambem aparece no painel "Dados personalizados" do lead/oportunidade.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modal-item')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="miSalvar()">Salvar item</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {{ itens_data|json_script:"itens-data" }}
+
+  <script>
+  (function () {
+    var CSRF = '{{ csrf_token }}';
+    var URL_SALVAR = '{% url "workspace:checklist_salvar" %}';
+    var URL_LISTA = '{% url "workspace:checklists_lista" %}';
+    var CHECKLIST_ID = '{{ checklist.pk|default:"" }}';
+
+    // ---------------------------------------------------------------
+    // Dados do checklist
+    // ---------------------------------------------------------------
+    var slugTouched = {% if checklist %}true{% else %}false{% endif %};
+    var nomeInput = document.getElementById('ck-nome');
+    var slugInput = document.getElementById('ck-slug');
+    if (slugInput) {
+      slugInput.addEventListener('input', function () { slugTouched = true; });
+    }
+    if (nomeInput && slugInput) {
+      nomeInput.addEventListener('input', function () {
+        if (slugTouched) return;
+        var contrabarra = String.fromCharCode(92);
+        var faixaDiacriticos = new RegExp('[' + contrabarra + 'u0300-' + contrabarra + 'u036f]', 'g');
+        slugInput.value = nomeInput.value.toLowerCase()
+          .normalize('NFD').replace(faixaDiacriticos, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      });
+    }
+
+    var form = document.getElementById('form-checklist');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var msg = document.getElementById('form-msg');
+      msg.textContent = 'salvando...';
+      fetch(URL_SALVAR, { method: 'POST', headers: { 'X-CSRFToken': CSRF }, body: new FormData(form) })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { msg.textContent = 'erro: ' + (res.d.erro || 'falha'); return; }
+          msg.textContent = 'salvo!';
+          if (!CHECKLIST_ID && res.d.id) {
+            window.location.href = '/workspace/checklists/' + res.d.id + '/editar/';
+          }
+        }).catch(function () { msg.textContent = 'erro de rede.'; });
+    });
+
+    var btnDel = document.getElementById('btn-excluir');
+    if (btnDel) {
+      btnDel.addEventListener('click', function () {
+        if (!confirm('Excluir este checklist e todos os itens? Nao da pra desfazer.')) return;
+        fetch('/workspace/api/checklists/' + CHECKLIST_ID + '/excluir/', { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d.ok) { window.location.href = URL_LISTA; } else { alert(d.erro || 'falha'); } });
+      });
+    }
+
+    if (!CHECKLIST_ID) { return; }  // sem checklist salvo ainda, nao ha itens pra gerenciar
+
+    // ---------------------------------------------------------------
+    // Itens
+    // ---------------------------------------------------------------
+    var URL_ITEM_SALVAR = '{% url "workspace:checklist_item_salvar" checklist.pk %}';
+    var URL_ITENS_ORDENAR = '{% url "workspace:checklist_itens_ordenar" checklist.pk %}';
+    var ITENS = JSON.parse(document.getElementById('itens-data').textContent);
+    var ITENS_ORDEM = ITENS.map(function (i) { return i.id; });
+
+    window.abrirNovoItem = function () {
+      document.getElementById('modal-item-title').textContent = 'Novo item';
+      document.getElementById('mi-id').value = '';
+      document.getElementById('mi-chave').value = '';
+      document.getElementById('mi-pergunta').value = '';
+      document.getElementById('mi-ajuda').value = '';
+      document.getElementById('mi-tipo-resposta').value = 'texto_livre';
+      document.getElementById('mi-tipo-validacao').value = 'nenhuma';
+      document.getElementById('mi-regex').value = '';
+      document.getElementById('mi-obrigatorio').checked = true;
+      document.getElementById('mi-max-tentativas').value = 3;
+      document.getElementById('mi-estrategia-erro').value = 'repetir';
+      document.getElementById('mi-mensagem-erro').value = '';
+      document.getElementById('mi-mensagem-sucesso').value = '';
+      document.getElementById('mi-mensagem-recontato').value = '';
+      document.getElementById('mi-campo').value = '';
+      document.getElementById('mi-ura-titulo').value = '';
+      document.getElementById('mi-opcoes-list').innerHTML = '';
+      esconderErroModal();
+      miAtualizarVisibilidade();
+      miAtualizarAvisoOpcoes();
+      abrirModal('modal-item');
+    };
+
+    window.editarItem = function (id) {
+      var item = ITENS.filter(function (i) { return i.id === id; })[0];
+      if (!item) return;
+      document.getElementById('modal-item-title').textContent = 'Editar item';
+      document.getElementById('mi-id').value = item.id;
+      document.getElementById('mi-chave').value = item.chave;
+      document.getElementById('mi-pergunta').value = item.pergunta;
+      document.getElementById('mi-ajuda').value = item.ajuda || '';
+      document.getElementById('mi-tipo-resposta').value = item.tipo_resposta;
+      document.getElementById('mi-tipo-validacao').value = item.tipo_validacao;
+      document.getElementById('mi-regex').value = item.regex_validacao || '';
+      document.getElementById('mi-obrigatorio').checked = !!item.obrigatorio;
+      document.getElementById('mi-max-tentativas').value = item.max_tentativas || 3;
+      document.getElementById('mi-estrategia-erro').value = item.estrategia_erro;
+      document.getElementById('mi-mensagem-erro').value = item.mensagem_erro || '';
+      document.getElementById('mi-mensagem-sucesso').value = item.mensagem_sucesso || '';
+      document.getElementById('mi-mensagem-recontato').value = item.mensagem_recontato || '';
+      document.getElementById('mi-campo').value = item.campo || '';
+      document.getElementById('mi-ura-titulo').value = item.ura_titulo || '';
+      document.getElementById('mi-opcoes-list').innerHTML = '';
+      (item.opcoes || []).forEach(function (o) { miAdicionarOpcao(o.texto, o.valor); });
+      esconderErroModal();
+      miAtualizarVisibilidade();
+      miAtualizarAvisoOpcoes();
+      abrirModal('modal-item');
+    };
+
+    window.excluirItem = function (id, chave) {
+      if (!confirm('Excluir o item "' + chave + '"? Isso tambem apaga as respostas ja registradas pra esse item.')) return;
+      fetch('/workspace/api/checklists/itens/' + id + '/excluir/', { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d.ok) { location.reload(); } else { alert(d.erro || 'falha'); } });
+    };
+
+    function esconderErroModal() {
+      var el = document.getElementById('mi-erro');
+      el.style.display = 'none';
+      el.textContent = '';
+    }
+
+    function miErro(msgTexto) {
+      var el = document.getElementById('mi-erro');
+      el.textContent = msgTexto;
+      el.style.display = 'block';
+    }
+
+    window.miAtualizarVisibilidade = function () {
+      var mostraOpcoes = document.getElementById('mi-tipo-resposta').value === 'opcoes';
+      document.getElementById('mi-opcoes-wrap').style.display = mostraOpcoes ? 'block' : 'none';
+      var mostraRegex = document.getElementById('mi-tipo-validacao').value === 'regex';
+      document.getElementById('mi-regex-wrap').style.display = mostraRegex ? 'block' : 'none';
+    };
+
+    window.miAdicionarOpcao = function (texto, valor) {
+      var wrap = document.getElementById('mi-opcoes-list');
+      var row = document.createElement('div');
+      row.className = 'ck-opcao-row';
+
+      var inputTexto = document.createElement('input');
+      inputTexto.type = 'text';
+      inputTexto.className = 'field-input mi-opcao-texto';
+      inputTexto.placeholder = 'Texto (o que o cliente ve)';
+      inputTexto.value = texto || '';
+      inputTexto.addEventListener('input', miAtualizarAvisoOpcoes);
+
+      var inputValor = document.createElement('input');
+      inputValor.type = 'text';
+      inputValor.className = 'field-input mi-opcao-valor';
+      inputValor.placeholder = 'Valor (opcional, default = texto)';
+      inputValor.value = valor || '';
+      inputValor.style.maxWidth = '220px';
+
+      var btnDelOpcao = document.createElement('button');
+      btnDelOpcao.type = 'button';
+      btnDelOpcao.className = 'btn btn-ghost btn-sm';
+      btnDelOpcao.title = 'Remover opcao';
+      btnDelOpcao.innerHTML = '<i class="bi bi-x-lg"></i>';
+      btnDelOpcao.addEventListener('click', function () { row.remove(); miAtualizarAvisoOpcoes(); });
+
+      row.appendChild(inputTexto);
+      row.appendChild(inputValor);
+      row.appendChild(btnDelOpcao);
+      wrap.appendChild(row);
+      miAtualizarAvisoOpcoes();
+    };
+
+    function miAtualizarAvisoOpcoes() {
+      var n = document.querySelectorAll('#mi-opcoes-list .ck-opcao-row').length;
+      var aviso = document.getElementById('mi-opcoes-aviso');
+      aviso.className = 'ck-opcoes-aviso';
+      if (n > 5) {
+        aviso.textContent = n + ' opcoes: o bot do Matrix so reconhece de 2 a 5. Com 6 ou mais, a pergunta cai no fluxo default e quebra em silencio.';
+        aviso.classList.add('show', 'danger');
+      } else if (n < 2) {
+        aviso.textContent = 'Multipla escolha precisa de pelo menos 2 opcoes.';
+        aviso.classList.add('show', 'warn');
+      }
+    }
+
+    window.miSalvar = function () {
+      var opcoes = [];
+      document.querySelectorAll('#mi-opcoes-list .ck-opcao-row').forEach(function (row) {
+        var texto = row.querySelector('.mi-opcao-texto').value.trim();
+        var valor = row.querySelector('.mi-opcao-valor').value.trim();
+        if (texto) opcoes.push({ texto: texto, valor: valor || texto });
+      });
+      var payload = {
+        id: document.getElementById('mi-id').value || null,
+        chave: document.getElementById('mi-chave').value.trim(),
+        pergunta: document.getElementById('mi-pergunta').value.trim(),
+        ajuda: document.getElementById('mi-ajuda').value.trim(),
+        tipo_resposta: document.getElementById('mi-tipo-resposta').value,
+        opcoes: opcoes,
+        ura_titulo: document.getElementById('mi-ura-titulo').value,
+        tipo_validacao: document.getElementById('mi-tipo-validacao').value,
+        regex_validacao: document.getElementById('mi-regex').value.trim(),
+        obrigatorio: document.getElementById('mi-obrigatorio').checked,
+        max_tentativas: parseInt(document.getElementById('mi-max-tentativas').value, 10) || 3,
+        estrategia_erro: document.getElementById('mi-estrategia-erro').value,
+        mensagem_erro: document.getElementById('mi-mensagem-erro').value,
+        mensagem_sucesso: document.getElementById('mi-mensagem-sucesso').value,
+        mensagem_recontato: document.getElementById('mi-mensagem-recontato').value,
+        campo: document.getElementById('mi-campo').value || null,
+      };
+      if (!payload.chave) { miErro('Informe a chave.'); return; }
+      if (!payload.pergunta) { miErro('Informe a pergunta.'); return; }
+
+      fetch(URL_ITEM_SALVAR, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(payload),
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { miErro(res.d.erro || 'falha ao salvar'); return; }
+          toast('Salvo', 'Item salvo com sucesso.', 'success');
+          fecharModal('modal-item');
+          setTimeout(function () { location.reload(); }, 400);
+        }).catch(function () { miErro('erro de rede.'); });
+    };
+
+    var btnNovoItem = document.getElementById('btn-novo-item');
+    if (btnNovoItem) { btnNovoItem.addEventListener('click', window.abrirNovoItem); }
+
+    // ---------------------------------------------------------------
+    // Drag and drop (HTML5 nativo) pra reordenar
+    // ---------------------------------------------------------------
+    var lista = document.getElementById('itens-lista');
+    if (lista) {
+      var dragId = null;
+      function renderOrdemVisual() {
+        ITENS_ORDEM.forEach(function (id) {
+          var row = lista.querySelector('.ck-item-row[data-id="' + id + '"]');
+          if (row) lista.appendChild(row);
+        });
+      }
+      function salvarOrdem() {
+        fetch(URL_ITENS_ORDENAR, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ ids: ITENS_ORDEM }),
+        }).then(function (r) { return r.json(); })
+          .then(function (d) { if (!d.ok) { toast('Erro', d.erro || 'falha ao reordenar', 'danger'); } })
+          .catch(function () { toast('Erro', 'erro de rede ao reordenar', 'danger'); });
+      }
+      lista.querySelectorAll('.ck-item-row').forEach(function (row) {
+        row.addEventListener('dragstart', function () {
+          dragId = parseInt(row.dataset.id, 10);
+          row.classList.add('dragging');
+        });
+        row.addEventListener('dragend', function () { row.classList.remove('dragging'); });
+        row.addEventListener('dragover', function (e) { e.preventDefault(); });
+        row.addEventListener('drop', function (e) {
+          e.preventDefault();
+          var dstId = parseInt(row.dataset.id, 10);
+          if (dragId === null || dragId === dstId) return;
+          var srcIdx = ITENS_ORDEM.indexOf(dragId);
+          var dstIdx = ITENS_ORDEM.indexOf(dstId);
+          if (srcIdx === -1 || dstIdx === -1) return;
+          ITENS_ORDEM.splice(srcIdx, 1);
+          ITENS_ORDEM.splice(dstIdx, 0, dragId);
+          renderOrdemVisual();
+          salvarOrdem();
+        });
+      });
+    }
+  })();
+  </script>
+{% endblock %}
