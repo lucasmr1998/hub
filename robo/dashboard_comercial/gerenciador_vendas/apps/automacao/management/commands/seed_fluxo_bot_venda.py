@@ -351,7 +351,7 @@ def _grafo_bot_venda(agente_id):
                 'lead_id': '{{var.payload.lead_id}}',
                 'criar_se_nao_existir': True,
             },
-            'pos': {'x': 260, 'y': 0},
+            'pos': {'x': 300, 'y': 0},
             'label': 'Carregar lead (fecha o gap do contexto)',
         },
         'roteia': {
@@ -364,7 +364,7 @@ def _grafo_bot_venda(agente_id):
                 {'esquerda': '{{var.payload.acao}}', 'operador': 'igual',
                  'direita': 'recontato', 'saida': 'recontato'},
             ]},
-            'pos': {'x': 520, 'y': 0},
+            'pos': {'x': 600, 'y': 0},
             'label': 'Switch: {{var.payload.acao}}',
         },
 
@@ -372,38 +372,38 @@ def _grafo_bot_venda(agente_id):
         'proximo': {
             'tipo': 'checklist_proximo_item',
             'config': {'checklist': SLUG_CHECKLIST, 'entidade': 'lead'},
-            'pos': {'x': 800, 'y': -420},
+            'pos': {'x': 950, 'y': -520},
             'label': 'Checklist: próxima pergunta',
         },
         'resp_fim': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_PROXIMO_ENCERRAR},
-            'pos': {'x': 1080, 'y': -560},
+            'pos': {'x': 1250, 'y': -760},
             'label': 'Responder: checklist completo (encerrar)',
         },
         'progresso': {
             'tipo': 'checklist_progresso',
             'config': {'checklist': SLUG_CHECKLIST, 'entidade': 'lead'},
-            'pos': {'x': 1080, 'y': -300},
+            'pos': {'x': 1250, 'y': -520},
             'label': 'Checklist: progresso (decide status_lead)',
         },
         'ja_respondeu': {
             'tipo': 'if',
             'config': {'esquerda': '{{nodes.progresso.respondidos}}',
                        'operador': 'maior', 'direita': '0'},
-            'pos': {'x': 1340, 'y': -300},
+            'pos': {'x': 1550, 'y': -520},
             'label': 'Lead já respondeu algo?',
         },
         'resp_pergunta': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_PROXIMO_PERGUNTA_EM_ANDAMENTO},
-            'pos': {'x': 1600, 'y': -380},
+            'pos': {'x': 1850, 'y': -640},
             'label': 'Responder: próxima pergunta (em andamento)',
         },
         'resp_pergunta_inicio': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_PROXIMO_PERGUNTA_INICIO},
-            'pos': {'x': 1600, 'y': -180},
+            'pos': {'x': 1850, 'y': -420},
             'label': 'Responder: próxima pergunta (status_lead=0, iniciar venda)',
         },
 
@@ -416,37 +416,37 @@ def _grafo_bot_venda(agente_id):
                 'resposta': '{{var.payload.answer}}',
                 'entidade': 'lead',
             },
-            'pos': {'x': 800, 'y': 0},
+            'pos': {'x': 950, 'y': 40},
             'label': 'Checklist: validar resposta (determinístico)',
         },
         'resp_ok': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_OK},
-            'pos': {'x': 1080, 'y': -140},
+            'pos': {'x': 1250, 'y': -100},
             'label': 'Responder: resposta válida',
         },
         'agente': {
             'tipo': 'ia_agente',
             'config': {'agente_id': str(agente_id), 'mensagem': MENSAGEM_AGENTE_VALIDADOR},
-            'pos': {'x': 1080, 'y': 140},
+            'pos': {'x': 1250, 'y': 160},
             'label': 'Agente IA: segunda opinião (Validador de respostas)',
         },
         'json': {
             'tipo': 'extrair_json',
             'config': {'origem': '{{nodes.agente.resposta}}'},
-            'pos': {'x': 1360, 'y': 140},
+            'pos': {'x': 1550, 'y': 160},
             'label': 'Extrair JSON da validação',
         },
         'se_valido': {
             'tipo': 'if',
             'config': {'esquerda': '{{nodes.json.valido}}', 'operador': 'igual', 'direita': 'True'},
-            'pos': {'x': 1640, 'y': 140},
+            'pos': {'x': 1850, 'y': 160},
             'label': 'IA validou?',
         },
         'resp_ok_ia': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_OK_IA},
-            'pos': {'x': 1920, 'y': 0},
+            'pos': {'x': 2150, 'y': 40},
             'label': 'Responder: aceita pela IA',
         },
         'se_desistiu': {
@@ -455,19 +455,19 @@ def _grafo_bot_venda(agente_id):
                 'esquerda': '{{nodes.json.intencao_detectada}}',
                 'operador': 'igual', 'direita': 'desistir',
             },
-            'pos': {'x': 1920, 'y': 280},
+            'pos': {'x': 2150, 'y': 300},
             'label': 'Cliente quer desistir?',
         },
         'resp_transbordo': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_TRANSBORDO},
-            'pos': {'x': 2200, 'y': 140},
+            'pos': {'x': 2450, 'y': 200},
             'label': 'Responder: transbordo (desistência)',
         },
         'resp_repergunta': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_REPERGUNTA},
-            'pos': {'x': 2200, 'y': 420},
+            'pos': {'x': 2450, 'y': 420},
             'label': 'Responder: repetir a pergunta',
         },
 
@@ -482,26 +482,26 @@ def _grafo_bot_venda(agente_id):
         'proximo_recontato': {
             'tipo': 'checklist_proximo_item',
             'config': {'checklist': SLUG_CHECKLIST, 'entidade': 'lead'},
-            'pos': {'x': 800, 'y': 560},
+            'pos': {'x': 950, 'y': 700},
             'label': 'Checklist: pergunta atual (recontato)',
         },
         'se_esgotou': {
             'tipo': 'if',
             'config': {'esquerda': '{{var.payload.tentativa}}',
                        'operador': 'maior', 'direita': str(LIMITE_TENTATIVAS_RECONTATO)},
-            'pos': {'x': 1080, 'y': 500},
+            'pos': {'x': 1250, 'y': 700},
             'label': f'Esgotou tentativas (> {LIMITE_TENTATIVAS_RECONTATO})?',
         },
         'resp_recontato_encerrar': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_RECONTATO_ENCERRAR},
-            'pos': {'x': 1360, 'y': 640},
+            'pos': {'x': 1550, 'y': 820},
             'label': 'Responder: encerrar recontato',
         },
         'resp_recontato_insistir': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_RECONTATO_INSISTIR},
-            'pos': {'x': 1360, 'y': 420},
+            'pos': {'x': 1550, 'y': 600},
             'label': 'Responder: insistir (reperguntar)',
         },
 
@@ -509,7 +509,7 @@ def _grafo_bot_venda(agente_id):
         'resp_erro': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_ERRO},
-            'pos': {'x': 520, 'y': 780},
+            'pos': {'x': 1250, 'y': 1020},
             'label': 'Responder: erro estrutural (transbordo)',
         },
     }
@@ -537,6 +537,10 @@ def _grafo_bot_venda(agente_id):
         # validar
         {'de': 'validar', 'para': 'resp_ok', 'saida': 'valida'},
         {'de': 'validar', 'para': 'resp_erro', 'saida': 'erro'},
+        # Se a IA cair ou devolver algo que nao e JSON, o turno ainda responde
+        # ao Matrix pelo caminho de erro, em vez de morrer sem resposta.
+        {'de': 'agente', 'para': 'resp_erro', 'saida': 'erro'},
+        {'de': 'json', 'para': 'resp_erro', 'saida': 'erro'},
         {'de': 'validar', 'para': 'agente', 'saida': 'invalida'},
         {'de': 'agente', 'para': 'json', 'saida': 'sucesso'},
         {'de': 'json', 'para': 'se_valido', 'saida': 'sucesso'},
