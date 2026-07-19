@@ -838,3 +838,48 @@
   do CLAUDE.md antes do proximo bloco.
 
 ---
+
+## 2026-07-19 — Bot de venda Matrix: push dos 11 commits + deploy em prod (dormente)
+
+- **Acao:** fechamento do bloco do bot conversacional (tarefa #204). Push de 11
+  commits acumulados (`e64a413..d502eb3`) e deploy em prod via webhook de
+  rebuild do EasyPanel.
+- **Contexto:** os commits estavam retidos localmente desde 17/07 aguardando a
+  decisao de arquitetura (engine nova x servicos Python). Decisao do dono:
+  engine nova, orquestracao no grafo, prompt no `Agente`. Isso destravou o
+  push.
+- **Checagem pre push:** varredura do diff por PII e segredo. 26 telefones e 6
+  CPFs apontados pelo grep sao, respectivamente, pre existentes no
+  `robo/exports/hub.html` (arquivo regerado inteiro, por isso aparece como
+  adicao no diff, mas identico ao remoto) e fixtures de teste
+  (`111.111.111-11`, `123.456.789-00`). Tokens encontrados sao de teste
+  (`token-matrix-teste`). **Nenhum dado novo de cliente entrou no repo**, que e
+  publico. Hook `migrations-safety` passou limpo.
+- **Deploy:** webhook respondeu HTTP 200. Migrations `0013` e `0014` aplicadas
+  em ~60s; 3 tabelas de checklist criadas vazias. Sem janela de queda.
+- **Validacao pos deploy:**
+  - App respondendo (`/login/` HTTP 200, 1.6s).
+  - Endpoints `/ia/proximo-passo`, `/ia/validar`, `/ia/recontato` retornando
+    **401** sem token. Antes do deploy retornavam 302 pro login, o que
+    confirma que a isencao de login no `TenantMiddleware` subiu junto e que a
+    auth por token esta ativa.
+  - Agendador vivo apos o rebuild: `agenda_ultima_rodada` do fluxo #31 as
+    23:30 UTC (intervalo de 15 min, com `now()` as 23:34), #25 as 23:10
+    (intervalo 60 min). Nota de leitura: `automacao_execucao` so ganha linha
+    quando a rodada encontra trabalho, entao "zero execucoes" NAO indica
+    agendador parado; o sinal correto e `agenda_ultima_rodada`.
+  - Fluxos ativos em prod inalterados: #25, #29, #31, #32.
+- **Estado do bot em prod:** DORMENTE. O fluxo 80 existe apenas no banco de
+  dev (o seed nao roda em prod). Os endpoints estao publicados porem ninguem
+  os chama: o Matrix ainda aponta pra outro destino.
+- **Decisao:** deployar com o bot dormente em vez de segurar os commits. A
+  carga e puramente aditiva (tabelas novas vazias, coluna opcional, rotas sem
+  chamador) e deixar codigo so na maquina do dono e risco maior, ainda mais
+  com varias sessoes concorrentes na mesma working tree.
+- **Proximo passo (nao feito):** os endpoints `/ia/*` ainda rodam a logica
+  Python de `services/validacao.py`; falta transforma-los em adaptadores finos
+  que disparam o fluxo 80 com `acao` no payload. Sem isso o grafo existe mas
+  nao e acionado. Pendente tambem: export da `RegraValidacao` do techub (o
+  roteiro semeado e rascunho estrutural, nao a ordem real de producao) e
+  remocao do `validacao_ia.py` hardcoded, ja substituido pelo `Agente`.
+- **Status:** completed
