@@ -25,12 +25,23 @@ class NodeResult:
     - status: 'ok' | 'erro' | 'aguardando' (aguardando = nó pausou, ex: delay).
     - branch: aresta de saída a seguir ('sucesso' | 'erro' | 'true' | 'false' | ...).
     - promote: vars a fundir em `contexto.variaveis` (ponte do `salvar_em`).
+    - entidades: entidades de domínio (lead/oportunidade/conversa) a fundir no
+      `Contexto` (`contexto.aplicar_resultado` chama `Contexto.injetar_entidades`).
+      Ex: um nó que carrega um `LeadProspecto` a partir do payload do webhook
+      devolve `entidades={'lead': lead_obj}` e, dali em diante no fluxo,
+      `contexto.lead` já vem preenchido pros nós seguintes (`checklist_*` etc).
+      Mecanismo GENÉRICO — qualquer nó pode usar, não é exclusivo de um nó
+      específico. Só sobrescreve quando o valor não é `None` (um nó que não
+      achou nada não apaga uma entidade que outro nó já tinha carregado antes
+      no mesmo fluxo). Chaves aceitas: `lead`, `oportunidade`, `conversa`
+      (mesmos nomes dos atributos de `Contexto`); chave desconhecida é ignorada.
     - erro: mensagem quando status == 'erro'.
     """
     output: dict = field(default_factory=dict)
     status: str = "ok"
     branch: Optional[str] = None
     promote: Optional[dict] = None
+    entidades: Optional[dict] = None
     erro: Optional[str] = None
     # Quando status == 'aguardando', descreve a espera:
     #   {'tipo': 'timer', 'segundos': N}                    → retoma por tempo (delay)

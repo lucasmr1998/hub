@@ -1,14 +1,15 @@
-"""Testes do seed do bot de vendas (Agente "Validador de respostas" + fluxos
-"[Bot] Venda de internet: próximo passo" / "validar resposta") na engine de
-automação nova.
+"""Testes do seed do bot de vendas: fluxo ÚNICO "[Bot] Venda de internet"
+(Agente "Validador de respostas" + um switch de entrada roteando
+proximo_passo/validar/recontato) na engine de automação nova.
 
 Cobre: exigência do checklist prévio, idempotência (2 rodadas), validade
-estrutural dos 2 grafos, preservação de `ativo` num re-run, as conexões dos
-branches do fluxo de validação, e o caminho ponta a ponta (via `executar_fluxo`
-direto, sem passar pela view HTTP) dos 2 fluxos — inclusive o roteamento pela
-INTENÇÃO detectada pela IA (desistir → transbordo), que é a essência da
-decisão de arquitetura: determinístico tenta primeiro, IA é segunda opinião
-DENTRO do grafo, o grafo decide o que fazer com a intenção.
+estrutural do grafo, preservação de `ativo` num re-run, remoção guardada dos
+2 fluxos separados da versão anterior, e o caminho ponta a ponta (via
+`executar_fluxo` direto a partir do `webhook`, SEM lead pré-injetado no
+`Contexto` — prova que o gap do lead fechou) dos 3 ramos — incluindo as 3
+correções: `ura.total_opcoes` sai como INT de verdade no JSON, `status_lead`
+é decisão do grafo (0 int vs "em_andamento" string), e o ramo "recontato"
+(3º endpoint do contrato, nunca tinha sido construído) existe e funciona.
 """
 import json
 from unittest import mock
@@ -19,15 +20,14 @@ from django.core.management.base import CommandError
 
 from apps.automacao.management.commands.seed_checklist_venda import SLUG_CHECKLIST
 from apps.automacao.management.commands.seed_fluxo_bot_venda import (
-    NOME_AGENTE_VALIDADOR, NOME_FLUXO_PROXIMO, NOME_FLUXO_VALIDAR,
+    LIMITE_TENTATIVAS_RECONTATO, NOME_AGENTE_VALIDADOR, NOME_FLUXO,
+    NOME_FLUXO_ANTIGO_PROXIMO, NOME_FLUXO_ANTIGO_VALIDAR,
 )
-from apps.automacao.models import Agente, Checklist, Fluxo, ItemChecklist
+from apps.automacao.models import Agente, Checklist, ExecucaoFluxo, Fluxo, ItemChecklist
 from apps.automacao.nodes import Contexto
 from apps.automacao.runtime import executar_fluxo, validar_fluxo
 from apps.automacao.services.checklist import registrar_resposta
 from tests.factories import IntegracaoAPIFactory, LeadProspectoFactory, TenantFactory
-
-TODOS_OS_NOMES = (NOME_FLUXO_PROXIMO, NOME_FLUXO_VALIDAR)
 
 
 def _checklist_minimo(tenant):
@@ -61,6 +61,20 @@ def _ativar_agente(tenant):
     return agente
 
 
+def _rodar(fluxo, tenant, payload):
+    """Roda o fluxo a partir do início (`webhook`), com Contexto SEM nenhuma
+    entidade pré-injetada — só `variaveis.payload`, exatamente como o caminho
+    HTTP real (`views.webhook_receber`) monta o Contexto. Prova que o gap do
+    lead fechou de verdade (o nó `carregar_lead` é quem resolve o lead)."""
+    ctx = Contexto(tenant=tenant, variaveis={'payload': payload})
+    resultado = executar_fluxo(fluxo.grafo, ctx)
+    return resultado, ctx
+
+
+def _corpo_resposta(ctx):
+    return json.loads(ctx.variaveis['_resposta_webhook']['corpo'])
+
+
 # ──────────────────────────────────────────────
 # Pré-requisito: checklist
 # ──────────────────────────────────────────────
@@ -72,12 +86,18 @@ def test_falha_sem_checklist_com_mensagem_clara():
         call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
 
 
+@pytest.mark.django_db
+def test_tenant_inexistente_falha():
+    with pytest.raises(CommandError, match='não encontrado'):
+        call_command('seed_fluxo_bot_venda', tenant='tenant-que-nao-existe')
+
+
 # ──────────────────────────────────────────────
-# Idempotência + validade estrutural
+# Idempotência + validade estrutural (UM fluxo só)
 # ──────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_seed_idempotente_duas_rodadas_contagens_estaveis():
+def test_seed_idempotente_duas_rodadas_um_fluxo_so():
     tenant = TenantFactory()
     _checklist_minimo(tenant)
 
@@ -85,9 +105,10 @@ def test_seed_idempotente_duas_rodadas_contagens_estaveis():
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
 
     fluxos = list(Fluxo.all_tenants.filter(tenant=tenant))
-    assert len(fluxos) == 2
-    assert {f.nome for f in fluxos} == set(TODOS_OS_NOMES)
-    assert all(f.ativo is False for f in fluxos)
+    assert len(fluxos) == 1
+    fluxo = fluxos[0]
+    assert fluxo.nome == NOME_FLUXO
+    assert fluxo.ativo is False
 
     agentes = list(Agente.all_tenants.filter(tenant=tenant))
     assert len(agentes) == 1
@@ -102,15 +123,14 @@ def test_seed_idempotente_duas_rodadas_contagens_estaveis():
 
 
 @pytest.mark.django_db
-def test_todos_os_grafos_sao_estruturalmente_validos():
+def test_grafo_e_estruturalmente_valido():
     tenant = TenantFactory()
     _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
 
-    for nome in TODOS_OS_NOMES:
-        fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=nome)
-        erros = validar_fluxo(fluxo.grafo)
-        assert erros == [], f'{nome}: {erros}'
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    erros = validar_fluxo(fluxo.grafo)
+    assert erros == [], erros
 
 
 @pytest.mark.django_db
@@ -119,7 +139,7 @@ def test_rerun_nao_desativa_fluxo_ja_ativado():
     _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
 
-    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_PROXIMO)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
     fluxo.ativo = True
     fluxo.save(update_fields=['ativo'])
 
@@ -127,8 +147,6 @@ def test_rerun_nao_desativa_fluxo_ja_ativado():
 
     fluxo.refresh_from_db()
     assert fluxo.ativo is True
-    outro = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_VALIDAR)
-    assert outro.ativo is False
 
 
 @pytest.mark.django_db
@@ -144,31 +162,65 @@ def test_rerun_nao_reativa_agente_desligado_manualmente():
     assert agente.ativo is True  # preservado, não voltou pra False
 
 
-@pytest.mark.django_db
-def test_tenant_inexistente_falha():
-    with pytest.raises(CommandError, match='não encontrado'):
-        call_command('seed_fluxo_bot_venda', tenant='tenant-que-nao-existe')
-
-
 # ──────────────────────────────────────────────
-# Grafo do fluxo "validar resposta": nós e conexões dos 3 branches
+# Grafo: nós e conexões esperados (switch de entrada + os 3 ramos)
 # ──────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_grafo_validar_tem_nos_e_branches_esperados():
+def test_grafo_tem_switch_de_entrada_com_3_ramos():
     tenant = TenantFactory()
     _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
 
-    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_VALIDAR)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
     grafo = fluxo.grafo
     nodes = grafo['nodes']
 
+    assert nodes[grafo['inicio']]['tipo'] == 'webhook'
+    assert nodes['hidratar']['tipo'] == 'carregar_lead'
+    assert nodes['roteia']['tipo'] == 'switch'
+
+    regras = {r['saida']: r for r in nodes['roteia']['config']['regras']}
+    assert set(regras) == {'proximo_passo', 'validar', 'recontato'}
+
+    por_saida = {(c['de'], c['saida']): c['para'] for c in grafo['conexoes']}
+    assert por_saida[('roteia', 'proximo_passo')] == 'proximo'
+    assert por_saida[('roteia', 'validar')] == 'validar'
+    assert por_saida[('roteia', 'recontato')] == 'proximo_recontato'
+
+
+@pytest.mark.django_db
+def test_grafo_ramo_proximo_passo_decide_status_lead():
+    tenant = TenantFactory()
+    _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+
+    grafo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO).grafo
+    nodes = grafo['nodes']
+    assert nodes['progresso']['tipo'] == 'checklist_progresso'
+    assert nodes['ja_respondeu']['tipo'] == 'if'
+
+    por_saida = {(c['de'], c['saida']): c['para'] for c in grafo['conexoes']}
+    assert por_saida[('proximo', 'tem_item')] == 'progresso'
+    assert por_saida[('proximo', 'completo')] == 'resp_fim'
+    assert por_saida[('proximo', 'erro')] == 'resp_erro'
+    assert por_saida[('progresso', 'completo')] == 'ja_respondeu'
+    assert por_saida[('progresso', 'incompleto')] == 'ja_respondeu'
+    assert por_saida[('ja_respondeu', 'true')] == 'resp_pergunta'
+    assert por_saida[('ja_respondeu', 'false')] == 'resp_pergunta_inicio'
+
+
+@pytest.mark.django_db
+def test_grafo_ramo_validar_tem_nos_e_branches_esperados():
+    tenant = TenantFactory()
+    _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+
+    grafo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO).grafo
+    nodes = grafo['nodes']
     assert nodes['validar']['tipo'] == 'checklist_validar'
     assert nodes['agente']['tipo'] == 'ia_agente'
     assert nodes['json']['tipo'] == 'extrair_json'
-    assert nodes['se_valido']['tipo'] == 'if'
-    assert nodes['se_desistiu']['tipo'] == 'if'
 
     por_saida = {(c['de'], c['saida']): c['para'] for c in grafo['conexoes']}
     assert por_saida[('validar', 'valida')] == 'resp_ok'
@@ -182,30 +234,130 @@ def test_grafo_validar_tem_nos_e_branches_esperados():
     assert por_saida[('se_desistiu', 'false')] == 'resp_repergunta'
 
 
+@pytest.mark.django_db
+def test_grafo_ramo_recontato_existe():
+    tenant = TenantFactory()
+    _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+
+    grafo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO).grafo
+    nodes = grafo['nodes']
+    assert nodes['proximo_recontato']['tipo'] == 'checklist_proximo_item'
+    assert nodes['se_esgotou']['tipo'] == 'if'
+    assert nodes['se_esgotou']['config']['direita'] == str(LIMITE_TENTATIVAS_RECONTATO)
+
+    por_saida = {(c['de'], c['saida']): c['para'] for c in grafo['conexoes']}
+    assert por_saida[('proximo_recontato', 'tem_item')] == 'se_esgotou'
+    assert por_saida[('proximo_recontato', 'completo')] == 'resp_recontato_encerrar'
+    assert por_saida[('se_esgotou', 'true')] == 'resp_recontato_encerrar'
+    assert por_saida[('se_esgotou', 'false')] == 'resp_recontato_insistir'
+
+
 # ──────────────────────────────────────────────
-# E2E: fluxo "próximo passo"
+# Remoção guardada dos 2 fluxos antigos
 # ──────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_e2e_proximo_passo_lead_sem_respostas_devolve_primeira_pergunta():
+def test_remove_fluxos_antigos_inativos_e_sem_execucoes():
+    tenant = TenantFactory()
+    _checklist_minimo(tenant)
+    Fluxo.all_tenants.create(
+        tenant=tenant, nome=NOME_FLUXO_ANTIGO_PROXIMO, grafo={}, ativo=False)
+    Fluxo.all_tenants.create(
+        tenant=tenant, nome=NOME_FLUXO_ANTIGO_VALIDAR, grafo={}, ativo=False)
+
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+
+    assert not Fluxo.all_tenants.filter(tenant=tenant, nome=NOME_FLUXO_ANTIGO_PROXIMO).exists()
+    assert not Fluxo.all_tenants.filter(tenant=tenant, nome=NOME_FLUXO_ANTIGO_VALIDAR).exists()
+    assert Fluxo.all_tenants.filter(tenant=tenant, nome=NOME_FLUXO).exists()
+
+
+@pytest.mark.django_db
+def test_nao_remove_fluxo_antigo_ativo():
+    tenant = TenantFactory()
+    _checklist_minimo(tenant)
+    antigo = Fluxo.all_tenants.create(
+        tenant=tenant, nome=NOME_FLUXO_ANTIGO_PROXIMO, grafo={}, ativo=True)
+
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+
+    assert Fluxo.all_tenants.filter(pk=antigo.pk).exists()
+
+
+@pytest.mark.django_db
+def test_nao_remove_fluxo_antigo_com_execucoes():
+    tenant = TenantFactory()
+    _checklist_minimo(tenant)
+    antigo = Fluxo.all_tenants.create(
+        tenant=tenant, nome=NOME_FLUXO_ANTIGO_VALIDAR, grafo={}, ativo=False)
+    ExecucaoFluxo.all_tenants.create(tenant=tenant, fluxo=antigo)
+
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+
+    assert Fluxo.all_tenants.filter(pk=antigo.pk).exists()
+
+
+# ──────────────────────────────────────────────
+# E2E: ramo "proximo_passo" (rodado do webhook, SEM lead pré-injetado)
+# ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_e2e_proximo_passo_lead_sem_respostas_status_lead_0_int_e_total_opcoes_int():
     tenant = TenantFactory()
     _checklist, item1, _item2 = _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
-    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_PROXIMO)
-    lead = LeadProspectoFactory(tenant=tenant)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990001')
 
-    ctx = Contexto(tenant=tenant, lead=lead, variaveis={'payload': {'lead_id': lead.id}})
-    resultado = executar_fluxo(fluxo.grafo, ctx)
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'proximo_passo', 'cellphone': '5589999990001', 'lead_id': lead.id,
+    })
 
     assert resultado.status == 'completado', resultado.erro
     resp = ctx.variaveis['_resposta_webhook']
     assert resp['status'] == 200
     corpo = json.loads(resp['corpo'])  # prova que o corpo é JSON válido de verdade
+
     assert corpo['proximo_passo'] == 'seguir_pergunta'
     assert corpo['deve_perguntar'] is True
     assert corpo['proxima_pergunta_id'] == item1.pk
     assert corpo['mensagem_inicial'] == item1.pergunta  # inclui a quebra de linha real
     assert corpo['lead_id'] == lead.id
+
+    # CORREÇÃO 2: lead nunca respondeu nada -> status_lead = 0 (INT, sem aspas)
+    assert corpo['status_lead'] == 0
+    assert isinstance(corpo['status_lead'], int)
+    assert not isinstance(corpo['status_lead'], bool)
+
+    # CORREÇÃO 1: ura.total_opcoes sai como INT de verdade (item1 é texto livre: 0 opções)
+    assert isinstance(corpo['ura']['total_opcoes'], int)
+    assert corpo['ura']['total_opcoes'] == 0
+
+
+@pytest.mark.django_db
+def test_e2e_proximo_passo_com_opcoes_total_opcoes_int_maior_que_zero():
+    tenant = TenantFactory()
+    checklist, item1, item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990002')
+    registrar_resposta(checklist, item1, 'lead', lead.pk, '11144477735', valor_processado='11144477735')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'proximo_passo', 'cellphone': '5589999990002',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['proxima_pergunta_id'] == item2.pk
+    assert isinstance(corpo['ura']['total_opcoes'], int)
+    assert corpo['ura']['total_opcoes'] == 2  # item2 tem 2 opções (Casa/Empresa)
+    assert corpo['ura']['opcoes'] == [{'texto': 'Casa', 'valor': 'casa'}, {'texto': 'Empresa', 'valor': 'empresa'}]
+
+    # CORREÇÃO 2: já tem 1 resposta -> status_lead = "em_andamento" (string)
+    assert corpo['status_lead'] == 'em_andamento'
+    assert isinstance(corpo['status_lead'], str)
 
 
 @pytest.mark.django_db
@@ -213,22 +365,23 @@ def test_e2e_proximo_passo_tudo_respondido_devolve_encerrar():
     tenant = TenantFactory()
     checklist, item1, item2 = _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
-    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_PROXIMO)
-    lead = LeadProspectoFactory(tenant=tenant)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990003')
     registrar_resposta(checklist, item1, 'lead', lead.pk, '11144477735', valor_processado='11144477735')
     registrar_resposta(checklist, item2, 'lead', lead.pk, '1', valor_processado='casa')
 
-    ctx = Contexto(tenant=tenant, lead=lead, variaveis={'payload': {'lead_id': lead.id}})
-    resultado = executar_fluxo(fluxo.grafo, ctx)
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'proximo_passo', 'cellphone': '5589999990003',
+    })
 
     assert resultado.status == 'completado', resultado.erro
-    corpo = json.loads(ctx.variaveis['_resposta_webhook']['corpo'])
+    corpo = _corpo_resposta(ctx)
     assert corpo['proximo_passo'] == 'red_encerrar'
     assert corpo['deve_perguntar'] is False
 
 
 # ──────────────────────────────────────────────
-# E2E: fluxo "validar resposta"
+# E2E: ramo "validar"
 # ──────────────────────────────────────────────
 
 @pytest.mark.django_db
@@ -237,17 +390,17 @@ def test_e2e_validar_resposta_valida_por_opcao_nao_chama_ia(mock_llm):
     tenant = TenantFactory()
     _checklist, _item1, item2 = _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
-    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_VALIDAR)
-    lead = LeadProspectoFactory(tenant=tenant)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990004')
 
-    ctx = Contexto(tenant=tenant, lead=lead, variaveis={
-        'payload': {'lead_id': lead.id, 'question_id': item2.pk, 'answer': '1'},
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990004',
+        'question_id': item2.pk, 'answer': '1',
     })
-    resultado = executar_fluxo(fluxo.grafo, ctx)
 
     assert resultado.status == 'completado', resultado.erro
     mock_llm.assert_not_called()
-    corpo = json.loads(ctx.variaveis['_resposta_webhook']['corpo'])
+    corpo = _corpo_resposta(ctx)
     assert corpo['resposta_correta'] is True
     assert corpo['needsReception'] == 'false'
     passos = {p.handle: p for p in resultado.passos}
@@ -263,8 +416,8 @@ def test_e2e_validar_ia_aceita_resposta_ambigua(mock_llm):
     _checklist, _item1, item2 = _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
     _ativar_agente(tenant)
-    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_VALIDAR)
-    lead = LeadProspectoFactory(tenant=tenant)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990005')
 
     mock_llm.return_value = json.dumps({
         'valido': True, 'dados_extraidos': {'tipo_imovel': 'casa'},
@@ -272,17 +425,17 @@ def test_e2e_validar_ia_aceita_resposta_ambigua(mock_llm):
         'intencao_detectada': 'ok',
     })
 
-    ctx = Contexto(tenant=tenant, lead=lead, variaveis={
-        'payload': {'lead_id': lead.id, 'question_id': item2.pk, 'answer': 'minha casa mesmo'},
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990005',
+        'question_id': item2.pk, 'answer': 'minha casa mesmo',
     })
-    resultado = executar_fluxo(fluxo.grafo, ctx)
 
     assert resultado.status == 'completado', resultado.erro
     mock_llm.assert_called_once()
     passos = {p.handle: p for p in resultado.passos}
     assert passos['validar'].branch == 'invalida'
     assert passos['se_valido'].branch == 'true'
-    corpo = json.loads(ctx.variaveis['_resposta_webhook']['corpo'])
+    corpo = _corpo_resposta(ctx)
     assert corpo['resposta_correta'] is True
     assert corpo['needsReception'] == 'false'
 
@@ -301,8 +454,8 @@ def test_e2e_validar_ia_detecta_desistencia_cai_no_transbordo(mock_llm):
     _checklist, _item1, item2 = _checklist_minimo(tenant)
     call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
     _ativar_agente(tenant)
-    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO_VALIDAR)
-    lead = LeadProspectoFactory(tenant=tenant)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990006')
 
     mock_llm.return_value = json.dumps({
         'valido': False, 'dados_extraidos': {}, 'mensagem_bot': 'Tudo bem, vou te transferir.',
@@ -310,16 +463,162 @@ def test_e2e_validar_ia_detecta_desistencia_cai_no_transbordo(mock_llm):
         'intencao_detectada': 'desistir',
     })
 
-    ctx = Contexto(tenant=tenant, lead=lead, variaveis={
-        'payload': {'lead_id': lead.id, 'question_id': item2.pk, 'answer': 'na verdade desisto, obrigado'},
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990006',
+        'question_id': item2.pk, 'answer': 'na verdade desisto, obrigado',
     })
-    resultado = executar_fluxo(fluxo.grafo, ctx)
 
     assert resultado.status == 'completado', resultado.erro
     passos = {p.handle: p for p in resultado.passos}
     assert passos['se_valido'].branch == 'false'
     assert passos['se_desistiu'].branch == 'true'
-    corpo = json.loads(ctx.variaveis['_resposta_webhook']['corpo'])
+    corpo = _corpo_resposta(ctx)
+    # needsReception é STRING "true"/"false" no contrato, não boolean
     assert corpo['needsReception'] == 'true'
+    assert isinstance(corpo['needsReception'], str)
     assert corpo['resposta_correta'] is False
     assert 'transferir' in corpo['retorno_erro_api'].lower()
+
+
+# ──────────────────────────────────────────────
+# E2E: ramo "recontato" (novo, nunca tinha sido construído)
+# ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_e2e_recontato_tentativa_1_reprergunta_com_a_pergunta_atual():
+    tenant = TenantFactory()
+    _checklist, item1, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990007')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'recontato', 'cellphone': '5589999990007',
+        'tentativa': 1, 'pergunta_id': item1.pk,
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['acao'] == 'reperguntar'
+    assert corpo['reperguntar'] is True
+    assert corpo['deve_transbordar'] == 'false'
+    assert 'Ainda esta ai?' in corpo['mensagem']
+    assert item1.pergunta in corpo['mensagem']
+
+
+@pytest.mark.django_db
+def test_e2e_recontato_tentativa_3_encerra():
+    tenant = TenantFactory()
+    _checklist, item1, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990008')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'recontato', 'cellphone': '5589999990008',
+        'tentativa': 3, 'pergunta_id': item1.pk,
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['acao'] == 'encerrar'
+    assert corpo['reperguntar'] is False
+    assert corpo['deve_transbordar'] == 'true'
+
+
+@pytest.mark.django_db
+def test_e2e_recontato_nada_pendente_encerra_sem_vazar_template():
+    tenant = TenantFactory()
+    checklist, item1, item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990009')
+    registrar_resposta(checklist, item1, 'lead', lead.pk, '11144477735', valor_processado='11144477735')
+    registrar_resposta(checklist, item2, 'lead', lead.pk, '1', valor_processado='casa')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'recontato', 'cellphone': '5589999990009',
+        'tentativa': 1, 'pergunta_id': item2.pk,
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['acao'] == 'encerrar'
+    assert '{{' not in corpo['mensagem']
+
+
+# ──────────────────────────────────────────────
+# Gap do lead: `carregar_lead` acha por telefone com/sem 55/DDD, rodando o
+# fluxo inteiro a partir do webhook (prova ponta a ponta, não só do node isolado)
+# ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_e2e_gap_lead_acha_por_telefone_com_55_quando_salvo_sem():
+    tenant = TenantFactory()
+    _checklist, item1, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='89999990010')  # salvo sem 55
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'proximo_passo', 'cellphone': '5589999990010',  # payload manda com 55
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['lead_id'] == lead.id
+    assert corpo['proxima_pergunta_id'] == item1.pk
+
+
+@pytest.mark.django_db
+def test_e2e_gap_lead_acha_por_telefone_sem_ddd_quando_salvo_com_55_e_ddd():
+    tenant = TenantFactory()
+    _checklist, item1, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990011')  # salvo com 55+DDD
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'proximo_passo', 'cellphone': '999990011',  # payload manda só o número local
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['lead_id'] == lead.id
+    assert corpo['proxima_pergunta_id'] == item1.pk
+
+
+@pytest.mark.django_db
+def test_e2e_gap_lead_cria_lead_quando_nao_acha_e_segue_o_fluxo():
+    tenant = TenantFactory()
+    _checklist, item1, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'proximo_passo', 'cellphone': '5589999990012',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['proxima_pergunta_id'] == item1.pk
+    assert corpo['status_lead'] == 0  # lead novo, nenhuma resposta ainda
+    assert ctx.lead is not None
+    assert ctx.lead.telefone == '5589999990012'
+
+
+@pytest.mark.django_db
+def test_e2e_gap_lead_sem_telefone_nem_criar_cai_no_erro_estrutural_sem_derrubar():
+    tenant = TenantFactory()
+    _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+
+    # payload sem `cellphone`: `hidratar` não acha nem cria lead nenhum; o
+    # fluxo não pode travar/derrubar — cai no erro estrutural compartilhado.
+    resultado, ctx = _rodar(fluxo, tenant, {'acao': 'proximo_passo'})
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['resposta_correta'] is False
+    assert corpo['needsReception'] == 'true'

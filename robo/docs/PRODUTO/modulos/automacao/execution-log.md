@@ -773,3 +773,68 @@
   proximo bloco).
 
 ---
+
+## 2026-07-19 — Bot de vendas consolidado em UM fluxo so + ramo recontato + gap do lead fechado
+
+- **Decisao do dono:** os 2 fluxos separados do `seed_fluxo_bot_venda.py`
+  ("proximo passo" / "validar resposta") viravam UM fluxo so, com switch de
+  entrada roteando por `{{var.payload.acao}}` ("abro uma tela e vejo o bot
+  inteiro"). Adicionado o ramo "recontato" (3o endpoint do contrato do
+  Matrix, nunca tinha sido construido).
+- **3 correcoes aplicadas:**
+  1. `ura.total_opcoes` int de verdade no JSON (nao string) — ja era garantido
+     pelo `responder_webhook._resolver_corpo` (resolve o corpo como OBJETO,
+     preserva tipo nas folhas, serializa com `json.dumps`); adicionado teste
+     de regressao explicito (`json.loads` + `isinstance(..., int)`).
+  2. `status_lead` polimorfico virou decisao do grafo: `checklist_progresso`
+     + `if` (`respondidos` maior que `0`) escolhem entre `0` (int, lead nunca
+     respondeu) e `"em_andamento"` (string, retomando). `"cliente_ativo"`
+     documentado como fora de escopo (dependeria de consulta HubSoft).
+  3. Gap do lead fechado: no `carregar_lead` novo (Comercial > Leads),
+     logo apos o `webhook`, resolve `LeadProspecto` por `lead_id` ou
+     `telefone` (so digitos, tolerante a 55/DDD, sufixos 8-13), cria minimo
+     se configurado. Mecanismo NOVO e GENERICO: `NodeResult.entidades` (em
+     `nodes/base.py`) + `Contexto.injetar_entidades`/`aplicar_resultado` (em
+     `nodes/context.py`) fundem a entidade no `contexto.lead` — reusavel por
+     qualquer no futuro, nao exclusivo deste.
+- **Achado durante a implementacao:** `Contexto.resolver` distingue "chave
+  ausente no payload" (devolve o texto `{{...}}` LITERAL) de "chave presente
+  com valor `None`" (devolve `None` de verdade) — um `lead_id` opcional que o
+  payload simplesmente nao manda vazava o template cru pro no. Corrigido no
+  `carregar_lead` (`_resolvido_ou_vazio`); documentado pra quem for usar esse
+  padrao em outro no com campo opcional.
+- **Arquivos:** `apps/automacao/nodes/base.py` (campo `NodeResult.entidades`),
+  `apps/automacao/nodes/context.py` (`injetar_entidades`), `apps/automacao/runtime.py`
+  (comentario), `apps/automacao/nodes/carregar_lead.py` (novo),
+  `apps/automacao/nodes/__init__.py` (registro), `apps/automacao/management/commands/seed_fluxo_bot_venda.py`
+  (reescrito: 1 fluxo, remove os 2 antigos com guard de seguranca — so se
+  inativos e sem `ExecucaoFluxo`), `tests/test_automacao_seed_fluxo_bot.py`
+  (reescrito), `tests/test_automacao_carregar_lead.py` (novo).
+- **Gates:** `manage.py check` limpo (so o warning pre-existente de
+  STATICFILES_DIRS). `pytest tests/test_automacao_seed_fluxo_bot.py
+  tests/test_automacao_nodes_checklist.py tests/test_automacao_carregar_lead.py`
+  **55/55** verde. Seed rodado 2x em dev (`aurora-hq`): 1a rodada cria o
+  fluxo novo (id=80) e remove os 2 antigos (id=78/79, estavam inativos e sem
+  execucao); 2a rodada so atualiza (idempotente). `validar_fluxo` do grafo
+  final: sem erros (23 nos).
+- **Achado de infra (fora de escopo, nao investigado a fundo aqui, so
+  diagnosticado):** `-k automacao` (suite inteira) mostra falhas nos meus
+  testes novos SO quando rodados junto com o resto da suite (isolados: 100%
+  verde). Causa raiz identificada: `TenantManager.get_queryset()` (
+  `apps/sistema/managers.py`) filtra por thread-local `get_current_tenant()`;
+  testes que batem em views reais (Django test client, ex:
+  `test_automacao_permissoes.py`) setam esse thread-local via
+  `TenantMiddleware` e ele fica "vazado" pros testes seguintes no MESMO
+  processo pytest que usam manager default (nao `all_tenants`) num relation
+  reverso (`checklist.itens`, `fluxo.execucoes`) — mesmo mecanismo que ja
+  quebrava `test_automacao_seed_recuperacao.py`/`test_automacao_acoes_crm.py`
+  antes deste trabalho (ver entradas de 16-17/07). Pre-existente, nao
+  introduzido aqui; mesma poluicao ja documentada, agora com causa raiz
+  identificada — registrar pra quem for investigar/corrigir depois (candidato:
+  reset explicito do thread-local em fixture `autouse` de teste).
+- **Status:** completed (local). NAO commitado, NAO deployado, nada tocado em
+  prod. Tarefa Workspace vinculada: NAO confirmada nesta sessao (subagente
+  sem acesso interativo) — usuario precisa criar/vincular conforme secao 1.7
+  do CLAUDE.md antes do proximo bloco.
+
+---

@@ -3,10 +3,19 @@
 Decisão de arquitetura (dono do produto): o bot externo (Matrix) conduz a venda
 por WhatsApp chamando nossa API a cada turno, mas a LÓGICA da conversa não pode
 ser serviço Python escondido — tem que ser um GRAFO visível e editável no
-editor, montado com peças que já existem (`checklist_proximo_item`,
-`checklist_validar`, `ia_agente`, `extrair_json`, `webhook`/`responder_webhook`,
-`if`). A IA usa a estrutura de `Agente` (prompt configurável na tela), nunca
-prompt cravado em código.
+editor, montado com peças que já existem (`carregar_lead`, `switch`,
+`checklist_proximo_item`, `checklist_progresso`, `checklist_validar`,
+`ia_agente`, `extrair_json`, `webhook`/`responder_webhook`, `if`). A IA usa a
+estrutura de `Agente` (prompt configurável na tela), nunca prompt cravado em
+código.
+
+UM FLUXO SÓ (revisão desta versão do seed): os 3 endpoints do contrato do
+Matrix (`/ia/proximo-passo`, `/ia/validar`, `/ia/recontato`) viviam em 2
+fluxos separados e o 3º (recontato) nunca tinha sido construído. O dono do
+produto pediu **um fluxo único** com um `switch` na entrada que roteia por
+`{{var.payload.acao}}` — "abro uma tela e vejo o bot inteiro". Este seed
+SUBSTITUI os 2 fluxos antigos (deletados no fim de `handle`, com guard de
+segurança — ver `_remover_fluxos_antigos`) pelo fluxo único abaixo.
 
 Cria:
 1. Agente "Validador de respostas" — segunda opinião semântica quando a
@@ -16,32 +25,68 @@ Cria:
    não deve depender do `atendimento_ia` (que é a implementação Python que
    este fluxo substitui). Se o prompt original mudar, reaplicar aqui e
    rerodar o seed.
-2. Fluxo "[Bot] Venda de internet: próximo passo" — responde "qual a próxima
-   pergunta?" pro Matrix.
-3. Fluxo "[Bot] Venda de internet: validar resposta" — valida a resposta do
-   cliente: o nó determinístico (`checklist_validar`) tenta primeiro; só
-   quando reprova é que a IA entra como segunda opinião (nó `ia_agente` no
-   PRÓPRIO GRAFO); o grafo decide o que fazer com a intenção detectada
-   (aceitar, repetir a pergunta ou transbordar pra humano).
+2. Fluxo "[Bot] Venda de internet" — os 3 turnos do bot num grafo só:
+   - `roteia` (switch por `{{var.payload.acao}}`) escolhe o ramo:
+     `proximo_passo` (qual a próxima pergunta?), `validar` (a resposta do
+     cliente serve?) ou `recontato` (cliente sumiu, insiste ou desiste?).
+   - `proximo_passo`: só o `checklist_proximo_item` decide (sem IA nesta
+     ponta). `status_lead` (0 int "inicia venda" vs "em_andamento") agora é
+     DECISÃO DO GRAFO — `checklist_progresso` + `if` conferem se o lead já
+     respondeu alguma coisa antes de montar a resposta (ver "CORREÇÃO 2"
+     abaixo).
+   - `validar`: o nó determinístico (`checklist_validar`) tenta primeiro; só
+     quando reprova é que a IA entra como segunda opinião (nó `ia_agente` no
+     PRÓPRIO GRAFO); o grafo decide o que fazer com a intenção detectada
+     (aceitar, repetir a pergunta ou transbordar pra humano).
+   - `recontato` (NOVO, nunca tinha sido construído): decide entre insistir
+     ou encerrar por `{{var.payload.tentativa}}` (limite: 2 tentativas, mesmo
+     valor de `LIMITE_TENTATIVAS_RECONTATO` do endpoint legado
+     `atendimento_ia/views.py::recontato`). A engine nova não replica sessão
+     persistida (mesma simplificação que o `proximo_passo` já assumia), então
+     `tentativa` vem do PAYLOAD (quem chama controla a contagem), não de um
+     contador salvo aqui — igual ao literal do desenho pedido.
 
-Os dois fluxos exigem o `Checklist` de slug `venda-internet-bot` do tenant
-(ver `seed_checklist_venda`) — o comando falha com erro claro se não achar.
+O fluxo exige o `Checklist` de slug `venda-internet-bot` do tenant (ver
+`seed_checklist_venda`) — o comando falha com erro claro se não achar.
+
+CORREÇÃO 1 (`ura.total_opcoes` como INT, não string): `checklist_proximo_item`
+já devolve `total_opcoes` como int no output (`len(item.opcoes or [])`), e
+`responder_webhook._resolver_corpo` (patch recente, ver o node) resolve o
+`corpo` como OBJETO JSON — quando o template é um dict/list válido, cada
+FOLHA com um único token `{{...}}` é resolvida via `Contexto.resolver`, que
+preserva o tipo bruto (não passa por interpolação de texto), e o resultado é
+serializado de novo com `json.dumps` (não `str()`). Resultado: `total_opcoes`
+sai como número no JSON final, sem aspas. Testado explicitamente em
+`test_e2e_proximo_passo_...` via `json.loads` + `isinstance(..., int)` (não é
+suposição — é o comportamento hoje, dado o corpo ser sempre um dict Python
+serializado com `_corpo()`/`json.dumps`, nunca uma string montada à mão).
+
+CORREÇÃO 2 (`status_lead` polimórfico): antes fixo em `"em_andamento"`
+(string), o que nunca deixava o Matrix entrar no branch `0` (int, "iniciar
+venda"). Agora é decisão do grafo: `checklist_progresso` conta quantas
+respostas o lead já tem; um `if` (`{{nodes.progresso.respondidos}}` maior que
+`0`) escolhe entre `CORPO_PROXIMO_PERGUNTA_EM_ANDAMENTO` (`status_lead =
+"em_andamento"`, string) e `CORPO_PROXIMO_PERGUNTA_INICIO` (`status_lead = 0`,
+int, sem aspas). `"cliente_ativo"` (3º valor do contrato) continua FORA de
+escopo aqui — depende de consulta ao HubSoft (cliente já é assinante), que
+este fluxo não faz; documentar isso é intencional, não esquecimento.
+
+CORREÇÃO 3 (GAP DO LEAD): os nós de checklist exigem `contexto.lead` já
+carregado; o gatilho `webhook` genérico só hidrata `{{var.payload}}`, nunca
+uma entidade de domínio. O nó novo `carregar_lead` (logo depois do trigger)
+resolve o `LeadProspecto` por `lead_id` ou `telefone` do payload (cria um
+mínimo se não achar) e injeta em `contexto.lead` via `NodeResult.entidades`
+(mecanismo genérico novo em `nodes/base.py`/`nodes/context.py` — ver os
+módulos). Os 3 branches de `carregar_lead` (`encontrado`/`nao_encontrado`/
+`erro`) alimentam `roteia` igualmente: se o lead não foi resolvido,
+`contexto.lead` continua `None` e os próprios nós de checklist caem no branch
+`erro` deles (que já tinham que existir de qualquer forma) — sem precisar de
+tratamento duplicado aqui.
 
 Idempotente por nome (fluxo) / nome (agente): rerodar ATUALIZA o grafo/prompt
 em vez de duplicar, e PRESERVA o `ativo` de quem já existe (nunca liga nem
 desliga nada sozinho, mesmo padrão de `seed_fluxos_recuperacao_analise`).
 Tudo nasce INATIVO (`ativo=False`) — revisar no editor antes de ligar.
-
-GAP CONHECIDO (documentar antes de ativar em produção, não resolvido aqui de
-propósito — foge do escopo deste seed): `checklist_proximo_item` e
-`checklist_validar` precisam de `contexto.lead` (um Lead de verdade) já
-carregado. O gatilho `webhook` genérico usado aqui NÃO hidrata isso sozinho —
-`Contexto(tenant=..., variaveis={'payload': payload})` na view
-`webhook_receber` não recebe `lead=`. Antes de ligar este fluxo pra valer,
-falta uma peça que carregue o Lead de `payload.lead_id` pro `contexto.lead`
-(um nó novo, ou uma hidratação na própria view). Os testes deste seed chamam
-`executar_fluxo` direto com o `Contexto` já montado (`lead=...`), que é como
-o editor/chat de teste também operam — não cobrem o caminho HTTP real.
 
 Uso:
     python manage.py seed_fluxo_bot_venda --tenant nuvyon \\
@@ -56,37 +101,42 @@ from apps.automacao.models import Agente, Checklist, Fluxo
 from apps.automacao.runtime import validar_fluxo
 
 NOME_AGENTE_VALIDADOR = 'Validador de respostas'
-NOME_FLUXO_PROXIMO = '[Bot] Venda de internet: próximo passo'
-NOME_FLUXO_VALIDAR = '[Bot] Venda de internet: validar resposta'
+NOME_FLUXO = '[Bot] Venda de internet'
+
+# Nomes dos 2 fluxos separados que este seed substitui (versão anterior).
+# `_remover_fluxos_antigos` só apaga se estiverem inativos e sem execuções.
+NOME_FLUXO_ANTIGO_PROXIMO = '[Bot] Venda de internet: próximo passo'
+NOME_FLUXO_ANTIGO_VALIDAR = '[Bot] Venda de internet: validar resposta'
+NOMES_FLUXOS_ANTIGOS = (NOME_FLUXO_ANTIGO_PROXIMO, NOME_FLUXO_ANTIGO_VALIDAR)
+
+# Limite de tentativas de recontato (mesmo valor do endpoint legado
+# `atendimento_ia/views.py::LIMITE_TENTATIVAS_RECONTATO`): a partir da
+# tentativa seguinte a este número, o grafo encerra em vez de insistir de novo.
+LIMITE_TENTATIVAS_RECONTATO = 2
 
 DESCRICAO_AGENTE = (
     'Segunda opinião semântica pras respostas do checklist de venda que a '
     'cascata determinística (`checklist_validar`) reprovou. Só entra quando o '
-    'grafo do fluxo "validar resposta" chama, nunca sozinho. Contrato de saída '
-    'em JSON (valido, dados_extraidos, mensagem_bot, motivo_invalido, '
+    f'ramo "validar" do fluxo "{NOME_FLUXO}" chama, nunca sozinho. Contrato de '
+    'saída em JSON (valido, dados_extraidos, mensagem_bot, motivo_invalido, '
     'confianca, intencao_detectada). Nasce INATIVO.'
 )
 
-DESCRICAO_FLUXO_PROXIMO = (
-    'Responde "qual a próxima pergunta do roteiro de venda?" pro bot externo '
-    '(Matrix), a cada turno da conversa. Só o nó `checklist_proximo_item` '
-    'decide (sem IA nesta ponta) — o checklist usado é o de slug '
-    f'"{SLUG_CHECKLIST}" do tenant. Corpo da resposta em JSON, campos e tipos '
-    'seguindo `apps.comercial.atendimento_ia.services.contrato.payload_proximo_passo`. '
-    'Nasce INATIVO.'
-)
-
-DESCRICAO_FLUXO_VALIDAR = (
-    'Valida a resposta que o cliente mandou pro bot externo (Matrix). O '
-    'determinístico (`checklist_validar`) tenta primeiro; só quando reprova '
-    '("invalida") é que entra o Agente IA "Validador de respostas" como '
-    'segunda opinião, DENTRO do próprio grafo — nunca como serviço Python '
-    'escondido. O grafo decide o que fazer com a intenção detectada pela IA '
-    '(aceitar / repetir a pergunta / transbordar pra humano). Corpo da '
-    'resposta em JSON, campos e tipos seguindo '
-    '`apps.comercial.atendimento_ia.services.contrato.payload_validar` '
-    '(atenção: `needsReception` é STRING "true"/"false", não boolean). '
-    'Nasce INATIVO.'
+DESCRICAO_FLUXO = (
+    'Bot de vendas por WhatsApp, fluxo ÚNICO: os 3 turnos que o Matrix chama '
+    '(qual a próxima pergunta / a resposta serve / o cliente sumiu, insisto ou '
+    'desisto) entram por um `switch` que roteia por `{{var.payload.acao}}` '
+    '("proximo_passo" / "validar" / "recontato"). `carregar_lead` fecha o gap '
+    'de `contexto.lead` logo após o trigger (o webhook genérico não hidrata '
+    'entidade nenhuma sozinho). O determinístico (`checklist_validar`) tenta '
+    'primeiro no ramo "validar"; só quando reprova é que o Agente IA '
+    '"Validador de respostas" entra como segunda opinião, DENTRO do próprio '
+    'grafo — nunca como serviço Python escondido. `status_lead` (0 int vs '
+    '"em_andamento" string) é decisão do grafo via `checklist_progresso`. '
+    'Corpo das respostas em JSON, campos e tipos seguindo '
+    '`apps.comercial.atendimento_ia.services.contrato` (`payload_proximo_passo` '
+    '/ `payload_validar` / `payload_recontato`; atenção: `needsReception` e '
+    '`deve_transbordar` são STRING "true"/"false", não boolean). Nasce INATIVO.'
 )
 
 # ── Prompt do Agente "Validador de respostas" ───────────────────────────────
@@ -128,40 +178,52 @@ def _system_prompt_validador(tenant):
 # Construído via `json.dumps` de um dict Python (nunca texto JSON escrito à
 # mão): garante que o TEMPLATE em si é JSON válido. Cada valor dinâmico é um
 # único token `{{...}}` (full match), que o `Contexto.resolver` devolve CRU
-# (tipo preservado: bool/número/lista) — o `responder_webhook` (ver node,
-# patch desta mesma tarefa) resolve o objeto inteiro e serializa com
-# `json.dumps`, escapando de verdade quebra de linha/aspas do texto da
-# pergunta. Valores estáticos (sem `{{...}}`) só passam direto.
+# (tipo preservado: bool/número/lista) — o `responder_webhook` resolve o
+# objeto inteiro e serializa com `json.dumps`, escapando de verdade quebra de
+# linha/aspas do texto da pergunta. Valores estáticos (sem `{{...}}`) passam
+# direto — é assim que `status_lead=0` (int) e `status_lead='em_andamento'`
+# (string) saem com o tipo certo no JSON final (ver CORREÇÃO 2 no topo do
+# arquivo): o valor já nasce no tipo certo em Python, `json.dumps` cuida do
+# resto.
 
 def _corpo(template):
     return json.dumps(template, ensure_ascii=False)
 
 
 # payload_proximo_passo (contrato: apps.comercial.atendimento_ia.services.contrato)
-CORPO_PROXIMO_PERGUNTA = _corpo({
-    'lead_id': '{{lead.id}}',
-    # Simplificação: este grafo não replica o rastreio de sessão do endpoint
-    # legado (/ia/proximo-passo); sempre "em_andamento". Ver descrição do fluxo.
-    'status_lead': 'em_andamento',
-    'proximo_passo': 'seguir_pergunta',
-    'proxima_pergunta_id': '{{nodes.proximo.item_id}}',
-    'deve_perguntar': True,
-    'deve_transbordar': 'false',
-    'motivo': '',
-    'intent_detectado': '',
-    'mensagem_inicial': '{{nodes.proximo.pergunta}}',
-    'ura': {
-        'total_opcoes': '{{nodes.proximo.total_opcoes}}',
-        'titulo': '{{nodes.proximo.ura_titulo}}',
-        # Inclui `valor` além de `texto` (o contrato original só usa `texto`):
-        # informação extra que o Matrix pode ignorar sem quebrar.
-        'opcoes': '{{nodes.proximo.opcoes}}',
-        'pergunta': '{{nodes.proximo.pergunta}}',
-    },
-})
+def _corpo_proxima_pergunta(status_lead):
+    """`status_lead` decide o tipo no contrato: `0` (int, lead nunca respondeu
+    nada — "iniciar venda") ou `'em_andamento'` (string, retomando). Builder
+    único pros 2 casos pra não duplicar o resto do payload e correr risco de
+    os dois corpos divergirem num campo que devia ser igual (a mesma armadilha
+    da CORREÇÃO 1: um `{{...}}` diferente por engano vira bug silencioso)."""
+    return _corpo({
+        'lead_id': '{{lead.id}}',
+        'status_lead': status_lead,
+        'proximo_passo': 'seguir_pergunta',
+        'proxima_pergunta_id': '{{nodes.proximo.item_id}}',
+        'deve_perguntar': True,
+        'deve_transbordar': 'false',
+        'motivo': '',
+        'intent_detectado': '',
+        'mensagem_inicial': '{{nodes.proximo.pergunta}}',
+        'ura': {
+            'total_opcoes': '{{nodes.proximo.total_opcoes}}',
+            'titulo': '{{nodes.proximo.ura_titulo}}',
+            # Inclui `valor` além de `texto` (o contrato original só usa `texto`):
+            # informação extra que o Matrix pode ignorar sem quebrar.
+            'opcoes': '{{nodes.proximo.opcoes}}',
+            'pergunta': '{{nodes.proximo.pergunta}}',
+        },
+    })
+
+
+CORPO_PROXIMO_PERGUNTA_EM_ANDAMENTO = _corpo_proxima_pergunta('em_andamento')
+CORPO_PROXIMO_PERGUNTA_INICIO = _corpo_proxima_pergunta(0)
 
 CORPO_PROXIMO_ENCERRAR = _corpo({
     'lead_id': '{{lead.id}}',
+    # Checklist completo implica que existe pelo menos uma resposta: nunca é 0.
     'status_lead': 'em_andamento',
     'proximo_passo': 'red_encerrar',
     'proxima_pergunta_id': 0,
@@ -174,6 +236,17 @@ CORPO_PROXIMO_ENCERRAR = _corpo({
 })
 
 # payload_validar (contrato: apps.comercial.atendimento_ia.services.contrato)
+# Corpo de erro estrutural GENÉRICO: compartilhado pelos ramos "proximo_passo"
+# e "validar" (e pelo `default` do switch de entrada) — mesmo node/handle
+# reaproveitado a partir de várias origens, igual ao seed anterior já fazia
+# dentro do ramo "validar". Fica no formato `payload_validar`; um chamador do
+# ramo "proximo_passo" que caia aqui recebe campos fora do shape que ele
+# esperava (`resposta_correta`/`needsReception` em vez de
+# `proximo_passo`/`ura`) — aceito conscientemente: é sempre um caminho de
+# ERRO estrutural (sem lead, checklist ausente, exceção), o Matrix já trata
+# isso como falha e cai pro fallback dele; criar um 2º corpo de erro só pra
+# manter o shape "puro" nesse caminho de exceção não pagava o custo extra de
+# nó/manutenção pro benefício (documentado aqui pra próxima revisão avaliar).
 _MSG_ERRO_ESTRUTURAL = (
     'Não consegui continuar o atendimento automático agora. Vou te transferir '
     'para um atendente.'
@@ -229,6 +302,31 @@ CORPO_VALIDAR_REPERGUNTA = _corpo({
     'message': '',
 })
 
+# payload_recontato (contrato: apps.comercial.atendimento_ia.services.contrato)
+# `pergunta_id`/`tentativa` ecoam o que o Matrix mandou: a engine nova não
+# replica sessão persistida (mesma simplificação já assumida no ramo
+# "proximo_passo"), então não há contador de tentativa nem "item atual"
+# guardado aqui — quem chama controla a contagem. `resp_recontato_encerrar` é
+# compartilhado entre "tentativas esgotadas" e "nada mais pendente" (fan-in,
+# mesmo padrão do `resp_erro`); por isso não referencia texto de pergunta.
+CORPO_RECONTATO_ENCERRAR = _corpo({
+    'pergunta_id': '{{var.payload.pergunta_id}}',
+    'acao': 'encerrar',
+    'tentativa': '{{var.payload.tentativa}}',
+    'reperguntar': False,
+    'mensagem': '',
+    'deve_transbordar': 'true',
+})
+
+CORPO_RECONTATO_INSISTIR = _corpo({
+    'pergunta_id': '{{nodes.proximo_recontato.item_id}}',
+    'acao': 'reperguntar',
+    'tentativa': '{{var.payload.tentativa}}',
+    'reperguntar': True,
+    'mensagem': 'Ainda esta ai? {{nodes.proximo_recontato.pergunta}}',
+    'deve_transbordar': 'false',
+})
+
 # Mensagem que o nó `ia_agente` manda pro LLM: pergunta original + resposta do
 # cliente (o `checklist_validar` expõe `pergunta` no output pra isso, ver node).
 MENSAGEM_AGENTE_VALIDADOR = (
@@ -237,49 +335,79 @@ MENSAGEM_AGENTE_VALIDADOR = (
 )
 
 
-def _grafo_proximo_passo():
+def _grafo_bot_venda(agente_id):
     nodes = {
+        # ── entrada + gap do lead ────────────────────────────────────────
         'trigger': {
             'tipo': 'webhook',
             'config': {'responder': 'no_resposta'},
             'pos': {'x': 0, 'y': 0},
             'label': 'Webhook: turno do bot (Matrix)',
         },
+        'hidratar': {
+            'tipo': 'carregar_lead',
+            'config': {
+                'telefone': '{{var.payload.cellphone}}',
+                'lead_id': '{{var.payload.lead_id}}',
+                'criar_se_nao_existir': True,
+            },
+            'pos': {'x': 260, 'y': 0},
+            'label': 'Carregar lead (fecha o gap do contexto)',
+        },
+        'roteia': {
+            'tipo': 'switch',
+            'config': {'regras': [
+                {'esquerda': '{{var.payload.acao}}', 'operador': 'igual',
+                 'direita': 'proximo_passo', 'saida': 'proximo_passo'},
+                {'esquerda': '{{var.payload.acao}}', 'operador': 'igual',
+                 'direita': 'validar', 'saida': 'validar'},
+                {'esquerda': '{{var.payload.acao}}', 'operador': 'igual',
+                 'direita': 'recontato', 'saida': 'recontato'},
+            ]},
+            'pos': {'x': 520, 'y': 0},
+            'label': 'Switch: {{var.payload.acao}}',
+        },
+
+        # ── ramo "proximo_passo" ─────────────────────────────────────────
         'proximo': {
             'tipo': 'checklist_proximo_item',
             'config': {'checklist': SLUG_CHECKLIST, 'entidade': 'lead'},
-            'pos': {'x': 280, 'y': 0},
+            'pos': {'x': 800, 'y': -420},
             'label': 'Checklist: próxima pergunta',
         },
         'resp_fim': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_PROXIMO_ENCERRAR},
-            'pos': {'x': 560, 'y': -140},
+            'pos': {'x': 1080, 'y': -560},
             'label': 'Responder: checklist completo (encerrar)',
+        },
+        'progresso': {
+            'tipo': 'checklist_progresso',
+            'config': {'checklist': SLUG_CHECKLIST, 'entidade': 'lead'},
+            'pos': {'x': 1080, 'y': -300},
+            'label': 'Checklist: progresso (decide status_lead)',
+        },
+        'ja_respondeu': {
+            'tipo': 'if',
+            'config': {'esquerda': '{{nodes.progresso.respondidos}}',
+                       'operador': 'maior', 'direita': '0'},
+            'pos': {'x': 1340, 'y': -300},
+            'label': 'Lead já respondeu algo?',
         },
         'resp_pergunta': {
             'tipo': 'responder_webhook',
-            'config': {'status': 200, 'corpo': CORPO_PROXIMO_PERGUNTA},
-            'pos': {'x': 560, 'y': 140},
-            'label': 'Responder: próxima pergunta',
+            'config': {'status': 200, 'corpo': CORPO_PROXIMO_PERGUNTA_EM_ANDAMENTO},
+            'pos': {'x': 1600, 'y': -380},
+            'label': 'Responder: próxima pergunta (em andamento)',
         },
-    }
-    conexoes = [
-        {'de': 'trigger', 'para': 'proximo', 'saida': 'default'},
-        {'de': 'proximo', 'para': 'resp_fim', 'saida': 'completo'},
-        {'de': 'proximo', 'para': 'resp_pergunta', 'saida': 'tem_item'},
-    ]
-    return {'inicio': 'trigger', 'nodes': nodes, 'conexoes': conexoes}
-
-
-def _grafo_validar(agente_id):
-    nodes = {
-        'trigger': {
-            'tipo': 'webhook',
-            'config': {'responder': 'no_resposta'},
-            'pos': {'x': 0, 'y': 0},
-            'label': 'Webhook: turno do bot (Matrix)',
+        'resp_pergunta_inicio': {
+            'tipo': 'responder_webhook',
+            'config': {'status': 200, 'corpo': CORPO_PROXIMO_PERGUNTA_INICIO},
+            'pos': {'x': 1600, 'y': -180},
+            'label': 'Responder: próxima pergunta (status_lead=0, iniciar venda)',
         },
+
+        # ── ramo "validar" ───────────────────────────────────────────────
         'validar': {
             'tipo': 'checklist_validar',
             'config': {
@@ -288,43 +416,37 @@ def _grafo_validar(agente_id):
                 'resposta': '{{var.payload.answer}}',
                 'entidade': 'lead',
             },
-            'pos': {'x': 280, 'y': 0},
+            'pos': {'x': 800, 'y': 0},
             'label': 'Checklist: validar resposta (determinístico)',
         },
         'resp_ok': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_OK},
-            'pos': {'x': 560, 'y': -260},
+            'pos': {'x': 1080, 'y': -140},
             'label': 'Responder: resposta válida',
-        },
-        'resp_erro': {
-            'tipo': 'responder_webhook',
-            'config': {'status': 200, 'corpo': CORPO_VALIDAR_ERRO},
-            'pos': {'x': 560, 'y': 260},
-            'label': 'Responder: erro estrutural (transbordo)',
         },
         'agente': {
             'tipo': 'ia_agente',
             'config': {'agente_id': str(agente_id), 'mensagem': MENSAGEM_AGENTE_VALIDADOR},
-            'pos': {'x': 560, 'y': 0},
+            'pos': {'x': 1080, 'y': 140},
             'label': 'Agente IA: segunda opinião (Validador de respostas)',
         },
         'json': {
             'tipo': 'extrair_json',
             'config': {'origem': '{{nodes.agente.resposta}}'},
-            'pos': {'x': 840, 'y': 0},
+            'pos': {'x': 1360, 'y': 140},
             'label': 'Extrair JSON da validação',
         },
         'se_valido': {
             'tipo': 'if',
             'config': {'esquerda': '{{nodes.json.valido}}', 'operador': 'igual', 'direita': 'True'},
-            'pos': {'x': 1120, 'y': 0},
+            'pos': {'x': 1640, 'y': 140},
             'label': 'IA validou?',
         },
         'resp_ok_ia': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_OK_IA},
-            'pos': {'x': 1400, 'y': -140},
+            'pos': {'x': 1920, 'y': 0},
             'label': 'Responder: aceita pela IA',
         },
         'se_desistiu': {
@@ -333,24 +455,86 @@ def _grafo_validar(agente_id):
                 'esquerda': '{{nodes.json.intencao_detectada}}',
                 'operador': 'igual', 'direita': 'desistir',
             },
-            'pos': {'x': 1400, 'y': 140},
+            'pos': {'x': 1920, 'y': 280},
             'label': 'Cliente quer desistir?',
         },
         'resp_transbordo': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_TRANSBORDO},
-            'pos': {'x': 1680, 'y': 0},
+            'pos': {'x': 2200, 'y': 140},
             'label': 'Responder: transbordo (desistência)',
         },
         'resp_repergunta': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_REPERGUNTA},
-            'pos': {'x': 1680, 'y': 260},
+            'pos': {'x': 2200, 'y': 420},
             'label': 'Responder: repetir a pergunta',
+        },
+
+        # ── ramo "recontato" (novo) ──────────────────────────────────────
+        # `proximo_recontato` é uma 2ª chamada a `checklist_proximo_item`
+        # (não reaproveita o handle `proximo` do ramo "proximo_passo"): cada
+        # nó só tem UM conjunto de arestas de saída por handle no grafo, e os
+        # 2 ramos precisam rotear o `tem_item`/`completo` pra lugares
+        # diferentes. É a fonte de verdade do texto da "pergunta atual" pro
+        # "Ainda esta ai? <pergunta>" (server-side, não depende do Matrix
+        # ecoar o texto de volta).
+        'proximo_recontato': {
+            'tipo': 'checklist_proximo_item',
+            'config': {'checklist': SLUG_CHECKLIST, 'entidade': 'lead'},
+            'pos': {'x': 800, 'y': 560},
+            'label': 'Checklist: pergunta atual (recontato)',
+        },
+        'se_esgotou': {
+            'tipo': 'if',
+            'config': {'esquerda': '{{var.payload.tentativa}}',
+                       'operador': 'maior', 'direita': str(LIMITE_TENTATIVAS_RECONTATO)},
+            'pos': {'x': 1080, 'y': 500},
+            'label': f'Esgotou tentativas (> {LIMITE_TENTATIVAS_RECONTATO})?',
+        },
+        'resp_recontato_encerrar': {
+            'tipo': 'responder_webhook',
+            'config': {'status': 200, 'corpo': CORPO_RECONTATO_ENCERRAR},
+            'pos': {'x': 1360, 'y': 640},
+            'label': 'Responder: encerrar recontato',
+        },
+        'resp_recontato_insistir': {
+            'tipo': 'responder_webhook',
+            'config': {'status': 200, 'corpo': CORPO_RECONTATO_INSISTIR},
+            'pos': {'x': 1360, 'y': 420},
+            'label': 'Responder: insistir (reperguntar)',
+        },
+
+        # ── erro estrutural compartilhado (fan-in: proximo_passo/validar/recontato/default) ──
+        'resp_erro': {
+            'tipo': 'responder_webhook',
+            'config': {'status': 200, 'corpo': CORPO_VALIDAR_ERRO},
+            'pos': {'x': 520, 'y': 780},
+            'label': 'Responder: erro estrutural (transbordo)',
         },
     }
     conexoes = [
-        {'de': 'trigger', 'para': 'validar', 'saida': 'default'},
+        # entrada
+        {'de': 'trigger', 'para': 'hidratar', 'saida': 'default'},
+        {'de': 'hidratar', 'para': 'roteia', 'saida': 'encontrado'},
+        {'de': 'hidratar', 'para': 'roteia', 'saida': 'nao_encontrado'},
+        {'de': 'hidratar', 'para': 'roteia', 'saida': 'erro'},
+        {'de': 'roteia', 'para': 'proximo', 'saida': 'proximo_passo'},
+        {'de': 'roteia', 'para': 'validar', 'saida': 'validar'},
+        {'de': 'roteia', 'para': 'proximo_recontato', 'saida': 'recontato'},
+        {'de': 'roteia', 'para': 'resp_erro', 'saida': 'default'},
+
+        # proximo_passo
+        {'de': 'proximo', 'para': 'progresso', 'saida': 'tem_item'},
+        {'de': 'proximo', 'para': 'resp_fim', 'saida': 'completo'},
+        {'de': 'proximo', 'para': 'resp_erro', 'saida': 'erro'},
+        {'de': 'progresso', 'para': 'ja_respondeu', 'saida': 'completo'},
+        {'de': 'progresso', 'para': 'ja_respondeu', 'saida': 'incompleto'},
+        {'de': 'progresso', 'para': 'resp_erro', 'saida': 'erro'},
+        {'de': 'ja_respondeu', 'para': 'resp_pergunta', 'saida': 'true'},
+        {'de': 'ja_respondeu', 'para': 'resp_pergunta_inicio', 'saida': 'false'},
+
+        # validar
         {'de': 'validar', 'para': 'resp_ok', 'saida': 'valida'},
         {'de': 'validar', 'para': 'resp_erro', 'saida': 'erro'},
         {'de': 'validar', 'para': 'agente', 'saida': 'invalida'},
@@ -360,16 +544,24 @@ def _grafo_validar(agente_id):
         {'de': 'se_valido', 'para': 'se_desistiu', 'saida': 'false'},
         {'de': 'se_desistiu', 'para': 'resp_transbordo', 'saida': 'true'},
         {'de': 'se_desistiu', 'para': 'resp_repergunta', 'saida': 'false'},
+
+        # recontato
+        {'de': 'proximo_recontato', 'para': 'se_esgotou', 'saida': 'tem_item'},
+        {'de': 'proximo_recontato', 'para': 'resp_recontato_encerrar', 'saida': 'completo'},
+        {'de': 'proximo_recontato', 'para': 'resp_erro', 'saida': 'erro'},
+        {'de': 'se_esgotou', 'para': 'resp_recontato_encerrar', 'saida': 'true'},
+        {'de': 'se_esgotou', 'para': 'resp_recontato_insistir', 'saida': 'false'},
     ]
     return {'inicio': 'trigger', 'nodes': nodes, 'conexoes': conexoes}
 
 
 class Command(BaseCommand):
     help = (
-        'Seed do bot de vendas por WhatsApp (Agente "Validador de respostas" + fluxos '
-        '"próximo passo"/"validar resposta") na engine de automação nova. Idempotente '
-        'por nome, tudo nasce INATIVO. Exige checklist "venda-internet-bot" (rodar '
-        'seed_checklist_venda antes).'
+        f'Seed do bot de vendas por WhatsApp: Agente "Validador de respostas" + fluxo único '
+        f'"{NOME_FLUXO}" (switch de entrada roteando proximo_passo/validar/recontato) na engine '
+        'de automação nova. Idempotente por nome, tudo nasce INATIVO. Exige checklist '
+        '"venda-internet-bot" (rodar seed_checklist_venda antes). Remove os 2 fluxos separados '
+        'da versão anterior deste seed, se estiverem inativos e sem execuções.'
     )
 
     def add_arguments(self, parser):
@@ -398,31 +590,25 @@ class Command(BaseCommand):
             f'  {"criado" if agente_criado else "atualizado"}: agente "{agente.nome}" '
             f'(id={agente.pk}, ativo={agente.ativo})')
 
-        grafos = {
-            NOME_FLUXO_PROXIMO: (_grafo_proximo_passo(), DESCRICAO_FLUXO_PROXIMO),
-            NOME_FLUXO_VALIDAR: (_grafo_validar(agente.pk), DESCRICAO_FLUXO_VALIDAR),
-        }
+        grafo = _grafo_bot_venda(agente.pk)
+        erros = validar_fluxo(grafo)
+        if erros:
+            raise CommandError(f'Grafo inválido para "{NOME_FLUXO}": {"; ".join(erros)}')
 
-        # Falha cedo: nenhum fluxo é escrito se algum grafo for estruturalmente inválido.
-        for nome, (grafo, _descricao) in grafos.items():
-            erros = validar_fluxo(grafo)
-            if erros:
-                raise CommandError(f'Grafo inválido para "{nome}": {"; ".join(erros)}')
+        fluxo, criado = self._upsert_fluxo(tenant, NOME_FLUXO, DESCRICAO_FLUXO, grafo)
+        self.stdout.write(
+            f'  {"criado" if criado else "atualizado"}: fluxo "{fluxo.nome}" '
+            f'(id={fluxo.pk}, ativo={fluxo.ativo})')
 
-        for nome, (grafo, descricao) in grafos.items():
-            fluxo, criado = self._upsert_fluxo(tenant, nome, descricao, grafo)
-            self.stdout.write(
-                f'  {"criado" if criado else "atualizado"}: fluxo "{fluxo.nome}" '
-                f'(id={fluxo.pk}, ativo={fluxo.ativo})')
+        self._remover_fluxos_antigos(tenant)
 
         self.stdout.write(self.style.WARNING(
             '  lembrete: o agente usa a integração de IA default do tenant '
             '(integracao_ia=None) — sem uma IntegracaoAPI de IA ativa no tenant, a '
             'segunda opinião falha (branch "erro" do nó ia_agente).'))
         self.stdout.write(self.style.WARNING(
-            '  gap conhecido: checklist_proximo_item/checklist_validar exigem '
-            'contexto.lead já carregado; o gatilho webhook genérico não hidrata isso '
-            'sozinho (ver docstring do módulo) — resolver antes de ligar em produção.'))
+            '  gap documentado (fora de escopo): `status_lead="cliente_ativo"` não é '
+            'produzido por este fluxo (dependeria de consulta ao HubSoft, não feita aqui).'))
         self.stdout.write(self.style.SUCCESS(
             'Seed concluído. Tudo nasce INATIVO, revisar no editor antes de ativar.'))
 
@@ -453,3 +639,26 @@ class Command(BaseCommand):
         fluxo.grafo = grafo
         fluxo.save()  # `ativo` propositalmente intocado (nunca liga/desliga num re-run)
         return fluxo, criado
+
+    def _remover_fluxos_antigos(self, tenant):
+        """Apaga os 2 fluxos separados da versão anterior deste seed, SÓ se
+        estiverem inativos e sem execuções registradas (guard de segurança:
+        nunca apaga histórico nem algo que alguém possa ter ativado)."""
+        for nome in NOMES_FLUXOS_ANTIGOS:
+            fluxo = Fluxo.all_tenants.filter(tenant=tenant, nome=nome).first()
+            if fluxo is None:
+                continue
+            if fluxo.ativo:
+                self.stdout.write(self.style.WARNING(
+                    f'  fluxo antigo "{nome}" (id={fluxo.pk}) está ATIVO — não removido. '
+                    f'Desative manualmente e rerode o seed pra limpar.'))
+                continue
+            if fluxo.execucoes.exists():
+                self.stdout.write(self.style.WARNING(
+                    f'  fluxo antigo "{nome}" (id={fluxo.pk}) tem execuções registradas — '
+                    f'não removido (histórico preservado).'))
+                continue
+            fluxo_id = fluxo.pk
+            fluxo.delete()
+            self.stdout.write(
+                f'  removido: fluxo antigo "{nome}" (id={fluxo_id}, inativo, sem execuções)')

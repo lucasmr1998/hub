@@ -133,11 +133,30 @@ class Contexto:
         """Guarda o output de um nó (vira `{{nodes.<node_id>.<campo>}}`)."""
         self.nodes[node_id] = output
 
+    # Chaves de `NodeResult.entidades` aceitas — mesmo nome dos atributos que o
+    # `__init__` já expõe. Chave fora daqui é ignorada (nunca seta atributo
+    # arbitrário no Contexto a partir de config/output de nó).
+    _ENTIDADES_ACEITAS = ('lead', 'oportunidade', 'conversa')
+
     def aplicar_resultado(self, node_id, resultado):
-        """Aplica um NodeResult ao contexto: registra output + aplica promote."""
+        """Aplica um NodeResult ao contexto: registra output + aplica promote +
+        funde entidades de domínio (ver `NodeResult.entidades`)."""
         self.registrar_saida(node_id, resultado.output)
         if resultado.promote:
             self.variaveis.update(resultado.promote)
+        if resultado.entidades:
+            self.injetar_entidades(resultado.entidades)
+
+    def injetar_entidades(self, entidades):
+        """Funde entidades de domínio no Contexto (`lead`/`oportunidade`/
+        `conversa`). Só sobrescreve quando o valor não é `None` — um nó que
+        não achou nada não apaga uma entidade que outro nó já tinha carregado
+        antes no mesmo fluxo. Mecanismo genérico (ver `NodeResult.entidades`),
+        chamado por `aplicar_resultado`; exposto à parte pra quem quiser
+        aplicar fora do runtime padrão (ex: teste)."""
+        for chave, valor in (entidades or {}).items():
+            if chave in self._ENTIDADES_ACEITAS and valor is not None:
+                setattr(self, chave, valor)
 
     # -- serialização (contrato de persistência: id, não objeto) ------------
 

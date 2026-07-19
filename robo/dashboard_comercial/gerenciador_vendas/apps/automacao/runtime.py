@@ -118,7 +118,9 @@ def executar_fluxo(fluxo, contexto, *, inicio=None, entrada=None, max_passos=100
                 status='erro', branch='erro', output={},
                 erro=f"exceção em '{handle}': {exc}",
             )
-        # contrato híbrido: registra output sob o handle + funde promote
+        # contrato híbrido: registra output sob o handle + funde promote + funde
+        # entidades de domínio (`NodeResult.entidades`, ex: um nó `carregar_lead`
+        # injeta `contexto.lead` no meio do grafo — ver `Contexto.aplicar_resultado`).
         contexto.aplicar_resultado(handle, resultado)
         passos.append(PassoTrace(handle, tipo, resultado.status, resultado.branch, resultado.erro))
 

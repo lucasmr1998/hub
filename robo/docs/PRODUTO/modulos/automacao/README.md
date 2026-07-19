@@ -39,6 +39,9 @@ Regras:
 ### Ponte de promoção
 Um nó com `salvar_em: "x"` devolve `NodeResult.promote = {"x": <output>}`. O runtime funde isso em `contexto.variaveis`, virando `{{var.x}}` daí pra frente.
 
+### Injeção de entidade (`NodeResult.entidades`)
+Um nó pode injetar uma entidade de domínio (`lead`/`oportunidade`/`conversa`) no meio do grafo devolvendo `NodeResult.entidades = {"lead": obj}`; `Contexto.aplicar_resultado` funde isso em `contexto.lead` (`Contexto.injetar_entidades`), passando a valer pros nós seguintes. Só sobrescreve quando o valor não é `None`. Mecanismo genérico (qualquer nó pode usar), criado pro nó `carregar_lead` fechar o gap do bot de vendas: o gatilho `webhook` só hidrata `{{var.payload}}`, nunca uma entidade — sem esse nó, `checklist_proximo_item`/`checklist_validar` falham com "Sem lead no contexto." em todo turno que vier via HTTP de verdade.
+
 ## Contrato de nó
 
 Todo bloco implementa `BaseNode` (em `nodes/base.py`):
@@ -50,6 +53,7 @@ class NodeResult:
     status: str = "ok"          # ok | erro | aguardando
     branch: str | None = None   # sucesso | erro | true | false | ...
     promote: dict | None = None # vars a fundir em contexto.variaveis (via salvar_em)
+    entidades: dict | None = None  # {'lead'|'oportunidade'|'conversa': obj} a fundir em contexto.*
     erro: str | None = None
 
 class BaseNode:
@@ -227,6 +231,7 @@ Contrato do handler de propriedade (`fn(tenant, oportunidade, valor, *, chave=''
 | `checklist_proximo_item` | Comercial › Checklist | Checklist: próximo item | ✅ ponte checklist→fluxo (bot de vendas vira grafo); acha o próximo item pendente via `services/checklist.proximo_item`; saídas `tem_item`/`completo`/`erro`; sem IA |
 | `checklist_validar` | Comercial › Checklist | Checklist: validar resposta | ✅ ponte checklist→fluxo; roda a cascata determinística de `atendimento_ia/services/validacao.validar` (opções/cpf/cep/email/regex) e grava via `registrar_resposta` quando válida; saídas `valida`/`invalida`/`erro`; **nunca chama LLM diretamente** (julgamento semântico livre fica pro grafo encadear `ia_agente`) |
 | `checklist_progresso` | Comercial › Checklist | Checklist: progresso | ✅ ponte checklist→fluxo; resumo via `services/checklist.progresso` (total/respondidos/faltando/percentual); saídas `completo`/`incompleto`/`erro`; sem IA |
+| `carregar_lead` | Comercial › Leads | Carregar lead | ✅ fecha o gap de `contexto.lead` no caminho HTTP real (o `webhook` genérico não hidrata entidade nenhuma sozinho): resolve por `lead_id` (pk direto) ou `telefone` (só dígitos, tolerante a 55/DDD, sufixos de 8 a 13 dígitos); cria lead mínimo quando `criar_se_nao_existir`; injeta em `contexto.lead` via `NodeResult.entidades` (mecanismo genérico novo, ver `nodes/base.py`/`nodes/context.py`); saídas `encontrado`/`nao_encontrado`/`erro` |
 
 **Modelos de execução (a "âncora"):** o mesmo runtime faz três comportamentos, decididos por como a execução pausa/ancora (`NodeResult.espera` + `ExecucaoFluxo`):
 - **timer** (delay) → retoma por tempo (cron).
