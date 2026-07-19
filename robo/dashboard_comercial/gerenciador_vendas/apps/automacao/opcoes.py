@@ -76,6 +76,15 @@ def _propriedades_oportunidade(tenant):
     return opcoes_propriedades(tenant)
 
 
+def _checklists(tenant):
+    """Catálogo dos nós `checklist_*`. `value` = slug, não pk: o `Checklist.slug`
+    já é o identificador estável reservado pra referência externa (mesmo campo
+    que a API do bot usa), então o nó não quebra se o checklist for renomeado."""
+    from .models import Checklist
+    return [{'value': c.slug, 'label': c.nome}
+            for c in Checklist.all_tenants.filter(tenant=tenant, ativo=True).order_by('nome')]
+
+
 FONTES = {
     'segmentos': _segmentos,
     'pipelines': _pipelines,
@@ -87,6 +96,7 @@ FONTES = {
     'varreduras': _varreduras,
     'motivos_perda': _motivos_perda,
     'propriedades_oportunidade': _propriedades_oportunidade,
+    'checklists': _checklists,
 }
 
 

@@ -56,3 +56,6 @@ from . import criar_nota  # noqa: F401,E402  (F6, tarefas 180/181: nota interna 
 from . import reabrir_oportunidade  # noqa: F401,E402  (F8, tarefas 180/181: reabrir oportunidade perdida)
 from . import definir_propriedade_oportunidade  # noqa: F401,E402  (F7/F9 unificados: catálogo de propriedades)
 from . import ia_agente  # noqa: F401,E402  (D2 — Agente IA: turno conversacional referenciando Agente)
+from . import checklist_proximo_item  # noqa: F401,E402  (bot vendas vira fluxo: acha a próxima pergunta pendente)
+from . import checklist_validar  # noqa: F401,E402  (bot vendas vira fluxo: cascata determinística, sem LLM)
+from . import checklist_progresso  # noqa: F401,E402  (bot vendas vira fluxo: resumo do andamento do checklist)
