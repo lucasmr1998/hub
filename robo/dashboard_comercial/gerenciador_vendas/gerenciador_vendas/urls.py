@@ -141,6 +141,10 @@ urlpatterns = [
     # Webhooks publicos de N8N externo (orquestradores enviando leads pra Hubtrix)
     path('api/public/n8n/', include('apps.integracoes.urls_n8n_public')),
 
+    # Adaptador do contrato Matrix (robo_v2) multi-empresa: /robo/<token>/ia/...
+    # Tenant resolvido pelo <token> na URL (api_token da IntegracaoAPI). Sem login.
+    path('robo/', include('apps.comercial.robo_matrix.urls')),
+
     # === Landing Pages publicas (sem login) ===
     path('p/', include('apps.marketing.landing_pages.urls')),
 

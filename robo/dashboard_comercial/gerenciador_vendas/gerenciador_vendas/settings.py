@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'apps.comercial.cadastro',
     'apps.comercial.viabilidade',
     'apps.comercial.crm',
+    'apps.comercial.robo_matrix',
 
     # === Módulo Marketing ===
     'apps.marketing.campanhas',
