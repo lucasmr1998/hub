@@ -261,3 +261,28 @@ def test_itens_ordenar_reordena(client, tenant):
     assert i3.ordem == 0
     assert i1.ordem == 1
     assert i2.ordem == 2
+
+
+@pytest.mark.django_db
+def test_pagina_novo_renderiza_sem_pk(client, tenant):
+    """Tela de NOVO checklist (sem pk) precisa renderizar.
+
+    Regressao: o template montava `{% url ... checklist.pk %}` pros endpoints de
+    item, e o `{% url %}` e resolvido pelo Django ANTES do JS rodar, entao o
+    guard de CHECKLIST_ID no script nao evitava o NoReverseMatch.
+    """
+    client.force_login(mk_user(tenant, 'workspace.ver', 'workspace.editar_todos'))
+    r = client.get(reverse('workspace:checklist_novo'))
+    assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_pagina_editar_renderiza_com_pk(client, tenant):
+    """Contraparte: com checklist salvo, a tela abre e traz os endpoints de item."""
+    checklist = _mk_checklist(tenant)
+    ItemChecklist.all_tenants.create(
+        tenant=tenant, checklist=checklist, chave='cep', pergunta='Qual o CEP?', ordem=0)
+    client.force_login(mk_user(tenant, 'workspace.ver', 'workspace.editar_todos'))
+    r = client.get(reverse('workspace:checklist_editar', args=[checklist.pk]))
+    assert r.status_code == 200
+    assert 'Qual o CEP?' in r.content.decode()

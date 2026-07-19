@@ -341,8 +341,16 @@
     // ---------------------------------------------------------------
     // Itens
     // ---------------------------------------------------------------
+    {# A tag de url e resolvida pelo Django ANTES do JS rodar, entao o guard de
+       CHECKLIST_ID la em cima nao basta: na tela de novo (sem pk) o reverse
+       explodiria com NoReverseMatch. Por isso o if de template aqui tambem. #}
+    {% if checklist.pk %}
     var URL_ITEM_SALVAR = '{% url "workspace:checklist_item_salvar" checklist.pk %}';
     var URL_ITENS_ORDENAR = '{% url "workspace:checklist_itens_ordenar" checklist.pk %}';
+    {% else %}
+    var URL_ITEM_SALVAR = '';
+    var URL_ITENS_ORDENAR = '';
+    {% endif %}
     var ITENS = JSON.parse(document.getElementById('itens-data').textContent);
     var ITENS_ORDEM = ITENS.map(function (i) { return i.id; });
 
