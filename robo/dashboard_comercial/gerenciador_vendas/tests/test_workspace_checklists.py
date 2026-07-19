@@ -286,3 +286,22 @@ def test_pagina_editar_renderiza_com_pk(client, tenant):
     r = client.get(reverse('workspace:checklist_editar', args=[checklist.pk]))
     assert r.status_code == 200
     assert 'Qual o CEP?' in r.content.decode()
+
+
+@pytest.mark.django_db
+def test_editor_nao_vaza_comentario_de_template_no_script(client, tenant):
+    """O JS do editor precisa chegar no navegador sem sujeira de template.
+
+    Regressao real: um comentario `{# ... #}` de MAIS DE UMA LINHA nao e removido
+    pelo Django (a sintaxe so vale numa linha), entao vazava literal pra dentro do
+    <script> e quebrava o parse. Resultado: `window.editarItem` nunca era definido
+    e o botao editar de cada item ficava inerte, sem erro visivel na tela.
+    """
+    checklist = _mk_checklist(tenant)
+    ItemChecklist.all_tenants.create(
+        tenant=tenant, checklist=checklist, chave='cep', pergunta='Qual o CEP?', ordem=0)
+    client.force_login(mk_user(tenant, 'workspace.ver', 'workspace.editar_todos'))
+    html = client.get(reverse('workspace:checklist_editar', args=[checklist.pk])).content.decode()
+
+    assert '{#' not in html, 'comentario de template vazou pro HTML/JS'
+    assert 'window.editarItem' in html, 'a funcao do botao editar sumiu do script'

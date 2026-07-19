@@ -341,9 +341,11 @@
     // ---------------------------------------------------------------
     // Itens
     // ---------------------------------------------------------------
-    {# A tag de url e resolvida pelo Django ANTES do JS rodar, entao o guard de
-       CHECKLIST_ID la em cima nao basta: na tela de novo (sem pk) o reverse
-       explodiria com NoReverseMatch. Por isso o if de template aqui tambem. #}
+    // A tag de url e resolvida pelo Django ANTES do JS rodar, entao o guard de
+    // CHECKLIST_ID la em cima nao basta: na tela de novo (sem pk) o reverse
+    // explodiria com NoReverseMatch. Por isso o if de template aqui tambem.
+    // (Comentario em JS, nao em template: o {# #} do Django so vale numa linha
+    // e, com mais de uma, vaza literal pro script e quebra o parse.)
     {% if checklist.pk %}
     var URL_ITEM_SALVAR = '{% url "workspace:checklist_item_salvar" checklist.pk %}';
     var URL_ITENS_ORDENAR = '{% url "workspace:checklist_itens_ordenar" checklist.pk %}';
