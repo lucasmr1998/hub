@@ -134,5 +134,14 @@ def api_dar_saida(request, pk):
     except TransicaoInvalida as erro:
         return JsonResponse({'erro': str(erro)}, status=400)
 
+    # Regra de parada (4.4): admitir alem do limite e permitido, porem sinalizado.
+    # A decisao e do RH; o sistema so garante que passar do teto seja consciente.
+    aviso = ''
+    if (saida == estados_rs.SAIDA_ADMITIDO and candidato.vaga_id
+            and candidato.vaga.atingiu_limite):
+        aviso = (f'Esta vaga já atingiu o limite de {candidato.vaga.limite_aprovados} '
+                 f'aprovados. Considere encerrar a vaga.')
+
     return JsonResponse({'ok': True, 'saida': saida,
-                         'rotulo': estados_rs.rotulo_saida(saida)})
+                         'rotulo': estados_rs.rotulo_saida(saida),
+                         'aviso': aviso})

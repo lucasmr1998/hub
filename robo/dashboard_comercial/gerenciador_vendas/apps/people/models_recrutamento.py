@@ -288,6 +288,24 @@ class Vaga(TenantMixin):
         """
         return self.requisitos.filter(usar_na_triagem=True)
 
+    @property
+    def total_admitidos(self):
+        """Quantos candidatos desta vaga ja sairam por admitido."""
+        return self.candidatos.filter(saida=estados_rs.SAIDA_ADMITIDO).count()
+
+    @property
+    def atingiu_limite(self):
+        """
+        A vaga ja bateu o teto de aprovados.
+
+        Regra 4.4 da spec: ao atingir `limite_aprovados`, a triagem para; a
+        captacao continua. Nao temos triagem por IA, entao aqui isto e um AVISO,
+        e nao um bloqueio: admitir o candidato 51 continua possivel, porque a
+        decisao final e do RH. O que o sistema faz e deixar visivel que o teto
+        foi passado, pra ser decisao e nao descuido.
+        """
+        return self.total_admitidos >= self.limite_aprovados
+
     def mudar_status(self, novo_status):
         """
         Aplica a mudanca de status, validando contra a maquina.
@@ -572,6 +590,100 @@ class Candidato(TenantMixin):
         self.consentimento_user_agent = ''
         self.anonimizado_em = timezone.now()
         self.save()
+
+
+class QuadroUnidade(TenantMixin):
+    """
+    Quantas posicoes de um cargo a unidade quer ter.
+
+    E a moldura contra a qual o recrutamento e lido: "a loja quer 8 atendentes,
+    tem 6 ativos e 2 em processo" e a leitura que o franqueado faz. Sem isso,
+    vaga aberta e um numero solto; com isso, vira "faltam 2".
+
+    Os derivados (ativos, em processo) NAO sao colunas: sao consulta, calculada
+    na hora. Guardar contagem em coluna e o caminho mais curto pra ela divergir
+    do que realmente existe, e a divergencia so aparece quando alguem confere na
+    mao. Ver `situacao()`.
+    """
+
+    unidade = models.ForeignKey(
+        'people.Unidade', on_delete=models.CASCADE, related_name='quadros',
+        verbose_name="Unidade",
+    )
+    cargo = models.ForeignKey(
+        'people.Cargo', on_delete=models.CASCADE, related_name='quadros',
+        verbose_name="Cargo",
+    )
+    quadro_definido = models.PositiveSmallIntegerField(
+        default=0, verbose_name="Quadro definido",
+        help_text="Quantas posições deste cargo a unidade deve ter.",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_quadro_unidade'
+        verbose_name = 'Quadro da unidade'
+        verbose_name_plural = 'Quadros das unidades'
+        ordering = ['unidade__nome', 'cargo__nome']
+        indexes = [
+            models.Index(fields=['tenant', 'unidade'],
+                         name='people_quadro_und_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'unidade', 'cargo'],
+                name='people_quadro_unico_por_unidade_cargo',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.cargo.nome} em {self.unidade.nome}: {self.quadro_definido}'
+
+    def admitidos_ativos(self):
+        """
+        Colaboradores ativos deste cargo nesta unidade.
+
+        Le do DP (Colaborador), nao do Candidato: quem ja foi admitido e virou
+        gente da casa conta como ocupacao real do quadro, e nao como processo.
+
+        `cargo` do Colaborador e FK pra Cargo, entao filtra por FK, nao por
+        nome. O campo comecou como texto livre no plano e virou entidade quando
+        os prints da Visio mostraram que Cargo tem CRUD.
+        """
+        from apps.people.models import Colaborador
+        from apps.people import estados as estados_dp
+
+        return (Colaborador.all_tenants.filter(
+            tenant=self.tenant, unidade=self.unidade, cargo=self.cargo,
+            situacao__in=estados_dp.SITUACOES_ATIVAS).count())
+
+    def em_processo(self):
+        """Candidatos ainda no pipeline pra vaga deste cargo nesta unidade."""
+        return Candidato.all_tenants.filter(
+            tenant=self.tenant, unidade=self.unidade,
+            vaga__cargo=self.cargo, saida='',
+            anonimizado_em__isnull=True).count()
+
+    def situacao(self):
+        """
+        Foto do quadro pra tela: definido, ativos, em processo e o que falta.
+
+        Um dict pronto, e nao os numeros soltos, pra que o template so exiba. A
+        conta de 'faltam' vive aqui e nao no template, senao cada tela que
+        mostrar quadro reimplementa e alguma erra.
+        """
+        ativos = self.admitidos_ativos()
+        processo = self.em_processo()
+        faltam = max(self.quadro_definido - ativos, 0)
+        return {
+            'definido': self.quadro_definido,
+            'ativos': ativos,
+            'em_processo': processo,
+            'faltam': faltam,
+            'cobre_a_falta': processo >= faltam,
+        }
 
 
 class HistoricoCandidato(TenantMixin):
