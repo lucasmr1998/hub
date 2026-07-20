@@ -160,6 +160,7 @@ urlpatterns = [
     # A rota pública vem ANTES: o include de 'people/' captura tudo sob o
     # prefixo, e o auto cadastro precisa ficar fora do gate de permissão.
     path('people/publico/', include('apps.people.urls_publico')),
+    path('people/candidatura/', include('apps.people.urls_candidatura')),
     path('people/', include('apps.people.urls')),
 
     # === Media files (uploads) ===

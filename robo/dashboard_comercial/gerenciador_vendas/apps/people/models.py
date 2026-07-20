@@ -90,6 +90,12 @@ class ConfiguracaoPeople(TenantMixin):
         default=0, verbose_name="Validade do link de cadastro (dias)",
         help_text="0 significa que o link nao expira sozinho.",
     )
+    dias_retencao_candidato = models.PositiveSmallIntegerField(
+        default=365, verbose_name="Retencao do banco de talentos (dias)",
+        help_text="Depois deste prazo sem movimentacao, o candidato nao "
+                  "contratado e anonimizado. O prazo e declarado no "
+                  "consentimento do formulario publico. 0 desliga o expurgo.",
+    )
 
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -923,5 +929,5 @@ class SubmissaoLinkCadastro(TenantMixin):
 # O re-export existe pra que `from apps.people.models import EtapaPipeline`
 # continue funcionando, no padrao de apps/sistema/models.py.
 from apps.people.models_recrutamento import (  # noqa: E402,F401
-    EtapaPipeline, LinkCandidatura, RequisitoVaga, Vaga,
+    Candidato, EtapaPipeline, LinkCandidatura, RequisitoVaga, Vaga,
 )

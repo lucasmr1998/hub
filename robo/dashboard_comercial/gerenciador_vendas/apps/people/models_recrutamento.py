@@ -9,6 +9,8 @@ Recrutamento e um subdominio inteiro, no padrao de split de
 Passo 1 do plano (`robo/docs/PRODUTO/modulos/people/RECRUTAMENTO-PLANO.md`):
 so a EtapaPipeline. Vaga, LinkCandidatura e Candidato vem nos passos seguintes.
 """
+import re
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -378,6 +380,198 @@ class RequisitoVaga(TenantMixin):
 
     def __str__(self):
         return self.texto
+
+
+class Candidato(TenantMixin):
+    """
+    Alguem que se candidatou. NAO e colaborador, e por isso mora em tabela
+    propria.
+
+    Se fosse mais uma `situacao` do Colaborador, toda consulta de RH (board do
+    DP, analises, feedback, clima) teria que lembrar de excluir candidato, e o
+    vocabulario racharia. Ja pagamos esse erro neste modulo uma vez.
+
+    A PONTE PRO DP: `colaborador` e FK nula, preenchida so quando o candidato e
+    admitido. Nao e o candidato que "vira" colaborador; e o colaborador que
+    passa a referenciar de qual candidatura veio. Os dois registros coexistem,
+    porque respondem perguntas diferentes: um e a pessoa da casa, outro e o
+    processo seletivo que a trouxe.
+
+    DEDUP POR WHATSAPP, e nao por CPF. O formulario publico nao coleta CPF de
+    proposito: a origem testou e descartou por atrito de conversao, e a dor
+    numero um do cliente e justamente "nao chega candidato". O CPF entra depois,
+    na aprovacao, pelo formulario de cadastro do DP, que e onde a constraint de
+    CPF ja mora.
+
+    Motivo declarado do dedup por numero, que nao e seguranca e sim integridade
+    de metrica: "fica parecendo pra gente um numero falso, parece que tem 300
+    pessoas que se candidataram pra aquela vaga, mas 20 e a mesma pessoa se
+    candidatando incansavelmente."
+
+    FURO CONHECIDO E ADMITIDO: a mesma pessoa com numeros diferentes passa. A
+    origem sabe e nao resolveu. Fica documentado em vez de fingido.
+    """
+
+    # ── Identidade ──
+    nome_completo = models.CharField(max_length=200, verbose_name="Nome completo")
+    whatsapp = models.CharField(
+        max_length=15, null=True, blank=True, default=None,
+        verbose_name="WhatsApp",
+        help_text="So digitos, E.164 sem o mais. Ex: 5586999998888.",
+    )
+    email = models.EmailField(blank=True, default='', verbose_name="Email")
+    data_nascimento = models.DateField(null=True, blank=True,
+                                       verbose_name="Data de nascimento")
+
+    # ── Endereco (o que a origem coleta) ──
+    cidade = models.CharField(max_length=100, blank=True, default='',
+                              verbose_name="Cidade")
+    estado = models.CharField(max_length=2, blank=True, default='',
+                              verbose_name="Estado")
+    bairro = models.CharField(max_length=100, blank=True, default='',
+                              verbose_name="Bairro")
+
+    # ── Perfil ──
+    experiencia_previa = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name="Experiência prévia",
+    )
+    disponibilidade_horario = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name="Disponibilidade de horário",
+    )
+    curriculo = models.FileField(
+        upload_to='people/curriculos/%Y/%m/', null=True, blank=True,
+        verbose_name="Currículo",
+    )
+
+    # ── Processo ──
+    vaga = models.ForeignKey(
+        Vaga, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='candidatos', verbose_name="Vaga",
+        help_text="Nulo quando veio por link de banco de talentos.",
+    )
+    unidade = models.ForeignKey(
+        'people.Unidade', on_delete=models.PROTECT, related_name='candidatos',
+        verbose_name="Unidade",
+    )
+    link_origem = models.ForeignKey(
+        'people.LinkCandidatura', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='candidatos', verbose_name="Link de origem",
+        help_text="Como a atribuição de canal sobrevive à exclusão do link.",
+    )
+    etapa = models.ForeignKey(
+        EtapaPipeline, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='candidatos', verbose_name="Etapa",
+    )
+    saida = models.CharField(
+        max_length=20, choices=estados_rs.SAIDAS, blank=True, default='',
+        db_index=True, verbose_name="Saída",
+        help_text="Vazio significa que ainda esta no pipeline.",
+    )
+    motivo_saida = models.TextField(blank=True, default='',
+                                    verbose_name="Motivo da saída")
+    colaborador = models.ForeignKey(
+        'people.Colaborador', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='candidaturas', verbose_name="Colaborador",
+        help_text="Preenchido na admissão. Ver a ponte no docstring da classe.",
+    )
+
+    # ── LGPD ──
+    consentimento_lgpd = models.BooleanField(default=False)
+    consentimento_em = models.DateTimeField(null=True, blank=True)
+    consentimento_ip = models.GenericIPAddressField(null=True, blank=True)
+    consentimento_versao = models.CharField(max_length=20, blank=True, default='')
+    consentimento_user_agent = models.TextField(blank=True, default='')
+    retencao_ate = models.DateField(
+        null=True, blank=True, verbose_name="Reter até",
+        help_text="Depois desta data o cron anonimiza. Prazo declarado no "
+                  "consentimento.",
+    )
+    anonimizado_em = models.DateTimeField(null=True, blank=True)
+
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_candidato'
+        verbose_name = 'Candidato'
+        verbose_name_plural = 'Candidatos'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'vaga', 'etapa'],
+                         name='people_cand_pipeline_idx'),
+            models.Index(fields=['tenant', 'saida'], name='people_cand_saida_idx'),
+            models.Index(fields=['tenant', 'retencao_ate'],
+                         name='people_cand_retencao_idx'),
+        ]
+        constraints = [
+            # Regra 4.5 da spec. Mesma forma do CPF no Colaborador: ausente e
+            # NULL (e NULLs sao distintos no Postgres, entao varios sem numero
+            # convivem), presente e unico por tenant.
+            models.UniqueConstraint(
+                fields=['tenant', 'whatsapp'],
+                name='people_candidato_whatsapp_unico_por_tenant',
+            ),
+            # Sem esta check, um unico ponto gravando '' faz o segundo ''
+            # estourar a unique com IntegrityError incompreensivel. E a mesma
+            # classe de bug que a check de CPF fecha no Colaborador.
+            models.CheckConstraint(
+                condition=(models.Q(whatsapp__isnull=True)
+                           | models.Q(whatsapp__regex=r'^\d{10,15}$')),
+                name='people_candidato_whatsapp_formato',
+            ),
+        ]
+
+    def __str__(self):
+        return self.nome_completo
+
+    def save(self, *args, **kwargs):
+        """
+        Normaliza o WhatsApp pra so digitos, ou None.
+
+        String vazia jamais chega ao banco: e ela que quebraria a unique.
+        """
+        self.whatsapp = re.sub(r'\D', '', self.whatsapp or '') or None
+        super().save(*args, **kwargs)
+
+    @property
+    def esta_no_pipeline(self):
+        return not self.saida
+
+    @property
+    def canal_origem(self):
+        """De qual canal veio. Sobrevive a desativacao do link."""
+        return self.link_origem.get_canal_display() if self.link_origem_id else ''
+
+    def anonimizar(self):
+        """
+        Tira a pessoa e mantem o numero.
+
+        Anonimizar em vez de apagar porque a analise de canal nao pode mentir
+        retroativamente: se a linha sumisse, o funil de tres meses atras
+        passaria a dizer que chegaram menos candidatos do que chegaram.
+
+        O arquivo do curriculo e apagado de verdade. Ele nao entra em nenhuma
+        agregacao e e o dado mais sensivel do registro.
+        """
+        if self.curriculo:
+            self.curriculo.delete(save=False)
+
+        self.nome_completo = 'Candidato anonimizado'
+        self.whatsapp = None
+        self.email = ''
+        self.data_nascimento = None
+        self.cidade = ''
+        self.estado = ''
+        self.bairro = ''
+        self.experiencia_previa = ''
+        self.disponibilidade_horario = ''
+        self.consentimento_ip = None
+        self.consentimento_user_agent = ''
+        self.anonimizado_em = timezone.now()
+        self.save()
 
 
 class LinkCandidatura(TenantMixin):

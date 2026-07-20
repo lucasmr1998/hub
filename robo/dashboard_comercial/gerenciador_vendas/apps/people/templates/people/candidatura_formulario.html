@@ -1,0 +1,93 @@
+{% extends "people/publico_base.html" %}
+
+{% block title %}Candidatura, {{ unidade.nome }}{% endblock %}
+
+{% block conteudo %}
+  <div class="pub-header">
+    <h1 class="pub-titulo">
+      {% if vaga %}{{ vaga.nome_exibido }}{% else %}Deixe seu currículo{% endif %}
+    </h1>
+    <p class="pub-sub">{{ unidade.nome }}</p>
+  </div>
+
+  {% if erros.geral %}
+    <div class="pub-card" style="margin-bottom: var(--sp-4);">
+      <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ erros.geral }}</p>
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'people_candidatura:enviar' link.token %}"
+        enctype="multipart/form-data" class="pub-card">
+    {% csrf_token %}
+
+    {% comment %}
+      Honeypot. Humano nao ve, robo preenche. Fora da tela por CSS e nao por
+      type=hidden, porque preenchedor automatico ignora hidden.
+    {% endcomment %}
+    <div style="position: absolute; left: -9999px;" aria-hidden="true">
+      <label for="sobrenome_confirmacao">Não preencha</label>
+      <input type="text" id="sobrenome_confirmacao" name="sobrenome_confirmacao"
+             tabindex="-1" autocomplete="off">
+    </div>
+
+    <div class="pub-secao">
+      <h2 class="pub-secao-titulo"><i class="bi bi-person"></i> Seus dados</h2>
+      {% include "components/input.html" with name="nome_completo" label="Nome completo" value=valores.nome_completo required=True error=erros.nome_completo %}
+      {% include "components/input.html" with name="whatsapp" label="WhatsApp" type="tel" value=valores.whatsapp required=True error=erros.whatsapp helper="Com DDD. É por aqui que a gente responde." %}
+      {% include "components/input.html" with name="email" label="Email" type="email" value=valores.email error=erros.email %}
+      {% include "components/input.html" with name="data_nascimento" label="Data de nascimento" type="date" value=valores.data_nascimento error=erros.data_nascimento %}
+    </div>
+
+    <div class="pub-secao">
+      <h2 class="pub-secao-titulo"><i class="bi bi-geo-alt"></i> Onde você mora</h2>
+      {% include "components/input.html" with name="cidade" label="Cidade" value=valores.cidade error=erros.cidade %}
+      {% include "components/input.html" with name="bairro" label="Bairro" value=valores.bairro error=erros.bairro %}
+      {% include "components/input.html" with name="estado" label="Estado (UF)" value=valores.estado error=erros.estado %}
+    </div>
+
+    <div class="pub-secao">
+      <h2 class="pub-secao-titulo"><i class="bi bi-briefcase"></i> Sua experiência</h2>
+      {% include "components/input.html" with name="experiencia_previa" label="Experiência prévia" value=valores.experiencia_previa error=erros.experiencia_previa placeholder="Ex: 1 ano como atendente" %}
+      {% include "components/input.html" with name="disponibilidade_horario" label="Disponibilidade de horário" value=valores.disponibilidade_horario error=erros.disponibilidade_horario placeholder="Ex: noites e fins de semana" %}
+
+      <div class="field{% if erros.curriculo %} has-error{% endif %}">
+        <label class="field-label" for="curriculo">Currículo</label>
+        <div class="field-input-wrap">
+          <input type="file" class="field-input" id="curriculo" name="curriculo"
+                 accept=".pdf,.doc,.docx">
+        </div>
+        {% if erros.curriculo %}
+          <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ erros.curriculo }}</p>
+        {% else %}
+          <p class="field-helper">PDF ou Word, até 5 MB. Opcional.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="pub-secao">
+      {% include "components/checkbox.html" with name="consentimento_lgpd" label="Autorizo o uso dos meus dados neste processo seletivo" checked=valores.consentimento_lgpd %}
+      {% if erros.consentimento_lgpd %}
+        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ erros.consentimento_lgpd }}</p>
+      {% endif %}
+      <p class="field-helper" style="margin-top: var(--sp-2);">
+        {% if config.texto_consentimento_lgpd %}
+          {{ config.texto_consentimento_lgpd }}
+        {% else %}
+          Seus dados ficam com o RH desta unidade e são usados só para este
+          processo seletivo e para futuras oportunidades.
+        {% endif %}
+        {% if config.dias_retencao_candidato %}
+          Guardamos por até {{ config.dias_retencao_candidato }} dias sem
+          movimentação, e depois disso apagamos automaticamente.
+        {% endif %}
+        Para sair antes, fale com o RH da unidade.
+      </p>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enviar candidatura</button>
+  </form>
+
+  <p class="pub-sub" style="text-align: center; margin-top: var(--sp-4);">
+    Em caso de dúvida, procure o gerente da loja.
+  </p>
+{% endblock %}
