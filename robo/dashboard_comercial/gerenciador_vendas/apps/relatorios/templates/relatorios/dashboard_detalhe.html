@@ -75,6 +75,23 @@
     </select>
   </div>
   {% endif %}
+  {% if motivos_perda %}
+  {% comment %}
+    Motivo de perda: multiplo (marcar varios = OU entre eles). So aparece se o
+    tenant tem catalogo cadastrado. Fica <select multiple> em vez de chips
+    porque sao 12 motivos, e chips ocupariam a barra inteira.
+  {% endcomment %}
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Motivo de perda</span>
+    <select id="filtro-motivo-perda" class="field-input" multiple size="1"
+            style="height:30px;padding:2px 8px;font-size:var(--fs-sm);min-width:170px;max-width:240px;"
+            onchange="setFiltroMotivos()" title="Segure Ctrl (ou Cmd) pra marcar varios">
+      {% for m in motivos_perda %}<option value="{{ m.id }}">{{ m.nome }}</option>{% endfor %}
+    </select>
+    <button type="button" class="btn btn-sm filtro-chip" onclick="limparMotivos()"
+            id="btn-limpar-motivos" style="display:none;" title="Limpar motivos">&times;</button>
+  </div>
+  {% endif %}
   {% if vendedores %}
   {# Vendedor vira select: 11 nomes nao cabem em chips como periodo/fonte. #}
   <div style="display:flex;align-items:center;gap:6px;">
@@ -500,7 +517,25 @@ const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
 const CSRF = "{{ csrf_token }}";
 
 // Filtros globais do dashboard (barra no topo) — aplicados em todos os widgets
-const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '', equipe: '', base: '', data_inicio: '', data_fim: '' };
+const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '', equipe: '', base: '', data_inicio: '', data_fim: '', motivo_perda: [] };
+
+// Motivo de perda e multiplo: guarda LISTA e manda o param repetido.
+function setFiltroMotivos() {
+  const sel = document.getElementById('filtro-motivo-perda');
+  FILTRO_GLOBAL.motivo_perda = sel ? Array.from(sel.selectedOptions).map(o => o.value) : [];
+  const btn = document.getElementById('btn-limpar-motivos');
+  if (btn) btn.style.display = FILTRO_GLOBAL.motivo_perda.length ? '' : 'none';
+  recarregarWidgets();
+}
+
+function limparMotivos() {
+  const sel = document.getElementById('filtro-motivo-perda');
+  if (sel) Array.from(sel.options).forEach(o => { o.selected = false; });
+  FILTRO_GLOBAL.motivo_perda = [];
+  const btn = document.getElementById('btn-limpar-motivos');
+  if (btn) btn.style.display = 'none';
+  recarregarWidgets();
+}
 
 // Calendario: qualquer um dos dois campos ja filtra (so "de" = dai em diante,
 // so "ate" = ate tal dia). O backend trata os dois como opcionais.
@@ -560,6 +595,8 @@ function _filtroQuery() {
   if (FILTRO_GLOBAL.base) p.set('base', FILTRO_GLOBAL.base);
   if (FILTRO_GLOBAL.data_inicio) p.set('data_inicio', FILTRO_GLOBAL.data_inicio);
   if (FILTRO_GLOBAL.data_fim) p.set('data_fim', FILTRO_GLOBAL.data_fim);
+  // append (nao set): o backend le com getlist, entao o param vai repetido
+  (FILTRO_GLOBAL.motivo_perda || []).forEach(m => p.append('motivo_perda', m));
   const s = p.toString();
   return s ? `?${s}` : '';
 }

@@ -95,6 +95,13 @@ def _overrides_da_barra(request) -> dict:
     if base_param in ('hubtrix', 'importado'):
         overrides['base'] = base_param
 
+    # Motivo de perda: MULTIPLA escolha (getlist). Marcar 2 motivos e "um OU
+    # outro", nao a intersecao — uma op so tem um motivo, entao AND daria zero
+    # sempre.
+    motivos = [m for m in request.GET.getlist('motivo_perda') if m.strip().isdigit()]
+    if motivos:
+        overrides['motivo_perda'] = [int(m) for m in motivos]
+
     # Trava de visibilidade por permissao (independe da barra): quem nao tem
     # ver_todas so enxerga o proprio escopo de equipe. None = ve tudo.
     overrides['escopo_responsaveis'] = escopo_responsaveis(request)
@@ -163,6 +170,23 @@ def _equipes_do_tenant(request):
     return [{'id': e.id, 'nome': e.nome, 'membros': e.n} for e in equipes]
 
 
+def _motivos_perda_do_tenant(request):
+    """Motivos de perda ativos, pro filtro multiplo da barra.
+
+    So o catalogo (MotivoPerda), nao o texto livre: filtrar por texto digitado
+    daria uma lista infinita e sem agrupamento. Ordena como o CRM ordena, pra
+    a lista sair na mesma ordem que a vendedora ve na hora de perder a op.
+    """
+    from apps.comercial.crm.models import MotivoPerda
+
+    return list(
+        MotivoPerda.all_tenants
+        .filter(tenant=getattr(request, 'tenant', None), ativo=True)
+        .order_by('ordem', 'nome')
+        .values('id', 'nome')
+    )
+
+
 # ----------------------------------------------------------------------------
 # UI
 # ----------------------------------------------------------------------------
@@ -223,6 +247,7 @@ def dashboard_detalhe_view(request, pk):
         'chart_palette': json.dumps(paleta_tenant(getattr(request, 'tenant', None))),
         'vendedores': _vendedores_do_tenant(request),
         'equipes': _equipes_do_tenant(request),
+        'motivos_perda': _motivos_perda_do_tenant(request),
         'mostrar_base_cliente': _tem_filtro_base_cliente(widgets),
     })
 
@@ -269,6 +294,7 @@ def dashboard_editar_view(request, pk):
         # no modo edicao enquanto os chips de periodo e fonte continuavam la.
         'vendedores': _vendedores_do_tenant(request),
         'equipes': _equipes_do_tenant(request),
+        'motivos_perda': _motivos_perda_do_tenant(request),
         'mostrar_base_cliente': _tem_filtro_base_cliente(widgets),
     })
 

@@ -231,3 +231,42 @@
 - **Status:** completed (codigo). Deploy junto com o proximo push.
 
 ---
+
+## 2026-07-20 — Filtro de motivo de perda (multipla escolha) no painel (tarefa #210)
+
+- **Pedido do Lucas:** filtrar o painel comercial por motivo, selecao multipla. Ele
+  falou "motivo de venda" e corrigiu para PERDA. A checagem no dado confirmou que era
+  o caminho certo: motivo de GANHO esta vazio em 1052 ops e motivo de CONTRATACAO em
+  1513 servicos; so o de PERDA tem dado (Sem retorno 357, Sem viabilidade 77, etc).
+- **Requisito reforcado no meio do caminho:** "todos widgets tem que responder ao
+  filtro". A primeira versao fazia a fonte sem o campo IGNORAR (como vendedor/equipe
+  fazem). Mudou: todas as fontes em uso declaram o caminho ate o MotivoPerda.
+- **Implementacao:**
+  - `campo_motivo_perda` novo no DataSource, declarado em 8 fontes. Caminhos:
+    oportunidade `motivo_perda_ref`; lead `oportunidade_crm__motivo_perda_ref`;
+    historico_contato e cliente_hubsoft via `lead__...`; servico_hubsoft via
+    `cliente__lead__...`; tarefa/venda/conversa via `oportunidade__...`.
+  - `_aplicar_motivo_perda` no builder + `_motivo_ids()` nos helpers `_v_lead`,
+    `_v_op` e `_v_atend`, que sao o caminho dos TRANSFORMS (funil, conversao,
+    scorecard). Sem isso 5 widgets ficavam de fora, igual aconteceu com o calendario.
+  - Multiplo e OU (`__in`), nunca E: a op tem um motivo so, intersecao daria zero.
+  - **DISTINCT onde o caminho e reverso** (lead -> oportunidade_crm): lead com 2 ops
+    perdidas apareceria 2x e inflaria a contagem. Em dev nao ha esse caso hoje (0
+    leads com 2+ ops), mas o distinct protege quando houver.
+  - views: `_motivos_perda_do_tenant` + `getlist('motivo_perda')` no override.
+  - Template: `<select multiple>` (12 motivos nao cabem em chips) + botao de limpar.
+- **Validacao:** 56 widgets do tenant no builder: 56 respondem, 0 ignoram. Os 18 do
+  Painel Executivo pela API HTTP: 18 mudam, inclusive os graficos.
+- **ARMADILHA que custou 4 rodadas de teste falso:** o runserver com --noreload
+  carrega o codigo no boot, e o meu Stop-Process NAO estava matando o processo (a
+  porta seguia ocupada e o servidor novo nao subia). Resultado: o browser testava
+  codigo velho enquanto o teste direto testava o novo, e os dois discordavam.
+  Licao: depois de matar, CONFIRMAR que a porta ficou livre, e provar que o servidor
+  tem o codigo novo (uma chamada que so o codigo novo responde) ANTES de testar.
+  Segunda licao: ler card por data-widget-id, nunca por posicao — o GridStack
+  reordena o DOM e a leitura posicional compara card errado.
+- **Ressalva pro usuario:** 305 ops estao sem motivo preenchido (quase 1/4). O
+  recorte por motivo nunca conta a historia toda.
+- **Status:** completed (codigo, dev). Deploy pendente de confirmacao.
+
+---

@@ -56,6 +56,11 @@ class DataSource:
     # None = a fonte nao tem data natural (ex: historico_pipeline).
     campo_data: Optional[str] = None
 
+    # Caminho ORM ate o MotivoPerda, pro filtro multiplo da barra. So faz
+    # sentido onde existe perda (a oportunidade). Fonte sem isso ignora o
+    # filtro, igual acontece com vendedor/equipe.
+    campo_motivo_perda: Optional[str] = None
+
     # Caminho ORM ate a EquipeVendas, pro filtro global de TIME. Sai do mesmo
     # dono do campo_vendedor: responsavel -> PerfilVendedor (OneToOne) -> equipe.
     # Fonte sem dono nao tem time (mesma regra do vendedor: a base HubSoft
@@ -116,6 +121,7 @@ def todos() -> list[DataSource]:
 registrar(DataSource(
     slug='oportunidade',
     campo_data='data_criacao',
+    campo_motivo_perda='motivo_perda_ref',
     label='Oportunidades',
     model_path='crm.OportunidadeVenda',
     descricao='Oportunidades do pipeline comercial (com lead, estagio, valor, responsavel).',
@@ -167,6 +173,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='lead',
+    campo_motivo_perda='oportunidade_crm__motivo_perda_ref',
     campo_data='data_cadastro',
     label='Leads',
     model_path='leads.LeadProspecto',
@@ -214,6 +221,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='tarefa',
+    campo_motivo_perda='oportunidade__motivo_perda_ref',
     campo_data='data_criacao',
     label='Tarefas CRM',
     model_path='crm.TarefaCRM',
@@ -245,6 +253,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='venda',
+    campo_motivo_perda='oportunidade__motivo_perda_ref',
     campo_data='data_venda',
     label='Vendas (CRM)',
     model_path='crm.Venda',
@@ -265,6 +274,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='conversa',
+    campo_motivo_perda='oportunidade__motivo_perda_ref',
     campo_data='data_abertura',
     label='Conversas (Inbox)',
     model_path='inbox.Conversa',
@@ -281,6 +291,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='historico_contato',
+    campo_motivo_perda='lead__oportunidade_crm__motivo_perda_ref',
     campo_data='data_hora_contato',
     label='Atendimentos (Historico de Contato)',
     model_path='leads.HistoricoContato',
@@ -347,6 +358,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='cliente_hubsoft',
+    campo_motivo_perda='lead__oportunidade_crm__motivo_perda_ref',
     campo_data='data_cadastro_hubsoft',
     label='Clientes HubSoft',
     model_path='integracoes.ClienteHubsoft',
@@ -388,6 +400,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='servico_hubsoft',
+    campo_motivo_perda='cliente__lead__oportunidade_crm__motivo_perda_ref',
     campo_data='data_habilitacao',
     label='Servicos HubSoft',
     model_path='integracoes.ServicoClienteHubsoft',

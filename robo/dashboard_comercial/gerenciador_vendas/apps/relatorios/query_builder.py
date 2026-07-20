@@ -465,6 +465,7 @@ class WidgetQueryBuilder:
         qs = self._aplicar_vendedor(qs)
         qs = self._aplicar_equipe(qs)
         qs = self._aplicar_base_cliente(qs)
+        qs = self._aplicar_motivo_perda(qs)
         qs = self._aplicar_escopo_visibilidade(qs)
         return qs
 
@@ -478,6 +479,36 @@ class WidgetQueryBuilder:
             return qs.filter(**{f'{campo}_id': int(vendedor)})
         except (TypeError, ValueError):
             return qs
+
+    def _aplicar_motivo_perda(self, qs):
+        """Filtro multiplo de motivo de perda (barra do dashboard).
+
+        Varios motivos = OU entre eles (`__in`), nunca E: a oportunidade tem um
+        motivo so, entao intersecao devolveria zero sempre.
+
+        Fonte sem `campo_motivo_perda` ignora, igual vendedor/equipe. Isso e de
+        proposito: um card de leads ou de servico HubSoft nao tem perda, e
+        zera-lo daria a impressao de que "nao ha nada", quando na verdade o
+        filtro nem se aplica ali.
+        """
+        motivos = self.overrides.get('motivo_perda')
+        campo = getattr(self.data_source, 'campo_motivo_perda', None)
+        if not motivos or not campo:
+            return qs
+        try:
+            ids = [int(m) for m in motivos]
+        except (TypeError, ValueError):
+            return qs
+        qs = qs.filter(**{f'{campo}_id__in': ids})
+        # DISTINCT obrigatorio quando o caminho passa por relacao REVERSA
+        # (lead -> oportunidade_crm): o lead com 2 ops perdidas apareceria 2x e
+        # inflaria a contagem. Nas fontes cujo caminho e so FK direta
+        # (oportunidade, tarefa, venda, conversa) nao ha duplicata, mas o
+        # distinct nao muda o resultado — entao aplico onde ha reversa e deixo
+        # o resto intacto, pra nao pagar DISTINCT a toa.
+        if '_crm__' in campo or campo.startswith('cliente__lead__'):
+            qs = qs.distinct()
+        return qs
 
     def _aplicar_equipe(self, qs):
         """Filtra pelo time global, quando a fonte tem dono."""
@@ -646,6 +677,16 @@ class WidgetQueryBuilder:
         do caminho count/sum, com o path de responsavel de cada transform."""
         return self.overrides.get('escopo_responsaveis')
 
+    def _motivo_ids(self):
+        """Ids do filtro multiplo de motivo de perda, ou None."""
+        motivos = self.overrides.get('motivo_perda')
+        if not motivos:
+            return None
+        try:
+            return [int(m) for m in motivos]
+        except (TypeError, ValueError):
+            return None
+
     def _v_lead(self, qs):
         """Leads do vendedor/time = leads cuja oportunidade e dele (OneToOne, sem duplicar)."""
         v = self._vendedor_id()
@@ -657,6 +698,9 @@ class WidgetQueryBuilder:
         esc = self._escopo_ids()
         if esc is not None:
             qs = qs.filter(oportunidade_crm__responsavel_id__in=esc)
+        mot = self._motivo_ids()
+        if mot:
+            qs = qs.filter(oportunidade_crm__motivo_perda_ref_id__in=mot).distinct()
         return qs
 
     def _v_op(self, qs):
@@ -669,6 +713,10 @@ class WidgetQueryBuilder:
         esc = self._escopo_ids()
         if esc is not None:
             qs = qs.filter(responsavel_id__in=esc)
+        mot = self._motivo_ids()
+        if mot:
+            # FK direta: sem duplicata, distinct desnecessario
+            qs = qs.filter(motivo_perda_ref_id__in=mot)
         return qs
 
     def _v_atend(self, qs):
@@ -682,6 +730,9 @@ class WidgetQueryBuilder:
         esc = self._escopo_ids()
         if esc is not None:
             qs = qs.filter(lead__oportunidade_crm__responsavel_id__in=esc)
+        mot = self._motivo_ids()
+        if mot:
+            qs = qs.filter(lead__oportunidade_crm__motivo_perda_ref_id__in=mot).distinct()
         return qs
 
     def _agg_expr(self, metrica: dict):
