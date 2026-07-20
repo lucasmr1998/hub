@@ -285,3 +285,25 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - **Status:** completed. Raiz (bot embaralhando endereco) na tarefa #201.
 
 ---
+
+## 2026-07-20 — Respostas do bot no detalhe do lead
+
+- **Acao:** secao "Respostas do bot" no `lead_detail.html`, alimentada por
+  `_respostas_checklist_do_lead` em `apps/comercial/leads/views.py`.
+- **Motivacao:** o bot de venda por WhatsApp (tarefa 204) coleta CPF, nome,
+  nascimento, email e o resto do roteiro, mas a vendedora que pegasse a
+  conversa no meio nao tinha como ver nada disso. Contraparte da tela de
+  acompanhamento criada no Workspace (ver execution-log do modulo workspace).
+- **O que mostra:** pergunta, o que o cliente respondeu e o valor normalizado
+  quando difere do bruto (ex: CPF gravado sem pontuacao, data em ISO). Agrupado
+  por checklist, na ordem dos itens. A secao NAO renderiza quando o lead nao
+  tem resposta nenhuma, pra nao deixar bloco vazio na pagina.
+- **Desempenho:** uma query so, com `select_related` de checklist e item; o
+  agrupamento por checklist e feito em memoria.
+- **Limitacao conhecida (nao resolvida aqui):** o espelho da resposta em
+  `LeadProspecto.dados_custom` so acontece quando o item do checklist esta
+  ligado a um `CampoCustomizado`. As 22 perguntas semeadas pro bot da Nuvyon
+  nasceram sem essa ligacao, entao hoje o dado vive so na tabela de respostas
+  do checklist e NAO aparece nos campos do cadastro. Ligar os itens aos campos
+  e trabalho separado.
+- **Status:** completed

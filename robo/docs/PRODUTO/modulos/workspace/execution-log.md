@@ -109,3 +109,34 @@ fonte unica do agente = `automacao.Agente`, multi-tenant-ready). Plano em `.clau
   Status: pending.
 - **Ambiente:** dev migrado pro Docker `pgvector/pgvector:pg17` (5433), pois o PG 18 nativo nao tem
   pgvector. Ver `context/reunioes/agentes_workspace_fase1_29-06-2026.md` e a memoria de referencia.
+
+## 2026-07-20 — Tela de acompanhamento das respostas do checklist
+
+- **Acao:** nova tela `/workspace/checklists/<pk>/respostas/` (view
+  `checklists.respostas_page`, rota `workspace:checklist_respostas`), com link
+  a partir da listagem de checklists e do editor.
+- **Motivacao:** o bot de venda por WhatsApp (tarefa 204) ja gravava resposta
+  de checklist em producao, mas nao havia nenhuma forma de ver isso pela
+  interface. Dado coletado que ninguem consegue ler nao serve pra decisao.
+- **O que mostra:** uma linha por entidade que comecou a responder, com
+  identificacao (nome e telefone quando e lead), progresso (respondidos sobre
+  total, com barra), item onde parou e data da ultima resposta. Ordenado pela
+  ultima resposta, 25 por pagina, com link pro detalhe do lead.
+- **Decisao de produto:** a leitura por checklist responde "como o bot esta
+  indo" (onde o roteiro perde gente), diferente da leitura por lead, que
+  responde "o que ja sei desse cliente" e vive no detalhe do lead (ver
+  execution-log do modulo comercial). As duas foram entregues juntas.
+- **Desempenho:** listar N entidades chamando `progresso()` por entidade daria
+  N+1. O servico `apps/automacao/services/checklist.py` foi partido em duas
+  camadas: funcoes `*_de` (`itens_elegiveis_de`, `progresso_de`,
+  `proximo_item_de`) recebem itens e respostas ja carregados e concentram a
+  regra; as funcoes antigas viraram wrappers que so buscam e delegam. Assim a
+  tela carrega tudo em bulk (`respostas_por_entidade`) sem duplicar a regra de
+  progresso. Assinaturas publicas antigas inalteradas.
+- **Design system:** componente novo `templates/components/progress_bar.html`
+  criado ANTES do uso e adicionado ao showcase. O bloco de barra que ja existia
+  (`breakdown_row`) carrega label e stats, que nao cabem em celula de tabela.
+- **Testes:** 16 novos em `tests/test_workspace_checklist_respostas.py`
+  (isolamento entre tenants, progresso batendo com o servico, ordem dos itens,
+  lead apagado nao quebrando a tela). Suite de checklist: 84 verdes.
+- **Status:** completed
