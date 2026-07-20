@@ -1368,10 +1368,21 @@ function _executarMoverOportunidade(opId, estagioId, extras) {
       if (data.codigo === 'motivo_perda_obrigatorio') {
         // Configuracao mudou enquanto user nao tinha selecionado motivo — reabre modal
         toast('Atencao', data.erro, 'warning');
-        carregarPipeline();
+      } else if (data.codigo === 'campos_obrigatorios_faltando') {
+        // Lista o que falta: sem isso o vendedor so ve "bloqueado" e nao sabe o
+        // que preencher. Os campos vem do modal "Completar dados" da oportunidade.
+        const labels = (data.campos_faltando || []).map(c => c.label).join(', ');
+        toast('Faltam dados',
+              labels
+                ? 'Preencha antes de mover: ' + labels + '. Abra a oportunidade e use "Completar dados".'
+                : (data.erro || 'Campos obrigatorios faltando'),
+              'warning');
       } else {
         toast('Erro', data.erro || 'Erro ao mover', 'danger');
       }
+      // Recarrega em qualquer erro: o card ficava visualmente na coluna nova
+      // mesmo com a movimentacao rejeitada no backend.
+      carregarPipeline();
       mostrarLoader(false);
     }
   })

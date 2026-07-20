@@ -307,3 +307,56 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
   do checklist e NAO aparece nos campos do cadastro. Ligar os itens aos campos
   e trabalho separado.
 - **Status:** completed
+
+## 2026-07-20 — Campos obrigatorios por etapa cobrem os dados comerciais (bloco B, tarefa 212)
+
+- **Acao:** ampliar o gate de `PipelineEstagio.campos_obrigatorios` pra cobrir os
+  4 campos comerciais que o modal "Completar dados" ja coletava mas que nao
+  eram exigiveis por etapa, e fazer o kanban dizer o que falta.
+- **Motivacao (dado de prod, Nuvyon 01/07 a 20/07):** o relatorio do HubSoft
+  mostra 276 vendas e o nosso painel 240. Investigando, os dois conjuntos so se
+  sobrepoem em 132: sao metricas diferentes, nao um erro de 36. A causa e que
+  **754 dos ~1080 leads estao presos em `status_api='rascunho_hubsoft'`** — o
+  prospecto foi criado no HubSoft (todos os 754 tem `id_hubsoft`), mas o lead
+  fica incompleto no Hubtrix, entao `editar_prospecto` nunca roda e o status
+  nunca vira `processado`. Como o cron `sincronizar_clientes` filtra
+  `status_api='processado'`, esses leads nunca ganham `ClienteHubsoft`. Resultado:
+  92 oportunidades ganhas no periodo sem cliente espelhado (65 delas em
+  rascunho, 24 sem CPF nenhum).
+- **Decisao:** reaproveitar o mecanismo existente de campos obrigatorios por
+  etapa em vez de criar aviso novo, travando o estagio de Ganho enquanto o lead
+  estiver incompleto. Foi escolha do dono, e e a opcao certa: menos codigo e o
+  operador configura sozinho pela UI.
+- **Output:**
+  - `apps/comercial/crm/services/requisitos_estagio.py`: +4 entradas em
+    `CAMPOS_DISPONIVEIS`, modulo "Comercial" — `lead.id_plano_rp`,
+    `lead.id_dia_vencimento`, `lead.id_origem`, `lead.id_origem_servico`.
+    Os tipos ja funcionam com o `_valor_preenchido` atual (CharField vazio e
+    IntegerField None). A UI de `/crm/configuracoes/` agrupa por modulo
+    sozinha, entao a secao nova aparece sem mudanca de template.
+  - `apps/comercial/crm/templates/crm/pipeline.html`: o kanban agora trata o
+    codigo `campos_obrigatorios_faltando` e lista os labels do que falta. Antes
+    caia no toast generico ("Campos obrigatorios faltando para entrar em X")
+    sem dizer quais, o que tornaria o bloqueio inutilizavel na pratica. Junto,
+    passou a recarregar o pipeline em qualquer erro: o card ficava visualmente
+    na coluna nova mesmo com a movimentacao rejeitada no backend.
+  - `tests/test_views_crm_apis.py`: `TestGateCamposObrigatorios`, 4 casos
+    (campos configuraveis, bloqueio com lead incompleto, liberacao com lead
+    completo, regressao de estagio sem config). Passando.
+- **Fora de escopo, registrado:** varios caminhos furam o gate porque setam
+  `estagio` direto sem chamar `campos_faltando` — `apps/assistente/tools.py`,
+  `apps/api/views_crm_n8n.py`, `apps/automacao/services/acoes.py`,
+  `apps/inbox/services.py`, `crm/signals.py`. O bloqueio pega a vendedora
+  arrastando o card, nao pega o Matrix movendo por regra.
+- **Nao e meu, mas achei:** `tests/.../TestLeadsTokenAPIs::test_consultar_leads_com_token`
+  falha em dev (403 vs 200). O teste seta `N8N_API_TOKEN` via `os.environ` em
+  runtime, mas o settings le no import. O teste irmao logo acima ja esta
+  marcado `xfail` pelo mesmo motivo; esse escapou.
+- **Pendente:** (1) configurar quais campos exigir no estagio de Ganho da
+  Nuvyon — decisao do dono, muda comportamento pras 17 vendedoras; (2) bloco A,
+  que e o que de fato recupera o passivo: alargar o filtro do cron pra incluir
+  `rascunho_hubsoft`, corrigir o sobrescrito silencioso do `lead` em
+  `_sincronizar_dados_cliente` (o `lead` vai no `defaults` com chave
+  `id_cliente`, entao dois leads com o mesmo CPF disputam a linha e o ultimo
+  vence sem log) e so entao rodar o backfill dos 754.
+- **Status:** completed (codigo); pending (config em prod + bloco A)

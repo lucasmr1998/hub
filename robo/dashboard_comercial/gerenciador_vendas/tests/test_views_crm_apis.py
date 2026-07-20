@@ -782,3 +782,82 @@ class TestCRMAPIsAuthRequired:
         fn = getattr(client, method)
         resp = fn(reverse(url_name))
         assert resp.status_code == 302
+
+
+# ── Gate de campos obrigatorios por estagio ──────────────────────────────
+
+class TestGateCamposObrigatorios:
+    """Os 4 campos comerciais do modal 'Completar dados' agora sao exigiveis
+    por etapa. Sem isso, oportunidade virava Ganho com lead incompleto e o
+    cliente nunca era espelhado do HubSoft."""
+
+    CAMPOS_COMERCIAIS = [
+        'lead.id_plano_rp', 'lead.id_dia_vencimento',
+        'lead.id_origem', 'lead.id_origem_servico',
+    ]
+
+    def _mover(self, api_client, op, estagio):
+        return api_client.post(
+            reverse('crm:api_mover_oportunidade'),
+            json.dumps({'oportunidade_id': op.pk, 'estagio_id': estagio.pk}),
+            content_type='application/json',
+        )
+
+    def test_campos_comerciais_estao_disponiveis_na_ui(self):
+        from apps.comercial.crm.services.requisitos_estagio import CAMPOS_DISPONIVEIS_DICT
+        for codigo in self.CAMPOS_COMERCIAIS:
+            assert codigo in CAMPOS_DISPONIVEIS_DICT, f'{codigo} nao configuravel'
+
+    def test_bloqueia_ganho_com_lead_incompleto(self, api_client, crm_api_setup):
+        cfg = crm_api_setup
+        e_ganho, op, lead = cfg['e_ganho'], cfg['op'], cfg['lead']
+        e_ganho.campos_obrigatorios = self.CAMPOS_COMERCIAIS
+        e_ganho.save(update_fields=['campos_obrigatorios'])
+
+        lead.id_plano_rp = None
+        lead.id_dia_vencimento = None
+        lead.id_origem = ''
+        lead.id_origem_servico = ''
+        lead.save(update_fields=[
+            'id_plano_rp', 'id_dia_vencimento', 'id_origem', 'id_origem_servico',
+        ])
+
+        resp = self._mover(api_client, op, e_ganho)
+        assert resp.status_code == 400
+        body = resp.json()
+        assert body['codigo'] == 'campos_obrigatorios_faltando'
+        # o kanban depende dessas labels pra dizer o que falta
+        faltando = {c['codigo'] for c in body['campos_faltando']}
+        assert faltando == set(self.CAMPOS_COMERCIAIS)
+        assert all(c['label'] for c in body['campos_faltando'])
+
+        op.refresh_from_db()
+        assert op.estagio_id != e_ganho.pk, 'oportunidade nao podia ter movido'
+
+    def test_libera_ganho_com_lead_completo(self, api_client, crm_api_setup):
+        cfg = crm_api_setup
+        e_ganho, op, lead = cfg['e_ganho'], cfg['op'], cfg['lead']
+        e_ganho.campos_obrigatorios = self.CAMPOS_COMERCIAIS
+        e_ganho.save(update_fields=['campos_obrigatorios'])
+
+        lead.id_plano_rp = 884
+        lead.id_dia_vencimento = 10
+        lead.id_origem = '1'
+        lead.id_origem_servico = '2'
+        lead.save(update_fields=[
+            'id_plano_rp', 'id_dia_vencimento', 'id_origem', 'id_origem_servico',
+        ])
+
+        resp = self._mover(api_client, op, e_ganho)
+        assert resp.status_code == 200, resp.content
+        assert resp.json()['ok'] is True
+        op.refresh_from_db()
+        assert op.estagio_id == e_ganho.pk
+
+    def test_estagio_sem_config_nao_bloqueia(self, api_client, crm_api_setup):
+        """Regressao: estagio sem campos_obrigatorios segue livre."""
+        cfg = crm_api_setup
+        resp = self._mover(api_client, cfg['op'], cfg['e_qualif'])
+        assert resp.status_code == 200, resp.content
+        cfg['op'].refresh_from_db()
+        assert cfg['op'].estagio_id == cfg['e_qualif'].pk

@@ -32,6 +32,11 @@ CAMPOS_DISPONIVEIS = [
     # Lead — qualificacao
     ('lead.empresa',          'Empresa',            'Qualificacao'),
     ('lead.score_qualificacao','Score (1-10)',      'Qualificacao'),
+    # Lead — dados comerciais (coletados no modal "Completar dados" da oportunidade)
+    ('lead.id_plano_rp',       'Plano contratado',   'Comercial'),
+    ('lead.id_dia_vencimento', 'Dia de vencimento',  'Comercial'),
+    ('lead.id_origem',         'Origem do cliente',  'Comercial'),
+    ('lead.id_origem_servico', 'Origem do servico',  'Comercial'),
     # Lead — gates externos
     ('lead.score_status_aprovado',  'Score externo APROVADO',     'Gate externo'),
     ('lead.documentacao_validada',  'Documentacao validada',      'Gate externo'),
