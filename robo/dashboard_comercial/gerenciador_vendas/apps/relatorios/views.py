@@ -98,9 +98,14 @@ def _overrides_da_barra(request) -> dict:
     # Motivo de perda: MULTIPLA escolha (getlist). Marcar 2 motivos e "um OU
     # outro", nao a intersecao — uma op so tem um motivo, entao AND daria zero
     # sempre.
-    motivos = [m for m in request.GET.getlist('motivo_perda') if m.strip().isdigit()]
-    if motivos:
-        overrides['motivo_perda'] = [int(m) for m in motivos]
+    # O valor especial 'sem' = motivo em branco. Existe porque op GANHA nao tem
+    # motivo de perda: sem essa opcao, marcar todos os motivos escondia as
+    # vendas, e o funil parecia ter perdido venda que na verdade estava fora do
+    # recorte.
+    motivos = [m.strip() for m in request.GET.getlist('motivo_perda') if m.strip()]
+    validos = [m for m in motivos if m.isdigit() or m == 'sem']
+    if validos:
+        overrides['motivo_perda'] = [int(m) if m.isdigit() else 'sem' for m in validos]
 
     # Trava de visibilidade por permissao (independe da barra): quem nao tem
     # ver_todas so enxerga o proprio escopo de equipe. None = ve tudo.

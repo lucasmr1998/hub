@@ -495,11 +495,10 @@ class WidgetQueryBuilder:
         campo = getattr(self.data_source, 'campo_motivo_perda', None)
         if not motivos or not campo:
             return qs
-        try:
-            ids = [int(m) for m in motivos]
-        except (TypeError, ValueError):
+        q = self._q_motivo(campo, motivos)
+        if q is None:
             return qs
-        qs = qs.filter(**{f'{campo}_id__in': ids})
+        qs = qs.filter(q)
         # DISTINCT obrigatorio quando o caminho passa por relacao REVERSA
         # (lead -> oportunidade_crm): o lead com 2 ops perdidas apareceria 2x e
         # inflaria a contagem. Nas fontes cujo caminho e so FK direta
@@ -678,14 +677,26 @@ class WidgetQueryBuilder:
         return self.overrides.get('escopo_responsaveis')
 
     def _motivo_ids(self):
-        """Ids do filtro multiplo de motivo de perda, ou None."""
+        """Selecao do filtro de motivo de perda (ids e/ou 'sem'), ou None."""
         motivos = self.overrides.get('motivo_perda')
-        if not motivos:
-            return None
-        try:
-            return [int(m) for m in motivos]
-        except (TypeError, ValueError):
-            return None
+        return motivos or None
+
+    @staticmethod
+    def _q_motivo(campo, motivos):
+        """Q do filtro de motivo: ids `__in` OU (se pediram) motivo em branco.
+
+        'sem' entra como OU porque o usuario pode querer "Preco + as que nao
+        tem motivo" numa tacada — e porque op GANHA nao tem motivo nenhum, e
+        sem essa opcao ela some do painel quando qualquer motivo e marcado.
+        """
+        ids = [m for m in motivos if isinstance(m, int) or (isinstance(m, str) and m.isdigit())]
+        sem = any(m == 'sem' for m in motivos)
+        q = Q()
+        if ids:
+            q |= Q(**{f'{campo}_id__in': [int(i) for i in ids]})
+        if sem:
+            q |= Q(**{f'{campo}__isnull': True})
+        return q if (ids or sem) else None
 
     def _v_lead(self, qs):
         """Leads do vendedor/time = leads cuja oportunidade e dele (OneToOne, sem duplicar)."""
@@ -700,7 +711,7 @@ class WidgetQueryBuilder:
             qs = qs.filter(oportunidade_crm__responsavel_id__in=esc)
         mot = self._motivo_ids()
         if mot:
-            qs = qs.filter(oportunidade_crm__motivo_perda_ref_id__in=mot).distinct()
+            qs = qs.filter(self._q_motivo('oportunidade_crm__motivo_perda_ref', mot)).distinct()
         return qs
 
     def _v_op(self, qs):
@@ -716,7 +727,7 @@ class WidgetQueryBuilder:
         mot = self._motivo_ids()
         if mot:
             # FK direta: sem duplicata, distinct desnecessario
-            qs = qs.filter(motivo_perda_ref_id__in=mot)
+            qs = qs.filter(self._q_motivo('motivo_perda_ref', mot))
         return qs
 
     def _v_atend(self, qs):
@@ -732,7 +743,7 @@ class WidgetQueryBuilder:
             qs = qs.filter(lead__oportunidade_crm__responsavel_id__in=esc)
         mot = self._motivo_ids()
         if mot:
-            qs = qs.filter(lead__oportunidade_crm__motivo_perda_ref_id__in=mot).distinct()
+            qs = qs.filter(self._q_motivo('lead__oportunidade_crm__motivo_perda_ref', mot)).distinct()
         return qs
 
     def _agg_expr(self, metrica: dict):

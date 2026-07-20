@@ -86,6 +86,12 @@
     <select id="filtro-motivo-perda" class="field-input" multiple size="1"
             style="height:30px;padding:2px 8px;font-size:var(--fs-sm);min-width:170px;max-width:240px;"
             onchange="setFiltroMotivos()" title="Segure Ctrl (ou Cmd) pra marcar varios">
+      {% comment %}
+        "Sem motivo" primeiro: op GANHA nao tem motivo de perda, entao sem essa
+        opcao marcar todos os motivos escondia as vendas e o funil parecia ter
+        perdido venda que so estava fora do recorte.
+      {% endcomment %}
+      <option value="sem">— Sem motivo (inclui as ganhas) —</option>
       {% for m in motivos_perda %}<option value="{{ m.id }}">{{ m.nome }}</option>{% endfor %}
     </select>
     <button type="button" class="btn btn-sm filtro-chip" onclick="limparMotivos()"
