@@ -166,3 +166,38 @@
 - **Status:** completed (codigo, dev).
 
 ---
+
+## 2026-07-20 — Calendario no lugar dos chips de periodo (tarefa #207)
+
+- **Pedido do Lucas:** trocar os chips 7d/30d/90d/Tudo por um calendario. Decisao
+  dele: fica so "Padrao" + calendario (opcao A), com INTERVALO REAL (opcao completa).
+- **O problema de fundo:** tudo no modulo era "ultimos N dias", sempre terminando
+  em HOJE. O fim da janela era implicito no codigo inteiro. Intervalo real exigiu
+  tornar o fim explicito nos dois caminhos (filtros do widget e transforms).
+- **Backend:**
+  - `_limites_intervalo()` faz o parse de data_inicio/data_fim. O fim vira 23:59:59
+    do dia (senao "ate 30/06" perderia o proprio dia 30: o usuario pensa em dia
+    inteiro, o banco em instante). Data invalida e ignorada com log, nao derruba o
+    painel. Datas trocadas sao corrigidas em vez de devolver vazio.
+  - `_aplicar_filtros`: o intervalo tem precedencia sobre `dias`.
+  - `_janela_e_fonte` + `_ate()`: o fim chega aos 4 transforms cross-modelo
+    (funil_macro, conversao_geral, conversao_por_canal, scorecard).
+  - **`campo_data` novo no DataSource** (7 fontes): sem ele o calendario so agia em
+    widget que JA tinha filtro de data salvo, e ficava mudo nos demais. Foi o que o
+    teste pegou. meta_vendas e historico_pipeline ficam sem, de proposito.
+  - `views.py` aceita data_inicio/data_fim; `dias` continua funcionando (link antigo
+    e widget salvo nao quebram).
+- **Front:** 4 chips viraram 2 inputs date; "Padrao" e intervalo sao mutuamente
+  exclusivos (escolher data apaga o chip; clicar no chip limpa os campos).
+- **Validacao:** parser OK nos 7 casos (intervalo, so inicio, so fim, trocadas,
+  invalida, vazio, nada). Backend: 272 sem filtro, 138 em junho, **0 em 2020** (a
+  prova de que o FIM corta). E2E no browser: chips sumiram, intervalo 2020 leva o
+  card de 272 pra 0, "Padrao" restaura, 0 erro de JS.
+- **Nota de metodo:** o E2E deu falso negativo ate eu reiniciar o runserver — ele
+  sobe com --noreload e carrega o codigo no boot, entao editar depois nao vale.
+  O `Client` do Django rodava em processo novo e por isso divergia.
+- **Pre-existente, nao meu:** `test_views_dashboard_full.py::test_vendas_count`
+  falha (espera 3, vem 1). Confirmei com stash que ja falhava antes.
+- **Status:** completed (codigo, dev). Deploy pendente de confirmacao.
+
+---

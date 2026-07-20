@@ -30,11 +30,14 @@
 <div id="rel-filtros" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin: 0 0 var(--sp-4); padding: var(--sp-2) var(--sp-3); background: var(--color-bg-subtle,#f8fafc); border:1px solid var(--color-border,#e2e8f0); border-radius:10px;">
   <div style="display:flex;align-items:center;gap:6px;">
     <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Período</span>
-    <button class="btn btn-sm filtro-chip is-active" data-grupo="dias" data-valor="" onclick="setFiltroGlobal('dias','',this)">Padrão</button>
-    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="7" onclick="setFiltroGlobal('dias','7',this)">7d</button>
-    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="30" onclick="setFiltroGlobal('dias','30',this)">30d</button>
-    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="90" onclick="setFiltroGlobal('dias','90',this)">90d</button>
-    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="tudo" onclick="setFiltroGlobal('dias','tudo',this)">Tudo</button>
+    <button class="btn btn-sm filtro-chip is-active" id="chip-periodo-padrao" data-grupo="dias" data-valor="" onclick="limparIntervalo(this)">Padrão</button>
+    {# Calendario no lugar dos chips fixos: permite intervalo que TERMINA no
+       passado (ex: so junho), o que "ultimos N dias" nunca permitiu. #}
+    <input type="date" id="filtro-data-inicio" class="filtro-data" onchange="setIntervalo()"
+           aria-label="Data inicial" title="De">
+    <span style="color:#94a3b8;font-size:12px;">até</span>
+    <input type="date" id="filtro-data-fim" class="filtro-data" onchange="setIntervalo()"
+           aria-label="Data final" title="Até">
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
     <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Fonte</span>
@@ -366,6 +369,14 @@
   /* Widget card */
   .filtro-chip { background: #fff; border: 1px solid var(--color-border,#e2e8f0); color: #475569; font-size: 12px; padding: 4px 12px; border-radius: 999px; }
   .filtro-chip.is-active { background: var(--color-primary,#2563eb); border-color: var(--color-primary,#2563eb); color: #fff; font-weight: 600; }
+  /* Mesma linguagem visual do chip, mas como campo (o calendario substituiu
+     os chips 7d/30d/90d/Tudo). */
+  .filtro-data {
+    background: #fff; border: 1px solid var(--color-border,#e2e8f0); color: #475569;
+    font-size: 12px; padding: 4px 10px; border-radius: 999px; font-family: inherit;
+  }
+  .filtro-data:focus { outline: none; border-color: var(--color-primary,#2563eb); }
+  .filtro-data:not([value=""]):valid { color: #0f172a; font-weight: 600; }
   .widget-card {
     background:var(--color-bg); border:1px solid var(--color-border);
     border-radius:var(--radius); height:100%; display:flex; flex-direction:column;
@@ -485,7 +496,37 @@ const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
 const CSRF = "{{ csrf_token }}";
 
 // Filtros globais do dashboard (barra no topo) — aplicados em todos os widgets
-const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '', equipe: '', base: '' };
+const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '', equipe: '', base: '', data_inicio: '', data_fim: '' };
+
+// Calendario: qualquer um dos dois campos ja filtra (so "de" = dai em diante,
+// so "ate" = ate tal dia). O backend trata os dois como opcionais.
+function setIntervalo() {
+  FILTRO_GLOBAL.data_inicio = (document.getElementById('filtro-data-inicio') || {}).value || '';
+  FILTRO_GLOBAL.data_fim = (document.getElementById('filtro-data-fim') || {}).value || '';
+  // Intervalo e "Padrao" sao mutuamente exclusivos: com data escolhida, o
+  // chip apaga pra nao dar a impressao de que os dois valem ao mesmo tempo.
+  const chip = document.getElementById('chip-periodo-padrao');
+  if (chip) chip.classList.toggle('is-active', !FILTRO_GLOBAL.data_inicio && !FILTRO_GLOBAL.data_fim);
+  recarregarWidgets();
+}
+
+function limparIntervalo(btn) {
+  FILTRO_GLOBAL.data_inicio = '';
+  FILTRO_GLOBAL.data_fim = '';
+  const ini = document.getElementById('filtro-data-inicio');
+  const fim = document.getElementById('filtro-data-fim');
+  if (ini) ini.value = '';
+  if (fim) fim.value = '';
+  if (btn) btn.classList.add('is-active');
+  recarregarWidgets();
+}
+
+function recarregarWidgets() {
+  document.querySelectorAll('.widget-card').forEach(card => {
+    const wid = parseInt(card.dataset.widgetId, 10);
+    if (wid) carregarWidget(wid, card);
+  });
+}
 
 function setFiltroGlobal(grupo, valor, btn) {
   FILTRO_GLOBAL[grupo] = valor;
@@ -513,6 +554,8 @@ function _filtroQuery() {
   if (FILTRO_GLOBAL.vendedor) p.set('vendedor', FILTRO_GLOBAL.vendedor);
   if (FILTRO_GLOBAL.equipe) p.set('equipe', FILTRO_GLOBAL.equipe);
   if (FILTRO_GLOBAL.base) p.set('base', FILTRO_GLOBAL.base);
+  if (FILTRO_GLOBAL.data_inicio) p.set('data_inicio', FILTRO_GLOBAL.data_inicio);
+  if (FILTRO_GLOBAL.data_fim) p.set('data_fim', FILTRO_GLOBAL.data_fim);
   const s = p.toString();
   return s ? `?${s}` : '';
 }

@@ -49,6 +49,12 @@ class DataSource:
     # vendedor e outra identidade, com gente que nem existe no CRM) — o widget
     # ignora o filtro e o front avisa que aquele numero nao foi recortado.
     campo_vendedor: Optional[str] = None
+    # Campo de data "principal" da fonte, pro filtro de periodo da barra
+    # (calendario) recortar mesmo quando o widget NAO tem filtro de data
+    # salvo. Sem isso o calendario nao teria onde agir e ficaria mudo: o
+    # usuario escolheria um intervalo e o numero nao mudaria.
+    # None = a fonte nao tem data natural (ex: historico_pipeline).
+    campo_data: Optional[str] = None
 
     # Caminho ORM ate a EquipeVendas, pro filtro global de TIME. Sai do mesmo
     # dono do campo_vendedor: responsavel -> PerfilVendedor (OneToOne) -> equipe.
@@ -109,6 +115,7 @@ def todos() -> list[DataSource]:
 
 registrar(DataSource(
     slug='oportunidade',
+    campo_data='data_criacao',
     label='Oportunidades',
     model_path='crm.OportunidadeVenda',
     descricao='Oportunidades do pipeline comercial (com lead, estagio, valor, responsavel).',
@@ -160,6 +167,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='lead',
+    campo_data='data_cadastro',
     label='Leads',
     model_path='leads.LeadProspecto',
     descricao='Leads do funil (origem, cidade, status, etc).',
@@ -236,6 +244,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='venda',
+    campo_data='data_venda',
     label='Vendas (CRM)',
     model_path='crm.Venda',
     descricao='Vendas registradas no CRM (com valor, status, lead).',
@@ -255,6 +264,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='conversa',
+    campo_data='data_abertura',
     label='Conversas (Inbox)',
     model_path='inbox.Conversa',
     descricao='Conversas multicanal — pra TMA e volume por canal.',
@@ -270,6 +280,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='historico_contato',
+    campo_data='data_hora_contato',
     label='Atendimentos (Historico de Contato)',
     model_path='leads.HistoricoContato',
     descricao='Atendimentos do funil (bot/humano). O legado conta como atendimento '
@@ -375,6 +386,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='servico_hubsoft',
+    campo_data='data_habilitacao',
     label='Servicos HubSoft',
     model_path='integracoes.ServicoClienteHubsoft',
     descricao='Servicos contratados (plano, valor, status, tecnologia, vendedor). Base pra receita, churn, performance de vendedor HubSoft.',
@@ -431,6 +443,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='fatura_hubsoft',
+    campo_data='data_vencimento',
     label='Faturas HubSoft',
     model_path='integracoes.FaturaHubsoft',
     descricao='Faturas (abertas/pagas/vencidas) — base pra inadimplencia.',

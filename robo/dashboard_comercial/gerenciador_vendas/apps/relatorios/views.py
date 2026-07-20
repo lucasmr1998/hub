@@ -61,6 +61,7 @@ def _overrides_da_barra(request) -> dict:
     """Filtros globais do dashboard (barra do topo), lidos da querystring.
 
     ?dias=7|30|90|tudo  ?fonte=facebook|organico  ?vendedor=<user_id>
+    ?data_inicio=YYYY-MM-DD  ?data_fim=YYYY-MM-DD
     """
     overrides = {}
     dias_param = (request.GET.get('dias') or '').strip()
@@ -68,6 +69,15 @@ def _overrides_da_barra(request) -> dict:
         overrides['dias'] = 'tudo'
     elif dias_param.isdigit():
         overrides['dias'] = int(dias_param)
+
+    # Calendario (intervalo real). Tem precedencia sobre `dias` no builder.
+    # `dias` continua aceito: widget salvo e link antigo nao quebram.
+    # Validacao de formato fica no builder, que ignora data invalida em vez
+    # de derrubar o painel.
+    for chave in ('data_inicio', 'data_fim'):
+        valor = (request.GET.get(chave) or '').strip()
+        if valor:
+            overrides[chave] = valor[:10]
 
     fonte_param = (request.GET.get('fonte') or '').strip()
     if fonte_param in ('facebook', 'organico'):

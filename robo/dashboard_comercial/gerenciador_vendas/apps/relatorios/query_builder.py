@@ -51,6 +51,36 @@ TRUNC_BY_GRAN = {
 }
 
 
+def _limites_intervalo(overrides):
+    """(inicio, fim) do filtro de calendario, ou (None, None) se nao veio.
+
+    Os dois sao opcionais e independentes: so inicio = "de tal dia em diante";
+    so fim = "ate tal dia". O fim vira 23:59:59 do dia escolhido, senao um
+    filtro "ate 30/06" perderia tudo que aconteceu no dia 30 (o usuario pensa
+    em dia inteiro, o banco pensa em instante).
+
+    Data invalida e ignorada em vez de derrubar o painel: dashboard sem filtro
+    e ruim, dashboard que nao abre e pior.
+    """
+    def _parse(valor, fim_do_dia=False):
+        if not valor:
+            return None
+        try:
+            d = datetime.strptime(str(valor).strip()[:10], '%Y-%m-%d')
+        except (ValueError, TypeError):
+            logger.warning('Filtro de data ignorado (formato invalido): %r', valor)
+            return None
+        d = d.replace(hour=23, minute=59, second=59) if fim_do_dia else d
+        return timezone.make_aware(d) if timezone.is_naive(d) else d
+
+    inicio = _parse(overrides.get('data_inicio'))
+    fim = _parse(overrides.get('data_fim'), fim_do_dia=True)
+    # Datas trocadas: usa como o usuario quis, em vez de devolver vazio
+    if inicio and fim and inicio > fim:
+        inicio, fim = fim.replace(hour=0, minute=0, second=0), inicio.replace(hour=23, minute=59, second=59)
+    return inicio, fim
+
+
 @dataclass
 class ResultadoQuery:
     labels: list = field(default_factory=list)
@@ -123,7 +153,11 @@ class WidgetQueryBuilder:
         dashboard (overrides). Compartilhado pelos transforms cross-modelo
         (funil_macro, conversao_geral, conversao_por_canal).
 
-        Retorna (cutoff|None, fonte|None, dias)."""
+        Retorna (cutoff|None, fonte|None, dias).
+
+        O FIM da janela sai por `self._fim_janela` (None = ate hoje), porque os
+        transforms chamadores esperam 3 valores. Quem precisa do fim le esse
+        atributo — trocar a tupla obrigaria a mexer nos 4 de uma vez."""
         dias = 30
         try:
             dias = int((self.widget.agrupamento or {}).get('dias') or 30)
@@ -131,11 +165,28 @@ class WidgetQueryBuilder:
             pass
         dias_override = self.overrides.get('dias')
         fonte = self.overrides.get('fonte')
+
+        # Calendario tem precedencia sobre `dias`
+        ini, fim = _limites_intervalo(self.overrides)
+        if ini or fim:
+            self._fim_janela = fim
+            return ini, fonte, dias
+
+        self._fim_janela = None
         if dias_override == 'tudo':
             return None, fonte, dias
         if dias_override:
             dias = int(dias_override)
         return timezone.now() - timedelta(days=dias), fonte, dias
+
+    def _ate(self, qs, campo):
+        """Aplica o fim da janela (calendario) no queryset, se houver.
+
+        Complementa o `cutoff` do _janela_e_fonte, que so cobre o inicio. Sem
+        isso, escolher "01/06 a 30/06" mostraria de junho ATE HOJE nos
+        transforms, que e exatamente o que o calendario promete nao fazer."""
+        fim = getattr(self, '_fim_janela', None)
+        return qs.filter(**{f'{campo}__lte': fim}) if fim else qs
 
     def _calcular_conversao_geral(self) -> ResultadoQuery:
         """Conversao geral em %: vendas fechadas no periodo / leads criados
@@ -156,6 +207,8 @@ class WidgetQueryBuilder:
         if cutoff:
             leads_qs = leads_qs.filter(data_cadastro__gte=cutoff)
             vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
+        leads_qs = self._ate(leads_qs, 'data_cadastro')
+        vendas_qs = self._ate(vendas_qs, 'data_fechamento_real')
 
         leads_n = leads_qs.count()
         vendas_n = vendas_qs.count()
@@ -198,6 +251,10 @@ class WidgetQueryBuilder:
         if cutoff:
             ganha &= Q(data_fechamento_real__gte=cutoff)
             perdida &= Q(data_fechamento_real__gte=cutoff)
+        _fim = getattr(self, '_fim_janela', None)
+        if _fim:
+            ganha &= Q(data_fechamento_real__lte=_fim)
+            perdida &= Q(data_fechamento_real__lte=_fim)
 
         linhas_qs = (
             qs.values('responsavel_id', 'responsavel__first_name', 'responsavel__username')
@@ -339,14 +396,35 @@ class WidgetQueryBuilder:
 
     def _aplicar_filtros(self, qs):
         dias_override = self.overrides.get('dias')
+        ini, fim = _limites_intervalo(self.overrides)
+        # O calendario precisa recortar SEMPRE, nao so quando o widget ja tem
+        # filtro de data salvo. Se a fonte declara campo_data e o widget nao
+        # tem `ultimos_dias`, aplica no campo da fonte: senao o usuario escolhe
+        # um intervalo, o numero nao muda, e o filtro parece quebrado.
+        tem_filtro_data = any(
+            (f.get('operador') == 'ultimos_dias') for f in (self.widget.filtros or [])
+        )
+        if (ini or fim) and not tem_filtro_data and self.data_source.campo_data:
+            campo_dt = self.data_source.campo_data
+            if ini:
+                qs = qs.filter(**{f'{campo_dt}__gte': ini})
+            if fim:
+                qs = qs.filter(**{f'{campo_dt}__lte': fim})
         for f in (self.widget.filtros or []):
             campo = f.get('campo')
             operador = f.get('operador', 'igual')
             valor = f.get('valor')
             if not self._validar_campo(campo) or operador not in OPERADORES_VALIDOS:
                 continue
-            # Override global de periodo: substitui valor dos ultimos_dias;
-            # 'tudo' remove o filtro de data por completo
+            # Override global de periodo no filtro de data do widget.
+            # O calendario (ini/fim) tem precedencia sobre `dias`: se o usuario
+            # escolheu um intervalo, e isso que ele quer ver, ponto.
+            if operador == 'ultimos_dias' and (ini or fim):
+                if ini:
+                    qs = qs.filter(**{f'{campo}__gte': ini})
+                if fim:
+                    qs = qs.filter(**{f'{campo}__lte': fim})
+                continue
             if operador == 'ultimos_dias' and dias_override:
                 if dias_override == 'tudo':
                     continue
@@ -863,6 +941,11 @@ class WidgetQueryBuilder:
                 ops_qs = ops_qs.filter(data_criacao__gte=cutoff)
                 vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
                 perdidas_qs = perdidas_qs.filter(data_fechamento_real__gte=cutoff)
+            atend_qs = self._ate(atend_qs, 'data_hora_contato')
+            leads_qs = self._ate(leads_qs, 'data_cadastro')
+            ops_qs = self._ate(ops_qs, 'data_criacao')
+            vendas_qs = self._ate(vendas_qs, 'data_fechamento_real')
+            perdidas_qs = self._ate(perdidas_qs, 'data_fechamento_real')
 
             atendimentos = atend_qs.count()
             leads_n = leads_qs.count()
@@ -921,6 +1004,9 @@ class WidgetQueryBuilder:
                 leads_qs = leads_qs.filter(data_cadastro__gte=cutoff)
                 ops_qs = ops_qs.filter(data_criacao__gte=cutoff)
                 vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
+            leads_qs = self._ate(leads_qs, 'data_cadastro')
+            ops_qs = self._ate(ops_qs, 'data_criacao')
+            vendas_qs = self._ate(vendas_qs, 'data_fechamento_real')
 
             leads_n = leads_qs.count()
             vendas_n = vendas_qs.count()
@@ -990,6 +1076,8 @@ class WidgetQueryBuilder:
             if cutoff:
                 leads_qs = leads_qs.filter(data_cadastro__gte=cutoff)
                 vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
+            leads_qs = self._ate(leads_qs, 'data_cadastro')
+            vendas_qs = self._ate(vendas_qs, 'data_fechamento_real')
 
             leads_por = {(r[campo_lead] or '—'): r['n']
                          for r in leads_qs.values(campo_lead).annotate(n=Count('id'))}
