@@ -360,3 +360,42 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
   `id_cliente`, entao dois leads com o mesmo CPF disputam a linha e o ultimo
   vence sem log) e so entao rodar o backfill dos 754.
 - **Status:** completed (codigo); pending (config em prod + bloco A)
+
+## 2026-07-20 — Gate de venda ligado no estagio de Ganho da Nuvyon (tarefa 212, fecha)
+
+- **Acao:** deploy do bloco B e configuracao dos campos obrigatorios no estagio
+  83 "Ativacao Confirmada" (`is_final_ganho=True`) da Nuvyon.
+- **Descoberta que mudou o desenho:** o mecanismo ja estava em uso no tenant. O
+  estagio 80 "Dados Completos" ja tinha os 12 campos de Lead + Endereco
+  configurados desde antes. O furo era que **o estagio de Ganho nao tinha trava
+  nenhuma**, entao dava pra arrastar o card de qualquer estagio direto pro 83 e
+  pular o 80 inteiro. Foi por isso que 92 oportunidades chegaram em Ganho com
+  lead incompleto: elas nunca passaram pelo 80.
+- **Config aplicada:** estagio 83 com 16 campos (os 12 do estagio 80 mais os 4
+  comerciais novos). Conferido que nenhum codigo ficou desconhecido pela UI.
+  Estado do pipeline depois: 80 com 12 campos, 83 com 16, 84 (Perdido) com 1,
+  demais sem trava.
+- **Risco descartado antes de ligar:** o gate tambem roda na engine de regras do
+  CRM (`automacao_pipeline._mover_por_regra`), e la a falha e silenciosa (so
+  `logger.info`). Se houvesse regra movendo card pro 83, ela pararia sem avisar.
+  Verificado em prod: nenhuma regra de `crm_regras_pipeline_estagio` tem o 83
+  como destino. A regra #14 "Servico HubSoft ativo" esta ancorada no 83 (dispara
+  com o card ja la), nao move pra la, e nunca disparou. Unico caminho pro Ganho
+  hoje e humano arrastando, entao o gate e seguro.
+- **Impacto medido antes de aplicar (Nuvyon):** 92 das 256 vendas de julho (36%)
+  teriam sido bloqueadas, e sao exatamente as 92 sem `ClienteHubsoft`, o que
+  confirma que o gate acerta o alvo. Das 44 oportunidades abertas, 33 nao
+  passariam hoje. Importante: **o gate nao e retroativo** — so roda no momento de
+  mover (`validar_avanco()` e codigo morto, ninguem chama). As ja ganhas
+  continuam ganhas e as abertas seguem nos seus estagios; cada uma so encontra a
+  trava quando a vendedora tentar fechar aquela venda especifica.
+- **Campos que mais travam** (nas vendas de julho): dia de vencimento 59, email
+  57, nascimento 57, rua 50, bairro 50, cidade 48, CEP 44, numero 42, UF 40, RG
+  39, CPF 38, plano 35, origem do servico 11, origem do cliente 9.
+- **Decisao pendente registrada:** nao foram adicionados os 4 comerciais ao
+  estagio 80. Faz sentido semantico ("Dados Completos" incluir plano e
+  vencimento, ja que o plano e escolhido no 79), mas adiantaria a trava no funil.
+  Deixado so no 83 por ora.
+- **Deploy:** push `4f2ae0e..a08c143` (8 commits, o do CRM mais 7 do modulo
+  People de outra sessao) e rebuild confirmado consultando o container.
+- **Status:** completed
