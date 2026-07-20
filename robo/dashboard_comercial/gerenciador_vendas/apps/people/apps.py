@@ -28,3 +28,6 @@ class PeopleConfig(AppConfig):
     name = 'apps.people'
     label = 'people'
     verbose_name = 'People (gestao de pessoas)'
+
+    def ready(self):
+        import apps.people.signals  # noqa: F401

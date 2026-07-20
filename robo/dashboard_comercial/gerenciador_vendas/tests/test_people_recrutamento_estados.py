@@ -115,11 +115,25 @@ def test_admissao_e_etapa_e_admitido_e_saida_e_sao_coisas_diferentes():
 
 @pytest.fixture
 def cenario(db):
+    """
+    Tenant com People ligado, porem com o pipeline ZERADO.
+
+    O signal de provisionamento (apps/people/signals.py) semeia as sete etapas
+    ao ativar o modulo, entao um tenant criado aqui ja nasceria com elas. Os
+    testes deste arquivo sao sobre a mecanica de `semear_padrao`, de
+    `do_escopo` e da constraint, e todos precisam partir do vazio pra dizer
+    alguma coisa. Limpar aqui deixa a premissa de cada teste explicita, em vez
+    de cada um ter que descontar as sete que vieram de brinde.
+
+    O provisionamento em si tem arquivo proprio: test_people_provisionamento.py
+    """
     from apps.sistema.models import Tenant
-    from apps.people.models import Unidade
+    from apps.people.models import EtapaPipeline, Unidade
 
     tenant = Tenant.objects.create(nome='Rede Teste', slug='rede-teste',
                                    modulo_people=True)
+    EtapaPipeline.all_tenants.filter(tenant=tenant).delete()
+
     unidade = Unidade.all_tenants.create(tenant=tenant, nome='Loja Centro',
                                          codigo='centro')
     outra = Unidade.all_tenants.create(tenant=tenant, nome='Loja Shopping',
