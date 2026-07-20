@@ -31,8 +31,12 @@
   <div style="display:flex;align-items:center;gap:6px;">
     <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Período</span>
     <button class="btn btn-sm filtro-chip is-active" id="chip-periodo-padrao" data-grupo="dias" data-valor="" onclick="limparIntervalo(this)">Padrão</button>
-    {# Calendario no lugar dos chips fixos: permite intervalo que TERMINA no
-       passado (ex: so junho), o que "ultimos N dias" nunca permitiu. #}
+    {% comment %}
+      Calendario no lugar dos chips fixos: permite intervalo que TERMINA no
+      passado (ex: so junho), o que "ultimos N dias" nunca permitiu.
+      Comentario de varias linhas TEM que ser {% comment %}: o {# #} do Django
+      e de uma linha so e, com quebra, vaza o texto cru pra tela.
+    {% endcomment %}
     <input type="date" id="filtro-data-inicio" class="filtro-data" onchange="setIntervalo()"
            aria-label="Data inicial" title="De">
     <span style="color:#94a3b8;font-size:12px;">até</span>

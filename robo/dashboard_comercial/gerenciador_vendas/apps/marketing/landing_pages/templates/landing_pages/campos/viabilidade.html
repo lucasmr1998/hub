@@ -1,5 +1,5 @@
-{# Campo viabilidade: visual de status (atualizado via JS apos preenchimento do CEP/endereco).
-   Server-side validacao chama consultar_viabilidade(tenant, ...) e marca status no LandingSubmissao. #}
+{% comment %} Campo viabilidade: visual de status (atualizado via JS apos preenchimento do CEP/endereco).
+   Server-side validacao chama consultar_viabilidade(tenant, ...) e marca status no LandingSubmissao. {% endcomment %}
 <div class="lp-campo lp-campo-viabilidade" data-campo-viabilidade
      data-msg-fora="{{ props.mensagem_fora_cobertura|default:'Infelizmente ainda nao atendemos seu endereco.' }}"
      style="display: flex; flex-direction: column; gap: 4px;">

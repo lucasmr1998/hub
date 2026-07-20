@@ -19,8 +19,8 @@
   </div>
 
   {% if conflitos %}
-    {# O dedup achou alguem parecido. Quem decide se e a mesma pessoa e o RH,
-       nao o servico: por isso a tela pergunta em vez de criar ou recusar. #}
+    {% comment %} O dedup achou alguem parecido. Quem decide se e a mesma pessoa e o RH,
+       nao o servico: por isso a tela pergunta em vez de criar ou recusar. {% endcomment %}
     <div class="section-card section-card-warning" style="margin-bottom: var(--sp-4);">
       <div class="section-card-header">
         <h2 class="section-card-title">
