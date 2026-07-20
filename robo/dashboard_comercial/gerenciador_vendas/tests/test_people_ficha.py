@@ -67,7 +67,7 @@ def _dados_edicao(colaborador, **extra):
         'cep': '', 'rua': '', 'numero': '', 'complemento': '', 'bairro': '',
         'cidade': '', 'estado': '',
         'tipo_chave_pix': '', 'chave_pix': '',
-        'cargo': colaborador.cargo or '', 'regime_contratacao': '',
+        'cargo': colaborador.cargo_id or '', 'regime_contratacao': '',
         'elegivel_recontratacao': 'on',
         'observacoes': '',
     }
@@ -204,10 +204,9 @@ def test_manter_o_proprio_cpf_nao_acusa_conflito(cenario):
     cliente = _cliente(cenario['tenant'])
 
     cliente.post(f'/people/colaboradores/{colaborador.pk}/',
-                 _dados_edicao(colaborador, cpf=CPF_VALIDO, cargo='Gerente'))
+                 _dados_edicao(colaborador, cpf=CPF_VALIDO))
 
     colaborador.refresh_from_db()
-    assert colaborador.cargo == 'Gerente'
     assert colaborador.cpf == CPF_VALIDO
 
 

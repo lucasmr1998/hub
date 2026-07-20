@@ -1,9 +1,13 @@
 """
-Ciclo de vida do link publico de auto cadastro.
+Ciclo de vida dos links publicos de auto cadastro.
 
-Um link ativo por unidade. Rotacionar significa invalidar o que esta circulando
-(no grupo de WhatsApp da loja, num cartaz na parede) e por outro no lugar, sem
-apagar o velho: a trilha de quem entrou por qual link e parte da auditoria.
+Uma unidade pode ter VARIOS links ativos ao mesmo tempo, cada um com seu
+contador. Isso e do produto real (ver GAPS-VISIO.md, gap 1): um link por
+campanha, por turno ou por recrutador, e invalidar um nao pode derrubar os
+outros.
+
+Link nao se apaga, se desativa: a trilha de submissoes aponta pra ele, e saber
+por qual link alguem entrou e parte da auditoria.
 """
 import secrets
 from datetime import timedelta
@@ -23,21 +27,21 @@ def gerar_token():
     return secrets.token_urlsafe(TAMANHO_TOKEN)
 
 
+def links_ativos(unidade):
+    """Todos os links vivos da unidade, mais recentes primeiro."""
+    return LinkCadastroUnidade.all_tenants.filter(unidade=unidade, ativo=True)
+
+
 def link_ativo(unidade):
-    return LinkCadastroUnidade.all_tenants.filter(unidade=unidade, ativo=True).first()
+    """O link ativo mais recente. Atalho pra quando so um interessa."""
+    return links_ativos(unidade).first()
 
 
 @transaction.atomic
-def criar_link(unidade, *, usuario=None, max_submissoes=None):
+def criar_link(unidade, *, usuario=None, nome='', template=None, max_submissoes=None):
     """
-    Cria o link da unidade. Se ja houver um ativo, devolve o que existe em vez
-    de criar outro: a constraint parcial nao deixaria mesmo, e falhar aqui seria
-    hostil com quem so clicou duas vezes.
+    Cria mais um link pra unidade. Nao substitui os que ja existem.
     """
-    existente = link_ativo(unidade)
-    if existente is not None:
-        return existente
-
     config = config_efetiva(unidade)
     expira_em = None
     if config.link_expira_em_dias:
@@ -46,7 +50,9 @@ def criar_link(unidade, *, usuario=None, max_submissoes=None):
     return LinkCadastroUnidade.all_tenants.create(
         tenant=unidade.tenant,
         unidade=unidade,
+        nome=nome,
         token=gerar_token(),
+        template=template,
         expira_em=expira_em,
         max_submissoes=max_submissoes,
         criado_por=usuario,
@@ -54,24 +60,20 @@ def criar_link(unidade, *, usuario=None, max_submissoes=None):
 
 
 @transaction.atomic
-def rotacionar_link(unidade, *, usuario=None):
+def rotacionar_link(link, *, usuario=None):
     """
-    Invalida o link atual e cria outro.
+    Invalida ESTE link e cria um substituto com a mesma configuracao.
 
-    A ordem importa e nao e simetrica: desativar PRIMEIRO, criar depois. A
-    constraint parcial de um ativo por unidade nao deixaria os dois coexistirem,
-    entao inverter a ordem daria IntegrityError. Aqui isso e garantia, nao
-    acidente: se alguem reescrever isto ao contrario, quebra na hora em vez de
-    deixar dois links vivos pra mesma loja.
+    E a acao pra quando um link especifico vazou. Age sobre o link, nao sobre a
+    unidade: os outros links da loja continuam valendo.
     """
-    anterior = link_ativo(unidade)
-    if anterior is not None:
-        desativar_link(anterior, usuario=usuario)
-
-    novo = criar_link(unidade, usuario=usuario)
-    if anterior is not None:
-        novo.rotacionado_de = anterior
-        novo.save(update_fields=['rotacionado_de'])
+    desativar_link(link, usuario=usuario)
+    novo = criar_link(
+        link.unidade, usuario=usuario, nome=link.nome,
+        template=link.template, max_submissoes=link.max_submissoes,
+    )
+    novo.rotacionado_de = link
+    novo.save(update_fields=['rotacionado_de'])
     return novo
 
 
@@ -79,6 +81,13 @@ def desativar_link(link, *, usuario=None):
     """Nunca deleta: a trilha de submissoes aponta pra ele."""
     link.ativo = False
     link.desativado_em = timezone.now()
+    link.save(update_fields=['ativo', 'desativado_em'])
+    return link
+
+
+def reativar_link(link, *, usuario=None):
+    link.ativo = True
+    link.desativado_em = None
     link.save(update_fields=['ativo', 'desativado_em'])
     return link
 
@@ -94,7 +103,7 @@ def resolver_por_token(token):
     if not token:
         return None
     return (LinkCadastroUnidade.all_tenants
-            .select_related('unidade', 'tenant')
+            .select_related('unidade', 'tenant', 'template')
             .filter(token=token)
             .first())
 

@@ -11,7 +11,7 @@ import pytest
 
 from apps.automacao.eventos import EVENTOS
 from apps.people import estados, telemetria
-from apps.people.models import Unidade
+from apps.people.models import Cargo, Unidade
 from apps.people.services import mover_situacao, registrar_colaborador
 from apps.sistema.models import LogSistema
 from tests.factories import TenantFactory
@@ -226,7 +226,8 @@ def test_contexto_nao_carrega_cpf_inteiro(unidade, eventos_capturados):
 @pytest.mark.django_db
 def test_contexto_traz_o_minimo_pra_montar_uma_mensagem(unidade, eventos_capturados):
     """Um fluxo de "avisar o gestor" precisa de nome, telefone e unidade."""
-    _registrar(unidade, cpf=CPF_VALIDO, telefone='86999998888', cargo='Atendente')
+    cargo = Cargo.all_tenants.create(tenant=unidade.tenant, nome='Atendente')
+    _registrar(unidade, cpf=CPF_VALIDO, telefone='86999998888', cargo=cargo)
 
     contexto = eventos_capturados[0]['contexto']
     for chave in ('colaborador_id', 'colaborador_nome', 'telefone',

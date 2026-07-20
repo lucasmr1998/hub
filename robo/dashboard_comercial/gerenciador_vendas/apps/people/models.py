@@ -180,6 +180,194 @@ class Unidade(TenantMixin):
         return self.nome
 
 
+class Cargo(TenantMixin):
+    """
+    Cargo da empresa. Cadastrado uma vez e reusado no cadastro de colaborador,
+    na abertura de vaga e na escala.
+
+    Existe como entidade, e nao como texto no colaborador, porque texto livre
+    produz "Atendente", "atendente" e "Atendente " como tres cargos distintos, e
+    isso corrompe qualquer agregacao. E porque cargo e o eixo de varios
+    relatorios de RH.
+    """
+
+    nome = models.CharField(max_length=120, verbose_name="Nome do cargo")
+    descricao = models.TextField(
+        blank=True, default='', verbose_name="Descricao do cargo",
+        help_text="Responsabilidades. Aparece na abertura de vaga.",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveSmallIntegerField(default=0, verbose_name="Ordem")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_cargo'
+        verbose_name = 'Cargo'
+        verbose_name_plural = 'Cargos'
+        ordering = ['ordem', 'nome']
+        indexes = [
+            models.Index(fields=['tenant', 'ativo'], name='people_cargo_ativo_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'nome'], name='people_cargo_nome_unico_por_tenant',
+            ),
+        ]
+
+    def __str__(self):
+        return self.nome
+
+
+class TemplateFormulario(TenantMixin):
+    """
+    Modelo do formulario publico de cadastro.
+
+    Define, campo a campo, se ele e solicitado, se e obrigatorio e com que
+    rotulo aparece. Cada link de cadastro aponta pra um template, entao a mesma
+    loja pode ter um formulario curto pra mutirao e um completo pra admissao.
+
+    A configuracao mora em JSON porque o catalogo de campos e fixo em codigo
+    (cada campo tem coluna no Colaborador). Ver apps/people/campos_formulario.py.
+    """
+
+    nome = models.CharField(max_length=120, verbose_name="Nome do template")
+    descricao = models.CharField(max_length=200, blank=True, default='', verbose_name="Descricao")
+    campos = models.JSONField(
+        default=dict, blank=True, verbose_name="Configuracao dos campos",
+        help_text="Por campo: solicitar, obrigatorio e rotulo.",
+    )
+    padrao = models.BooleanField(
+        default=False, verbose_name="Template padrao",
+        help_text="Usado quando o link nao aponta pra nenhum template.",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_template_formulario'
+        verbose_name = 'Template de formulario'
+        verbose_name_plural = 'Templates de formulario'
+        ordering = ['-padrao', 'nome']
+        indexes = [
+            models.Index(fields=['tenant', 'ativo'], name='people_tpl_ativo_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'nome'], name='people_template_nome_unico_por_tenant',
+            ),
+            models.UniqueConstraint(
+                fields=['tenant'], condition=models.Q(padrao=True),
+                name='people_template_um_padrao_por_tenant',
+            ),
+        ]
+
+    def __str__(self):
+        return self.nome
+
+    def config(self):
+        """Configuracao completa, com o que faltar preenchido pelo padrao."""
+        from apps.people.campos_formulario import normalizar_config
+        return normalizar_config(self.campos)
+
+    def campos_do_formulario(self):
+        """Campos que o formulario publico deve mostrar, na ordem do catalogo."""
+        from apps.people.campos_formulario import campos_solicitados
+        return campos_solicitados(self.campos)
+
+    @classmethod
+    def padrao_do_tenant(cls, tenant):
+        """
+        Template padrao do tenant, criado sob demanda.
+
+        Sob demanda e nao por data migration pelo mesmo motivo da unidade
+        sentinela: tenant que nunca usar People nao ganha linha orfa.
+        """
+        from apps.people.campos_formulario import config_padrao
+
+        template = cls.all_tenants.filter(tenant=tenant, padrao=True).first()
+        if template is None:
+            template = cls.all_tenants.create(
+                tenant=tenant, nome='Formulario padrao',
+                descricao='Criado automaticamente.',
+                campos=config_padrao(), padrao=True,
+            )
+        return template
+
+
+ESCOPO_CHOICES = [
+    ('tenant',   'Toda a empresa'),
+    ('unidades', 'Unidades especificas'),
+]
+
+
+class MensagemEtapa(TenantMixin):
+    """
+    Mensagem sugerida ao RH quando o colaborador chega numa etapa.
+
+    NADA E ENVIADO AUTOMATICAMENTE, e isso e decisao de produto copiada da tela
+    de origem, que diz em dois lugares diferentes: "nada e enviado
+    automaticamente" e "o envio e sempre manual, editavel antes de enviar, sem
+    alterar este padrao".
+
+    Quem quiser automatizar de verdade monta um fluxo na engine escutando o
+    evento da transicao. Os dois caminhos convivem: este e a sugestao pro
+    humano, aquele e a automacao explicita.
+    """
+
+    etapa = models.CharField(
+        max_length=20, choices=estados.SITUACOES, verbose_name="Etapa",
+        help_text="Situacao em que a mensagem fica disponivel.",
+    )
+    texto = models.TextField(
+        verbose_name="Mensagem padrao",
+        help_text="Aceita {{nome}}, {{primeiro_nome}}, {{unidade}} e {{cargo}}.",
+    )
+    escopo = models.CharField(
+        max_length=10, choices=ESCOPO_CHOICES, default='tenant', verbose_name="Aplicado em")
+    unidades = models.ManyToManyField(
+        Unidade, blank=True, related_name='mensagens_etapa', verbose_name="Unidades",
+        help_text="So vale quando o escopo e por unidades.",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_mensagem_etapa'
+        verbose_name = 'Mensagem de etapa'
+        verbose_name_plural = 'Mensagens de etapa'
+        ordering = ['etapa']
+        indexes = [
+            models.Index(fields=['tenant', 'etapa', 'ativo'], name='people_msg_etapa_idx'),
+        ]
+
+    def __str__(self):
+        return f'Mensagem de {estados.rotulo(self.etapa)}'
+
+    def vale_para(self, unidade):
+        if self.escopo == 'tenant':
+            return True
+        return self.unidades.filter(pk=unidade.pk).exists()
+
+    def render(self, colaborador):
+        """Troca as variaveis. O RH ainda edita antes de enviar."""
+        substituicoes = {
+            '{{nome}}': colaborador.nome_completo,
+            '{{primeiro_nome}}': colaborador.primeiro_nome or colaborador.nome_completo,
+            '{{unidade}}': getattr(colaborador.unidade, 'nome', ''),
+            '{{cargo}}': getattr(colaborador.cargo, 'nome', '') if colaborador.cargo else '',
+        }
+        texto = self.texto
+        for chave, valor in substituicoes.items():
+            texto = texto.replace(chave, valor)
+        return texto
+
+
 TIPO_CHAVE_PIX_CHOICES = [
     ('cpf',       'CPF'),
     ('celular',   'Celular'),
@@ -313,9 +501,11 @@ class Colaborador(TenantMixin):
     # mas criados agora porque a maquina de estados ja depende deles: entrar em
     # experiencia exige data_admissao, e o dedup precisa saber se a pessoa
     # desligada pode voltar.
-    cargo = models.CharField(
-        max_length=120, blank=True, default='', verbose_name="Cargo",
-        help_text="Texto livre por enquanto. Vira FK quando Recrutamento chegar.",
+    cargo = models.ForeignKey(
+        Cargo, null=True, blank=True, on_delete=models.PROTECT,
+        related_name='colaboradores', verbose_name="Cargo",
+        help_text="PROTECT: apagar cargo com gente dentro reescreveria historico. "
+                  "Pra tirar de circulacao, desative o cargo.",
     )
     regime_contratacao = models.CharField(
         max_length=20, choices=REGIME_CONTRATACAO_CHOICES, blank=True, default='',
@@ -326,6 +516,15 @@ class Colaborador(TenantMixin):
     prorrogacoes_experiencia = models.PositiveSmallIntegerField(
         default=0, verbose_name="Prorrogacoes da experiencia",
     )
+
+    # Interrupcoes (ferias e afastamento). Zerados ao voltar pra efetivado, com
+    # o valor antigo guardado no historico. Ver LIMPA_AO_SAIR em estados.py.
+    inicio_afastamento = models.DateField(
+        null=True, blank=True, verbose_name="Inicio do afastamento ou das ferias")
+    fim_previsto_afastamento = models.DateField(
+        null=True, blank=True, verbose_name="Retorno previsto")
+    motivo_afastamento = models.CharField(
+        max_length=60, blank=True, default='', verbose_name="Motivo do afastamento")
     data_desligamento = models.DateField(null=True, blank=True, verbose_name="Data de desligamento")
     motivo_desligamento = models.CharField(max_length=40, blank=True, default='', verbose_name="Motivo do desligamento")
     elegivel_recontratacao = models.BooleanField(
@@ -535,6 +734,12 @@ class LinkCadastroUnidade(TenantMixin):
     URL (e um QR pra colar na parede), o colaborador abre no celular, preenche
     os proprios dados e cai no board.
 
+    UMA UNIDADE PODE TER VARIOS LINKS ATIVOS. Isso e do produto real, conferido
+    em print: a mesma loja aparece com quatro links vivos, criados em datas
+    diferentes, cada um com seu contador. Um por campanha, por turno ou por
+    recrutador, e invalidar um nao pode derrubar os outros. A primeira versao
+    daqui tinha uma constraint de um ativo por unidade, que era invencao nossa.
+
     O token e unique GLOBAL, nao por tenant, e isso e proposital: a URL publica
     nao carrega tenant nenhum, entao e o proprio token que resolve de quem e o
     cadastro. Por isso ele tem 32 bytes de entropia.
@@ -546,6 +751,16 @@ class LinkCadastroUnidade(TenantMixin):
     unidade = models.ForeignKey(
         Unidade, on_delete=models.CASCADE, related_name='links_cadastro',
         verbose_name="Unidade",
+    )
+    nome = models.CharField(
+        max_length=120, blank=True, default='', verbose_name="Nome do link",
+        help_text="Como o RH distingue este link dos outros da mesma loja. "
+                  "Ex: Mutirao de julho, Turno da noite.",
+    )
+    template = models.ForeignKey(
+        TemplateFormulario, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='links', verbose_name="Formulario",
+        help_text="Qual formulario o colaborador preenche. Vazio usa o padrao do tenant.",
     )
     token = models.CharField(
         max_length=64, unique=True, db_index=True, verbose_name="Token",
@@ -585,18 +800,11 @@ class LinkCadastroUnidade(TenantMixin):
         indexes = [
             models.Index(fields=['tenant', 'unidade', 'ativo'], name='people_link_und_idx'),
         ]
-        constraints = [
-            # Um cartao por loja, como na tela de origem. Se a rotacao tentar
-            # criar o novo antes de desativar o velho, isto falha alto em vez de
-            # deixar dois links vivos pra mesma unidade.
-            models.UniqueConstraint(
-                fields=['unidade'], condition=models.Q(ativo=True),
-                name='people_link_ativo_unico_por_unidade',
-            ),
-        ]
+        # Sem constraint de unicidade por unidade: varios links ativos na mesma
+        # loja e o comportamento do produto real. Ver GAPS-VISIO.md, gap 1.
 
     def __str__(self):
-        return f'Link de {self.unidade}'
+        return self.nome or f'Link de {self.unidade}'
 
     def esta_valido(self):
         """Aceita submissao? Ativo, dentro do prazo e abaixo do teto."""

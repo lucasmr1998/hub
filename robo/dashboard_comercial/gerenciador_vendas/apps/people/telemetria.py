@@ -40,10 +40,13 @@ EVENTO_ADMISSAO_INICIADA = 'people.colaborador.admissao_iniciada'
 EVENTO_EXPERIENCIA_INICIADA = 'people.colaborador.experiencia_iniciada'
 EVENTO_EXPERIENCIA_PRORROGADA = 'people.colaborador.experiencia_prorrogada'
 EVENTO_EFETIVADO = 'people.colaborador.efetivado'
+EVENTO_ENTROU_EM_FERIAS = 'people.colaborador.entrou_em_ferias'
+EVENTO_ENTROU_EM_AFASTAMENTO = 'people.colaborador.entrou_em_afastamento'
 EVENTO_DESLIGAMENTO_INICIADO = 'people.colaborador.desligamento_iniciado'
 EVENTO_DESLIGADO = 'people.colaborador.desligado'
 EVENTO_VIROU_FREELANCER = 'people.colaborador.virou_freelancer'
 EVENTO_VOLTOU_PRA_CADASTRO = 'people.colaborador.voltou_pra_cadastro'
+EVENTO_RETORNOU = 'people.colaborador.retornou'
 
 # Qual evento cada destino da maquina de estados emite.
 EVENTO_POR_SITUACAO = {
@@ -51,9 +54,18 @@ EVENTO_POR_SITUACAO = {
     estados.SITUACAO_EM_ADMISSAO:     EVENTO_ADMISSAO_INICIADA,
     estados.SITUACAO_EM_EXPERIENCIA:  EVENTO_EXPERIENCIA_INICIADA,
     estados.SITUACAO_EFETIVADO:       EVENTO_EFETIVADO,
+    estados.SITUACAO_FERIAS:          EVENTO_ENTROU_EM_FERIAS,
+    estados.SITUACAO_AFASTAMENTO:     EVENTO_ENTROU_EM_AFASTAMENTO,
     estados.SITUACAO_EM_DESLIGAMENTO: EVENTO_DESLIGAMENTO_INICIADO,
     estados.SITUACAO_DESLIGADO:       EVENTO_DESLIGADO,
     estados.SITUACAO_FREELANCER:      EVENTO_VIROU_FREELANCER,
+}
+
+# Voltar de ferias ou afastamento e "retornou", nao "efetivado" de novo:
+# efetivado ja aconteceu uma vez e contar duas estragaria o funil.
+EVENTO_DE_RETORNO = {
+    (estados.SITUACAO_FERIAS, estados.SITUACAO_EFETIVADO): EVENTO_RETORNOU,
+    (estados.SITUACAO_AFASTAMENTO, estados.SITUACAO_EFETIVADO): EVENTO_RETORNOU,
 }
 
 # Eventos que merecem WARNING no log em vez de INFO.
@@ -72,6 +84,8 @@ def evento_da_transicao(de, para):
     """
     if estados.eh_prorrogacao(de, para):
         return EVENTO_EXPERIENCIA_PRORROGADA
+    if (de, para) in EVENTO_DE_RETORNO:
+        return EVENTO_DE_RETORNO[(de, para)]
     return EVENTO_POR_SITUACAO.get(para)
 
 
@@ -98,7 +112,7 @@ def contexto_do_colaborador(colaborador, **extras):
         'cpf_mascarado': colaborador.cpf_mascarado,
         'situacao': colaborador.situacao,
         'situacao_rotulo': colaborador.situacao_rotulo,
-        'cargo': colaborador.cargo or '',
+        'cargo': colaborador.cargo.nome if colaborador.cargo_id else '',
         'unidade_id': getattr(unidade, 'pk', None),
         'unidade_nome': getattr(unidade, 'nome', ''),
         'ponto_entrada': colaborador.ponto_entrada,

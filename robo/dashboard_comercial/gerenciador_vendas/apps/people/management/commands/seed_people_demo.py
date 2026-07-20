@@ -74,7 +74,8 @@ class Command(BaseCommand):
             self._limpar(tenant)
 
         unidades = self._criar_unidades(tenant)
-        self._criar_pessoas(tenant, unidades)
+        cargos = self._criar_cargos(tenant)
+        self._criar_pessoas(tenant, unidades, cargos)
         self._demonstrar_dedup(tenant, unidades[0])
         self._resumo(tenant)
 
@@ -101,13 +102,26 @@ class Command(BaseCommand):
                 f'{"criada" if nova else "ja existia"}: unidade {unidade.nome}')
         return criadas
 
-    def _criar_pessoas(self, tenant, unidades):
+    def _criar_cargos(self, tenant):
+        """Cargo e entidade, nao texto. Ver GAPS-VISIO.md, gap 2."""
+        from apps.people.models import Cargo
+
+        cargos = {}
+        for ordem, nome in enumerate(sorted({p[2] for p in PESSOAS})):
+            cargo, _ = Cargo.all_tenants.get_or_create(
+                tenant=tenant, nome=nome, defaults={'ordem': ordem * 10})
+            cargos[nome] = cargo
+        self.stdout.write(f'cargos: {", ".join(cargos)}')
+        return cargos
+
+    def _criar_pessoas(self, tenant, unidades, cargos):
         self.stdout.write('')
         self.stdout.write('Colaboradores:')
         hoje = date.today()
 
-        for indice, (nome, base, cargo, fase, dias) in enumerate(PESSOAS):
+        for indice, (nome, base, nome_cargo, fase, dias) in enumerate(PESSOAS):
             unidade = unidades[indice % len(unidades)]
+            cargo = cargos[nome_cargo]
             admissao = hoje - timedelta(days=dias) if dias else None
 
             resultado = registrar_colaborador(

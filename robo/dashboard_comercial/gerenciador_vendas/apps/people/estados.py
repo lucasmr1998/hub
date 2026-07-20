@@ -28,6 +28,8 @@ SITUACAO_CADASTRO = 'cadastro'
 SITUACAO_EM_ADMISSAO = 'em_admissao'
 SITUACAO_EM_EXPERIENCIA = 'em_experiencia'
 SITUACAO_EFETIVADO = 'efetivado'
+SITUACAO_FERIAS = 'ferias'
+SITUACAO_AFASTAMENTO = 'afastamento'
 SITUACAO_EM_DESLIGAMENTO = 'em_desligamento'
 SITUACAO_DESLIGADO = 'desligado'
 SITUACAO_FREELANCER = 'freelancer'
@@ -37,10 +39,18 @@ SITUACOES = [
     (SITUACAO_EM_ADMISSAO,     'Em admissao'),
     (SITUACAO_EM_EXPERIENCIA,  'Em experiencia'),
     (SITUACAO_EFETIVADO,       'Efetivado'),
+    (SITUACAO_FERIAS,          'Ferias'),
+    (SITUACAO_AFASTAMENTO,     'Afastamento'),
     (SITUACAO_EM_DESLIGAMENTO, 'Em desligamento'),
     (SITUACAO_DESLIGADO,       'Desligado'),
     (SITUACAO_FREELANCER,      'Freelancer'),
 ]
+
+# Ferias e Afastamento sao TEMPORARIOS: a pessoa sai de efetivado e volta pra
+# efetivado. Nao sao fases do ciclo, sao interrupcoes dele. Por isso o board
+# continua com as colunas do ciclo, e quem esta de ferias aparece marcado na
+# coluna de origem em vez de virar coluna propria.
+SITUACOES_TEMPORARIAS = (SITUACAO_FERIAS, SITUACAO_AFASTAMENTO)
 
 VALORES_SITUACAO = [valor for valor, _ in SITUACOES]
 ROTULOS_SITUACAO = dict(SITUACOES)
@@ -52,12 +62,16 @@ SITUACOES_ATIVAS = (
     SITUACAO_EM_ADMISSAO,
     SITUACAO_EM_EXPERIENCIA,
     SITUACAO_EFETIVADO,
+    SITUACAO_FERIAS,
+    SITUACAO_AFASTAMENTO,
     SITUACAO_EM_DESLIGAMENTO,
 )
 
-# Colunas do board nesta entrega. Freelancer fica de fora ate a fase do banco de
-# freelancers existir. Lista separada de SITUACOES de proposito: o que o board
-# mostra e decisao de produto, o que a maquina aceita e decisao de dominio.
+# Colunas do board. Freelancer fica de fora ate a fase do banco de freelancers
+# existir, e Ferias/Afastamento tambem, porque sao interrupcoes e nao fases: a
+# pessoa de ferias continua sendo do quadro e aparece na coluna Efetivado com
+# um badge. Lista separada de SITUACOES de proposito: o que o board mostra e
+# decisao de produto, o que a maquina aceita e decisao de dominio.
 COLUNAS_BOARD = [
     SITUACAO_CADASTRO,
     SITUACAO_EM_ADMISSAO,
@@ -66,6 +80,121 @@ COLUNAS_BOARD = [
     SITUACAO_EM_DESLIGAMENTO,
     SITUACAO_DESLIGADO,
 ]
+
+# Onde o card aparece no board quando a situacao nao tem coluna propria.
+COLUNA_DE_APOIO = {
+    SITUACAO_FERIAS: SITUACAO_EFETIVADO,
+    SITUACAO_AFASTAMENTO: SITUACAO_EFETIVADO,
+}
+
+
+def coluna_do_board(situacao):
+    """Em qual coluna este colaborador aparece."""
+    return COLUNA_DE_APOIO.get(situacao, situacao)
+
+
+# ── Etapas configuraveis do fluxo ────────────────────────────────────────────
+#
+# Espelha a tela "Fluxo do Departamento Pessoal" do produto de origem: sete
+# etapas fixas, e a configuracao acontece dentro de cada uma. As etapas sao as
+# mesmas situacoes da maquina, com o nome que a tela usa.
+
+ETAPAS_FLUXO = [
+    {
+        'situacao': SITUACAO_CADASTRO,
+        'nome': 'Cadastro Inicial',
+        'descricao': 'Colaborador acabou de ser cadastrado no sistema.',
+        'icone': 'bi-person-plus',
+        'recursos': ['comunicacao', 'formulario_cadastro'],
+    },
+    {
+        'situacao': SITUACAO_EM_ADMISSAO,
+        'nome': 'Admissao',
+        'descricao': 'Documentacao, exame admissional e checklist do processo de admissao.',
+        'icone': 'bi-briefcase',
+        'recursos': ['comunicacao', 'checklist', 'pedido_documentacao',
+                     'exame_admissional', 'contabilidade'],
+    },
+    {
+        'situacao': SITUACAO_EM_EXPERIENCIA,
+        'nome': 'Periodo de Experiencia',
+        'descricao': 'Duracao do periodo, checklist de acompanhamento.',
+        'icone': 'bi-stopwatch',
+        'recursos': ['comunicacao', 'periodo_experiencia', 'checklist'],
+    },
+    {
+        'situacao': SITUACAO_EFETIVADO,
+        'nome': 'Ativos',
+        'descricao': 'Colaborador efetivado.',
+        'icone': 'bi-people',
+        'recursos': ['comunicacao'],
+    },
+    {
+        'situacao': SITUACAO_FERIAS,
+        'nome': 'Ferias',
+        'descricao': 'Checklist de acompanhamento durante as ferias.',
+        'icone': 'bi-umbrella',
+        'recursos': ['comunicacao', 'checklist'],
+    },
+    {
+        'situacao': SITUACAO_AFASTAMENTO,
+        'nome': 'Afastamentos',
+        'descricao': 'Checklist de acompanhamento durante o afastamento.',
+        'icone': 'bi-heart-pulse',
+        'recursos': ['comunicacao', 'checklist'],
+    },
+    {
+        'situacao': SITUACAO_EM_DESLIGAMENTO,
+        'nome': 'Desligamento',
+        'descricao': 'Exame demissional, entrevista, documentacao e comunicacao do desligamento.',
+        'icone': 'bi-box-arrow-right',
+        'recursos': ['comunicacao', 'checklist', 'exame_demissional',
+                     'entrevista_saida', 'documentacao_rescisao'],
+    },
+]
+
+# Recursos que ja existem em codigo. Os demais aparecem na tela de configuracao
+# como "em construcao", pra que o mapa do modulo fique visivel desde o inicio em
+# vez de a tela mentir sobre o tamanho do produto.
+RECURSOS_DISPONIVEIS = {'comunicacao', 'formulario_cadastro', 'periodo_experiencia'}
+
+ROTULOS_RECURSO = {
+    'comunicacao': 'Comunicacao com Colaborador',
+    'formulario_cadastro': 'Formulario de Cadastro',
+    'periodo_experiencia': 'Configuracao do Periodo de Experiencia',
+    'checklist': 'Checklist do Processo',
+    'pedido_documentacao': 'Pedido de Documentacao',
+    'exame_admissional': 'Exame Admissional',
+    'contabilidade': 'Envio para a Contabilidade',
+    'exame_demissional': 'Exame Demissional',
+    'entrevista_saida': 'Entrevista de Desligamento',
+    'documentacao_rescisao': 'Documentacao da Rescisao',
+}
+
+DESCRICOES_RECURSO = {
+    'comunicacao': 'Prepare a mensagem que o RH podera enviar ao colaborador quando '
+                   'ele chegar nesta etapa. Nada e enviado automaticamente.',
+    'formulario_cadastro': 'Define quais informacoes o colaborador devera preencher '
+                           'durante o cadastro.',
+    'periodo_experiencia': 'Defina por quantos dias dura o periodo de experiencia e '
+                           'como ele e dividido.',
+    'checklist': 'Crie uma lista de atividades para acompanhar tudo o que precisa ser '
+                 'realizado nesta etapa.',
+    'pedido_documentacao': 'Configure os documentos solicitados ao colaborador e os '
+                           'links utilizados para o envio.',
+    'exame_admissional': 'Clinica, agendamento e comprovante do exame admissional.',
+    'contabilidade': 'Pacote de documentos enviado ao contador ao iniciar a experiencia.',
+    'exame_demissional': 'Clinica, agendamento e comprovante do exame demissional.',
+    'entrevista_saida': 'Perguntas da entrevista de desligamento e como ela e aplicada.',
+    'documentacao_rescisao': 'Termo de rescisao e demais documentos anexados na saida.',
+}
+
+
+def etapa_por_situacao(situacao):
+    for etapa in ETAPAS_FLUXO:
+        if etapa['situacao'] == situacao:
+            return etapa
+    return None
 
 
 # ── Os tres pontos de entrada (D1) ───────────────────────────────────────────
@@ -129,9 +258,26 @@ TRANSICOES = {
         SITUACAO_DESLIGADO,
     },
     SITUACAO_EFETIVADO: {
+        # Interrupcoes: sai e volta. Ver SITUACOES_TEMPORARIAS.
+        SITUACAO_FERIAS,
+        SITUACAO_AFASTAMENTO,
         SITUACAO_EM_DESLIGAMENTO,
         SITUACAO_DESLIGADO,
         SITUACAO_FREELANCER,
+    },
+    SITUACAO_FERIAS: {
+        # O caminho normal e voltar. Desligar durante as ferias tambem acontece
+        # (pedido de demissao na volta, por exemplo), entao a saida existe.
+        SITUACAO_EFETIVADO,
+        SITUACAO_AFASTAMENTO,
+        SITUACAO_EM_DESLIGAMENTO,
+        SITUACAO_DESLIGADO,
+    },
+    SITUACAO_AFASTAMENTO: {
+        SITUACAO_EFETIVADO,
+        SITUACAO_FERIAS,
+        SITUACAO_EM_DESLIGAMENTO,
+        SITUACAO_DESLIGADO,
     },
     SITUACAO_EM_DESLIGAMENTO: {
         SITUACAO_DESLIGADO,
@@ -185,6 +331,8 @@ EFEITOS = {
     SITUACAO_EM_EXPERIENCIA:  {'exige': ['data_admissao'],
                                'calcula': ['data_fim_experiencia']},
     SITUACAO_EFETIVADO:       {},
+    SITUACAO_FERIAS:          {'exige': ['inicio_afastamento']},
+    SITUACAO_AFASTAMENTO:     {'exige': ['inicio_afastamento', 'motivo_afastamento']},
     SITUACAO_EM_DESLIGAMENTO: {'exige': ['motivo_desligamento']},
     SITUACAO_DESLIGADO:       {'exige': ['data_desligamento', 'motivo_desligamento']},
     SITUACAO_FREELANCER:      {},
@@ -203,6 +351,12 @@ EXCECOES_EXIGE = {
 # servico o guarda no snapshot do HistoricoSituacao.
 LIMPA_AO_SAIR = {
     SITUACAO_DESLIGADO: ['data_desligamento', 'motivo_desligamento'],
+    # Voltar de ferias ou afastamento zera os campos da interrupcao, senao a
+    # ficha de quem ja voltou continua dizendo que a pessoa esta fora.
+    SITUACAO_FERIAS: ['inicio_afastamento', 'fim_previsto_afastamento',
+                      'motivo_afastamento'],
+    SITUACAO_AFASTAMENTO: ['inicio_afastamento', 'fim_previsto_afastamento',
+                           'motivo_afastamento'],
 }
 
 # Whitelist do que a transicao pode gravar, por destino.
@@ -217,6 +371,9 @@ CAMPOS_ACEITOS = {
     SITUACAO_EM_EXPERIENCIA:  ['data_admissao', 'data_fim_experiencia',
                                'cargo', 'regime_contratacao'],
     SITUACAO_EFETIVADO:       ['cargo'],
+    SITUACAO_FERIAS:          ['inicio_afastamento', 'fim_previsto_afastamento'],
+    SITUACAO_AFASTAMENTO:     ['inicio_afastamento', 'fim_previsto_afastamento',
+                               'motivo_afastamento'],
     SITUACAO_EM_DESLIGAMENTO: ['motivo_desligamento', 'data_desligamento'],
     SITUACAO_DESLIGADO:       ['data_desligamento', 'motivo_desligamento',
                                'elegivel_recontratacao'],

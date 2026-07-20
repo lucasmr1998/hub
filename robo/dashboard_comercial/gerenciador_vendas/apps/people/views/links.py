@@ -1,40 +1,46 @@
 """
-Tela "Cadastro via link": um cartao por unidade, com o link publico dela.
+Tela "Cadastro via link".
 
-Espelha a tela de origem, onde cada loja tem seu cartao com Copiar Link, Baixar
-QR, Desativar e Novo Link. O QR entra no passo seguinte.
+Lista de links, nao um cartao por loja: uma unidade pode ter varios links ativos
+ao mesmo tempo, cada um com seu formulario e seu contador. Ver GAPS-VISIO.md,
+gap 1.
 """
+import io
+
 from django.contrib import messages
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from apps.people.models import LinkCadastroUnidade, SubmissaoLinkCadastro, Unidade
+from apps.people.models import (
+    LinkCadastroUnidade, SubmissaoLinkCadastro, TemplateFormulario, Unidade,
+)
 from apps.people.permissoes import pode_acessar, requer_people
-from apps.people.services import criar_link, desativar_link, rotacionar_link
+from apps.people.services import criar_link, desativar_link, reativar_link, rotacionar_link
 from apps.sistema.utils import registrar_acao
 
 
 @requer_people()
 def lista(request):
-    unidades = Unidade.objects.filter(ativo=True).order_by('nome')
-    ativos = {
-        link.unidade_id: link
-        for link in LinkCadastroUnidade.objects.filter(ativo=True).select_related('unidade')
-    }
+    links = (LinkCadastroUnidade.objects
+             .select_related('unidade', 'template')
+             .order_by('-ativo', '-criado_em'))
 
-    cartoes = [
-        {
-            'unidade': unidade,
-            'link': ativos.get(unidade.pk),
-            'url': request.build_absolute_uri(ativos[unidade.pk].caminho_publico)
-                   if unidade.pk in ativos else '',
-        }
-        for unidade in unidades
-    ]
+    unidade_id = request.GET.get('unidade') or ''
+    if unidade_id:
+        links = links.filter(unidade_id=unidade_id)
 
     return render(request, 'people/links_lista.html', {
         'pagetitle': 'Cadastro via link',
-        'cartoes': cartoes,
+        'links': [
+            {'link': link, 'url': request.build_absolute_uri(link.caminho_publico)}
+            for link in links
+        ],
+        'unidades_opcoes': list(
+            Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
+        'unidade_selecionada': unidade_id,
+        'templates_opcoes': list(
+            TemplateFormulario.objects.filter(ativo=True).values_list('pk', 'nome')),
         'pode_gerir': pode_acessar(request, 'people.gerir_links'),
         'ultimas': (SubmissaoLinkCadastro.objects
                     .select_related('link__unidade', 'colaborador')[:15]),
@@ -43,48 +49,78 @@ def lista(request):
 
 @require_POST
 @requer_people('people.gerir_links')
-def gerar(request, unidade_pk):
-    unidade = get_object_or_404(Unidade.objects, pk=unidade_pk)
-    link = criar_link(unidade, usuario=request.user)
+def criar(request):
+    unidade = get_object_or_404(Unidade.objects, pk=request.POST.get('unidade'))
+    template = None
+    if request.POST.get('template'):
+        template = TemplateFormulario.objects.filter(pk=request.POST['template']).first()
+
+    link = criar_link(
+        unidade, usuario=request.user,
+        nome=(request.POST.get('nome') or '').strip(),
+        template=template,
+    )
     registrar_acao('people', 'criar', 'link_cadastro', link.pk,
-                   f'Link de cadastro gerado para {unidade.nome}.', request=request)
-    messages.success(request, f'Link de {unidade.nome} gerado.')
+                   f'Link de cadastro criado para {unidade.nome}.', request=request)
+    messages.success(request, f'Link de {unidade.nome} criado.')
     return redirect('people:links_lista')
 
 
 @require_POST
 @requer_people('people.gerir_links')
-def rotacionar(request, unidade_pk):
+def rotacionar(request, pk):
     """
-    "Novo Link". Invalida o que esta circulando e poe outro no lugar.
+    Invalida ESTE link e cria um substituto com a mesma configuracao.
 
-    E a acao que se usa quando o link vazou pra fora da loja. Por isso a
-    mensagem diz o que aconteceu com o antigo: quem clica precisa saber que
-    acabou de quebrar o QR que esta na parede.
+    E a acao pra quando um link especifico vazou. Os outros links da mesma loja
+    continuam valendo, que e a diferenca em relacao a desativar tudo.
     """
-    unidade = get_object_or_404(Unidade.objects, pk=unidade_pk)
-    link = rotacionar_link(unidade, usuario=request.user)
-    registrar_acao('people', 'editar', 'link_cadastro', link.pk,
-                   f'Link de cadastro rotacionado para {unidade.nome}.', request=request)
+    link = get_object_or_404(LinkCadastroUnidade.objects, pk=pk)
+    novo = rotacionar_link(link, usuario=request.user)
+    registrar_acao('people', 'editar', 'link_cadastro', novo.pk,
+                   f'Link rotacionado em {link.unidade.nome}.', request=request)
     messages.success(
         request,
-        f'Novo link de {unidade.nome} gerado. O anterior parou de funcionar, '
-        f'entao redistribua o QR e o link de quem ja tinha o antigo.',
+        'Link substituido. O anterior parou de funcionar agora, entao redistribua '
+        'o QR e o endereco pra quem tinha o antigo.',
     )
     return redirect('people:links_lista')
 
 
+@requer_people()
+def qr(request, pk):
+    """
+    QR do link, em SVG.
+
+    SVG e nao PNG porque o uso real e cartaz colado na parede da loja: precisa
+    escalar sem borrar na impressao. `segno` e pure python e nao arrasta Pillow.
+    """
+    import segno
+
+    link = get_object_or_404(LinkCadastroUnidade.objects, pk=pk)
+    url = request.build_absolute_uri(link.caminho_publico)
+
+    buffer = io.BytesIO()
+    segno.make(url, error='m').save(buffer, kind='svg', scale=8, border=2)
+
+    resposta = HttpResponse(buffer.getvalue(), content_type='image/svg+xml')
+    nome = link.unidade.codigo or 'unidade'
+    resposta['Content-Disposition'] = f'attachment; filename="qr-{nome}.svg"'
+    return resposta
+
+
 @require_POST
 @requer_people('people.gerir_links')
-def desativar(request, unidade_pk):
-    unidade = get_object_or_404(Unidade.objects, pk=unidade_pk)
-    link = LinkCadastroUnidade.objects.filter(unidade=unidade, ativo=True).first()
-    if link is None:
-        messages.warning(request, f'{unidade.nome} nao tem link ativo.')
-        return redirect('people:links_lista')
+def alternar_ativo(request, pk):
+    link = get_object_or_404(LinkCadastroUnidade.objects, pk=pk)
+    if link.ativo:
+        desativar_link(link, usuario=request.user)
+        estado = 'desativado'
+    else:
+        reativar_link(link, usuario=request.user)
+        estado = 'reativado'
 
-    desativar_link(link, usuario=request.user)
     registrar_acao('people', 'editar', 'link_cadastro', link.pk,
-                   f'Link de cadastro desativado para {unidade.nome}.', request=request)
-    messages.success(request, f'Link de {unidade.nome} desativado.')
+                   f'Link {estado} em {link.unidade.nome}.', request=request)
+    messages.success(request, f'Link {estado}.')
     return redirect('people:links_lista')

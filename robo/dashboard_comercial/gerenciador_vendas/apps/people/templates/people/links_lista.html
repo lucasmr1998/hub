@@ -11,10 +11,16 @@
         <p class="page-eyebrow">People</p>
         <h1 class="page-title">Cadastro via link</h1>
         <p class="page-subtitle">
-          Cada loja tem um link proprio. O colaborador abre no celular, preenche
-          os proprios dados e cai no board, sem ninguem digitar por ele.
+          Envie um destes links para o colaborador preencher o proprio cadastro
+          pelo celular. Uma loja pode ter varios: um por campanha, por turno ou
+          por recrutador.
         </p>
       </div>
+      {% if pode_gerir %}
+        <button type="button" class="btn btn-primary" onclick="abrirModal('modal-novo-link')">
+          <i class="bi bi-plus-lg"></i> Novo link
+        </button>
+      {% endif %}
     </div>
   </div>
 
@@ -24,76 +30,80 @@
     {% endfor %}
   {% endif %}
 
-  {% if cartoes %}
-    <div class="form-grid-2">
-      {% for cartao in cartoes %}
-        <div class="section-card">
-          <div class="section-card-header">
-            <h2 class="section-card-title"><i class="bi bi-shop"></i> {{ cartao.unidade.nome }}</h2>
-            {% if cartao.link %}
-              {% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
-            {% else %}
-              {% include "components/badge.html" with variant="neutral" label="Sem link" %}
-            {% endif %}
-          </div>
-          <div class="section-card-body">
-            {% if cartao.link %}
-              <div class="field">
-                <label class="field-label" for="url-{{ cartao.unidade.pk }}">Link publico</label>
-                <div class="field-input-wrap">
-                  <input class="field-input" id="url-{{ cartao.unidade.pk }}"
-                         value="{{ cartao.url }}" readonly
-                         onclick="this.select()">
-                </div>
-                <p class="field-helper">
-                  {{ cartao.link.submissoes }} cadastro{{ cartao.link.submissoes|pluralize }} recebido{{ cartao.link.submissoes|pluralize }}
-                  {% if cartao.link.ultima_submissao_em %}
-                    · ultimo em {{ cartao.link.ultima_submissao_em|date:"d/m/Y H:i" }}
-                  {% endif %}
-                  {% if cartao.link.expira_em %}
-                    · expira em {{ cartao.link.expira_em|date:"d/m/Y" }}
-                  {% endif %}
-                </p>
-              </div>
+  <form method="get" id="filtro-links" style="margin-bottom: var(--sp-4); max-width: 320px;">
+    {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas as unidades" %}
+    <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
+  </form>
 
-              {% if pode_gerir %}
-                <div class="form-actions">
-                  <button type="button" class="btn btn-secondary btn-sm"
-                          data-copiar="url-{{ cartao.unidade.pk }}">
-                    <i class="bi bi-clipboard"></i> Copiar link
-                  </button>
-                  <form method="post" action="{% url 'people:link_rotacionar' cartao.unidade.pk %}"
-                        onsubmit="return confirm('O link atual para de funcionar na hora. Quem tiver o QR antigo ou o link antigo nao vai mais conseguir se cadastrar. Continuar?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-ghost btn-sm">
-                      <i class="bi bi-arrow-repeat"></i> Novo link
-                    </button>
-                  </form>
-                  <form method="post" action="{% url 'people:link_desativar' cartao.unidade.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-ghost btn-sm">
-                      <i class="bi bi-pause-circle"></i> Desativar
-                    </button>
-                  </form>
-                </div>
+  {% if links %}
+    <table class="entity-table">
+      <thead>
+        <tr>
+          <th>Loja</th>
+          <th>Nome</th>
+          <th>Formulario</th>
+          <th>Criado</th>
+          <th>Status</th>
+          <th>Cadastros</th>
+          {% if pode_gerir %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in links %}
+          <tr>
+            <td>{{ item.link.unidade.nome }}</td>
+            <td>
+              {{ item.link.nome|default:"—" }}
+              <br>
+              <input class="field-input" id="url-{{ item.link.pk }}" value="{{ item.url }}"
+                     readonly onclick="this.select()" style="max-width: 340px; margin-top: 4px;">
+            </td>
+            <td>{{ item.link.template.nome|default:"Padrao" }}</td>
+            <td>{{ item.link.criado_em|date:"d/m/y" }}</td>
+            <td>
+              {% if item.link.esta_valido %}
+                {% include "components/badge.html" with variant="success" label="Ativo" dot=True size="sm" %}
+              {% elif item.link.ativo %}
+                {% include "components/badge.html" with variant="warning" label="Expirado" size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Inativo" size="sm" %}
               {% endif %}
-            {% else %}
-              <p class="field-helper">Esta unidade ainda nao tem link de cadastro.</p>
-              {% if pode_gerir %}
-                <form method="post" action="{% url 'people:link_gerar' cartao.unidade.pk %}" class="form-actions">
+            </td>
+            <td>{{ item.link.submissoes }}</td>
+            {% if pode_gerir %}
+              <td style="text-align: right; white-space: nowrap;">
+                <button type="button" class="btn btn-ghost btn-sm" data-copiar="url-{{ item.link.pk }}"
+                        title="Copiar link">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+                <a href="{% url 'people:link_qr' item.link.pk %}" class="btn btn-ghost btn-sm"
+                   title="Baixar QR pra colar na loja" download="qr-{{ item.link.unidade.codigo }}.svg">
+                  <i class="bi bi-qr-code"></i>
+                </a>
+                <form method="post" action="{% url 'people:link_rotacionar' item.link.pk %}"
+                      style="display:inline;"
+                      onsubmit="return confirm('O link atual para de funcionar agora. Quem tiver o QR antigo nao vai mais conseguir se cadastrar. Continuar?');">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-link-45deg"></i> Gerar link
+                  <button type="submit" class="btn btn-ghost btn-sm" title="Substituir por um novo">
+                    <i class="bi bi-arrow-repeat"></i>
                   </button>
                 </form>
-              {% endif %}
+                <form method="post" action="{% url 'people:link_alternar_ativo' item.link.pk %}"
+                      style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm"
+                          title="{% if item.link.ativo %}Desativar{% else %}Reativar{% endif %}">
+                    <i class="bi {% if item.link.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+                  </button>
+                </form>
+              </td>
             {% endif %}
-          </div>
-        </div>
-      {% endfor %}
-    </div>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% else %}
-    {% include "components/empty_state.html" with icon="bi-shop" text="Nenhuma unidade ativa" subtext="O link de cadastro e por loja, entao cadastre as unidades primeiro." cta_label="Ir para unidades" cta_href="/people/unidades/" %}
+    {% include "components/empty_state.html" with icon="bi-link-45deg" text="Nenhum link de cadastro" subtext="Crie um link por loja e envie pro colaborador preencher o proprio cadastro." %}
   {% endif %}
 
   {% if ultimas %}
@@ -104,7 +114,7 @@
     </p>
     <table class="entity-table">
       <thead>
-        <tr><th>Quando</th><th>Unidade</th><th>Resultado</th><th>Pessoa</th><th>Observacao</th></tr>
+        <tr><th>Quando</th><th>Loja</th><th>Resultado</th><th>Pessoa</th><th>Observacao</th></tr>
       </thead>
       <tbody>
         {% for envio in ultimas %}
@@ -132,7 +142,39 @@
     </table>
   {% endif %}
 
+  {% if pode_gerir %}
+    <div id="modal-novo-link" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-md">
+        <form method="post" action="{% url 'people:link_criar' %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h2 class="modal-title">Novo link de cadastro</h2>
+            <button type="button" class="modal-close" onclick="fecharModal('modal-novo-link')" aria-label="Fechar">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-stack">
+              {% include "components/select.html" with name="unidade" label="Loja" options=unidades_opcoes required=True blank_label="Selecione a loja" %}
+              {% include "components/input.html" with name="nome" label="Nome do link" placeholder="Ex: Mutirao de julho" helper="So pra voce distinguir os links da mesma loja." %}
+              {% include "components/select.html" with name="template" label="Formulario" options=templates_opcoes blank_label="Formulario padrao" helper="Define quais campos o colaborador preenche." %}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-novo-link')">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Criar link</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
   <script>
+    const filtroLinks = document.querySelector('#filtro-links select');
+    if (filtroLinks) {
+      filtroLinks.addEventListener('change', function () { filtroLinks.form.submit(); });
+    }
+
     // Copiar link. Fallback pra select quando a Clipboard API nao esta
     // disponivel (http sem localhost, navegador antigo).
     document.querySelectorAll('[data-copiar]').forEach(function (botao) {

@@ -12,7 +12,7 @@ import pytest
 
 from apps.people import estados
 from apps.people.excecoes import CampoObrigatorioFaltando, TransicaoInvalida
-from apps.people.models import Colaborador, HistoricoSituacao, Unidade
+from apps.people.models import Cargo, Colaborador, HistoricoSituacao, Unidade
 from apps.people.services import (
     buscar_colaborador, config_efetiva, mover_situacao, registrar_colaborador,
     unidade_sentinela,
@@ -193,10 +193,11 @@ def test_reaproveitamento_nao_sobrescreve_dado_do_rh(unidade):
 def test_auto_cadastro_nao_mexe_em_campo_do_rh_nem_vazio(unidade):
     """Cargo, regime e data de admissao sao decisao do RH, nao do colaborador."""
     _registrar(unidade, nome='Maria', cpf=CPF_VALIDO)
+    cargo = Cargo.all_tenants.create(tenant=unidade.tenant, nome='Gerente')
     r = _registrar(unidade, nome='Maria', cpf=CPF_VALIDO, origem='link_publico',
-                   cargo='Gerente', data_admissao=date(2026, 1, 1))
+                   cargo=cargo, data_admissao=date(2026, 1, 1))
 
-    assert r.colaborador.cargo == ''
+    assert r.colaborador.cargo is None
     assert r.colaborador.data_admissao is None
 
 

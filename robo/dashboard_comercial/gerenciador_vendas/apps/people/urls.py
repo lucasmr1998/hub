@@ -13,11 +13,12 @@ urlpatterns = [
     path('colaboradores/<int:pk>/', colaboradores.detalhe, name='colaborador_detalhe'),
     path('colaboradores/<int:pk>/revisar/', colaboradores.revisar, name='colaborador_revisar'),
 
-    # Links publicos de auto cadastro, um por unidade
+    # Links publicos de auto cadastro. Uma unidade pode ter varios.
     path('links/', links.lista, name='links_lista'),
-    path('links/<int:unidade_pk>/gerar/', links.gerar, name='link_gerar'),
-    path('links/<int:unidade_pk>/rotacionar/', links.rotacionar, name='link_rotacionar'),
-    path('links/<int:unidade_pk>/desativar/', links.desativar, name='link_desativar'),
+    path('links/novo/', links.criar, name='link_criar'),
+    path('links/<int:pk>/rotacionar/', links.rotacionar, name='link_rotacionar'),
+    path('links/<int:pk>/alternar-ativo/', links.alternar_ativo, name='link_alternar_ativo'),
+    path('links/<int:pk>/qr.svg', links.qr, name='link_qr'),
 
     # Unidades (lojas e filiais)
     path('unidades/', unidades.lista, name='unidades_lista'),

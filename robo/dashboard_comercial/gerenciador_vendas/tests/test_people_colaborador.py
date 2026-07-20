@@ -13,7 +13,9 @@ from django.db import IntegrityError, transaction
 
 from apps.people import estados
 from apps.people.excecoes import PeopleError, TransicaoNaoAutorizada
-from apps.people.models import Colaborador, HistoricoSituacao, Unidade, sem_guarda_de_situacao
+from apps.people.models import (
+    Cargo, Colaborador, HistoricoSituacao, Unidade, sem_guarda_de_situacao,
+)
 from tests.factories import TenantFactory
 
 
@@ -147,10 +149,10 @@ def test_mudar_situacao_por_save_solto_levanta(unidade):
 def test_salvar_outros_campos_nao_e_afetado_pela_guarda(unidade):
     col = _criar(unidade)
     col = Colaborador.all_tenants.get(pk=col.pk)
-    col.cargo = 'Atendente'
+    col.cargo = Cargo.all_tenants.create(tenant=unidade.tenant, nome='Atendente')
     col.save()
     col.refresh_from_db()
-    assert col.cargo == 'Atendente'
+    assert col.cargo.nome == 'Atendente'
     assert col.situacao == estados.SITUACAO_CADASTRO
 
 
@@ -231,12 +233,12 @@ def test_refresh_from_db_reancora_a_guarda(unidade):
     Colaborador.all_tenants.filter(pk=col.pk).update(situacao=estados.SITUACAO_EFETIVADO)
     col.refresh_from_db()
 
-    col.cargo = 'Gerente'
+    col.cargo = Cargo.all_tenants.create(tenant=unidade.tenant, nome='Gerente')
     col.save()  # nao pode levantar
 
     do_banco = Colaborador.all_tenants.get(pk=col.pk)
     assert do_banco.situacao == estados.SITUACAO_EFETIVADO
-    assert do_banco.cargo == 'Gerente'
+    assert do_banco.cargo.nome == 'Gerente'
 
 
 @pytest.mark.django_db

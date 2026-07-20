@@ -8,7 +8,7 @@ que fica aqui e o que e mesmo do formulario, tipo normalizar mascara de CEP.
 """
 from django import forms
 
-from apps.people.models import Unidade
+from apps.people.models import Cargo, Unidade
 from apps.people.utils import (
     normalizar_cep, normalizar_cpf, normalizar_e164, normalizar_estado,
 )
@@ -110,7 +110,8 @@ class ColaboradorForm(forms.Form):
     email = forms.EmailField(required=False, label='Email')
     data_nascimento = forms.DateField(required=False, label='Data de nascimento')
     unidade = forms.ModelChoiceField(queryset=Unidade.objects.none(), label='Unidade')
-    cargo = forms.CharField(max_length=120, required=False, label='Cargo')
+    cargo = forms.ModelChoiceField(
+        queryset=Cargo.objects.none(), required=False, label='Cargo')
     regime_contratacao = forms.ChoiceField(required=False, label='Regime de contratacao')
     data_admissao = forms.DateField(required=False, label='Data de admissao')
 
@@ -122,6 +123,7 @@ class ColaboradorForm(forms.Form):
         self.tenant = tenant
         self.situacao_inicial = situacao_inicial
         self.fields['unidade'].queryset = Unidade.objects.filter(ativo=True)
+        self.fields['cargo'].queryset = Cargo.objects.filter(ativo=True)
         self.fields['regime_contratacao'].choices = [('', 'Nao definido')] + list(
             REGIME_CONTRATACAO_CHOICES)
 

@@ -18,7 +18,7 @@ from django.utils import timezone
 
 from apps.people.models import LinkCadastroUnidade, SubmissaoLinkCadastro, Unidade
 from apps.people.services import (
-    criar_link, desativar_link, link_ativo, registrar_submissao,
+    criar_link, desativar_link, link_ativo, links_ativos, registrar_submissao,
     resolver_por_token, rotacionar_link,
 )
 from apps.sistema.models import (
@@ -73,25 +73,30 @@ def test_tokens_nao_se_repetem(cenario):
 
 
 @pytest.mark.django_db
-def test_criar_duas_vezes_devolve_o_mesmo_link(cenario):
-    """Clicar duas vezes no botao nao pode virar erro na cara do usuario."""
-    primeiro = criar_link(cenario['unidade'])
-    segundo = criar_link(cenario['unidade'])
-    assert primeiro.pk == segundo.pk
+def test_uma_unidade_pode_ter_varios_links_ativos(cenario):
+    """
+    E o comportamento do produto real, conferido em print: a mesma loja aparece
+    com varios links vivos, um por campanha ou por turno. A primeira versao
+    daqui tinha uma constraint de um ativo por unidade, que era invencao nossa.
+    """
+    primeiro = criar_link(cenario['unidade'], nome='Mutirao de julho')
+    segundo = criar_link(cenario['unidade'], nome='Turno da noite')
+
+    assert primeiro.pk != segundo.pk
+    assert links_ativos(cenario['unidade']).count() == 2
 
 
 @pytest.mark.django_db
-def test_banco_barra_dois_links_ativos_na_mesma_unidade(cenario):
+def test_token_e_unico_globalmente(cenario):
     """
-    A constraint parcial e o que garante o "um cartao por loja". Sem ela, um
-    caminho alternativo poderia deixar dois links vivos e ninguem saberia qual
-    esta circulando.
+    O token e o que resolve o tenant na URL publica, que nao carrega tenant
+    nenhum. Colisao ali entregaria o cadastro pra empresa errada.
     """
-    criar_link(cenario['unidade'])
+    link = criar_link(cenario['unidade'])
     with pytest.raises(IntegrityError):
         with transaction.atomic():
             LinkCadastroUnidade.all_tenants.create(
-                tenant=cenario['tenant'], unidade=cenario['unidade'], token='outro-token')
+                tenant=cenario['tenant'], unidade=cenario['unidade'], token=link.token)
 
 
 @pytest.mark.django_db
@@ -118,7 +123,7 @@ def test_rotacionar_invalida_o_antigo(cenario):
     pra nada justamente no caso que a motiva: link vazado.
     """
     antigo = criar_link(cenario['unidade'])
-    novo = rotacionar_link(cenario['unidade'])
+    novo = rotacionar_link(antigo)
 
     antigo.refresh_from_db()
     assert antigo.ativo is False
@@ -132,15 +137,24 @@ def test_rotacionar_invalida_o_antigo(cenario):
 def test_rotacao_guarda_a_linhagem(cenario):
     """Saber de qual link o atual nasceu e parte de investigar um vazamento."""
     antigo = criar_link(cenario['unidade'])
-    novo = rotacionar_link(cenario['unidade'])
+    novo = rotacionar_link(antigo)
     assert novo.rotacionado_de_id == antigo.pk
 
 
 @pytest.mark.django_db
-def test_rotacionar_sem_link_anterior_apenas_cria(cenario):
-    novo = rotacionar_link(cenario['unidade'])
-    assert novo.ativo is True
-    assert novo.rotacionado_de is None
+def test_rotacionar_nao_derruba_os_outros_links_da_loja(cenario):
+    """
+    A diferenca em relacao a desativar tudo: rotacionar age sobre UM link, que e
+    o que vazou. Os outros continuam circulando.
+    """
+    vazado = criar_link(cenario['unidade'], nome='Vazado')
+    outro = criar_link(cenario['unidade'], nome='Intacto')
+
+    rotacionar_link(vazado)
+
+    outro.refresh_from_db()
+    assert outro.ativo is True
+    assert links_ativos(cenario['unidade']).count() == 2
 
 
 @pytest.mark.django_db
@@ -246,13 +260,13 @@ def test_submissao_conta_e_marca_o_horario(cenario):
 # ──────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_tela_lista_um_cartao_por_unidade(cenario):
-    Unidade.all_tenants.create(
-        tenant=cenario['tenant'], nome='Loja Norte', codigo='loja-norte')
+def test_tela_lista_os_links(cenario):
+    criar_link(cenario['unidade'], nome='Um')
+    criar_link(cenario['unidade'], nome='Dois')
     resposta = _cliente(cenario['tenant']).get('/people/links/')
 
     assert resposta.status_code == 200
-    assert len(resposta.context['cartoes']) == 2
+    assert len(resposta.context['links']) == 2
 
 
 @pytest.mark.django_db
@@ -263,19 +277,27 @@ def test_tela_mostra_a_url_completa(cenario):
 
 
 @pytest.mark.django_db
-def test_unidade_inativa_nao_aparece(cenario):
-    """Loja fechada nao deve continuar recebendo cadastro."""
-    cenario['unidade'].ativo = False
-    cenario['unidade'].save()
-    resposta = _cliente(cenario['tenant']).get('/people/links/')
-    assert resposta.context['cartoes'] == []
+def test_filtra_por_unidade(cenario):
+    outra = Unidade.all_tenants.create(
+        tenant=cenario['tenant'], nome='Loja Norte', codigo='loja-norte')
+    criar_link(cenario['unidade'], nome='Do Centro')
+    criar_link(outra, nome='Do Norte')
+
+    corpo = _cliente(cenario['tenant']).get(
+        f'/people/links/?unidade={cenario["unidade"].pk}').content.decode()
+    assert 'Do Centro' in corpo
+    assert 'Do Norte' not in corpo
 
 
 @pytest.mark.django_db
-def test_gera_pela_tela(cenario):
+def test_cria_pela_tela(cenario):
     cliente = _cliente(cenario['tenant'])
-    cliente.post(f'/people/links/{cenario["unidade"].pk}/gerar/')
-    assert link_ativo(cenario['unidade']) is not None
+    cliente.post('/people/links/novo/', {
+        'unidade': cenario['unidade'].pk, 'nome': 'Mutirao'})
+    link = link_ativo(cenario['unidade'])
+    assert link is not None
+    assert link.nome == 'Mutirao'
+
 
 
 @pytest.mark.django_db
@@ -283,7 +305,7 @@ def test_rotaciona_pela_tela(cenario):
     antigo = criar_link(cenario['unidade'])
     cliente = _cliente(cenario['tenant'])
 
-    cliente.post(f'/people/links/{cenario["unidade"].pk}/rotacionar/')
+    cliente.post(f'/people/links/{antigo.pk}/rotacionar/')
 
     antigo.refresh_from_db()
     assert antigo.ativo is False
@@ -291,40 +313,66 @@ def test_rotaciona_pela_tela(cenario):
 
 
 @pytest.mark.django_db
-def test_desativa_pela_tela(cenario):
-    criar_link(cenario['unidade'])
+def test_desativa_e_reativa_pela_tela(cenario):
+    link = criar_link(cenario['unidade'])
     cliente = _cliente(cenario['tenant'])
 
-    cliente.post(f'/people/links/{cenario["unidade"].pk}/desativar/')
-
+    cliente.post(f'/people/links/{link.pk}/alternar-ativo/')
     assert link_ativo(cenario['unidade']) is None
+
+    cliente.post(f'/people/links/{link.pk}/alternar-ativo/')
+    assert link_ativo(cenario['unidade']) is not None
 
 
 @pytest.mark.django_db
 def test_acoes_so_aceitam_post(cenario):
+    link = criar_link(cenario['unidade'])
     cliente = _cliente(cenario['tenant'])
-    for acao in ['gerar', 'rotacionar', 'desativar']:
-        resposta = cliente.get(f'/people/links/{cenario["unidade"].pk}/{acao}/')
+    assert cliente.get('/people/links/novo/').status_code == 405
+    for acao in ['rotacionar', 'alternar-ativo']:
+        resposta = cliente.get(f'/people/links/{link.pk}/{acao}/')
         assert resposta.status_code == 405, acao
 
 
 @pytest.mark.django_db
 def test_quem_so_ve_nao_gerencia(cenario):
-    criar_link(cenario['unidade'])
+    link = criar_link(cenario['unidade'])
     cliente = _cliente(cenario['tenant'], 'leitora', funcionalidades=['people.ver'])
 
-    assert cliente.post(f'/people/links/{cenario["unidade"].pk}/rotacionar/').status_code == 403
+    assert cliente.post(f'/people/links/{link.pk}/rotacionar/').status_code == 403
     corpo = cliente.get('/people/links/').content.decode()
     assert 'Novo link' not in corpo
 
 
 @pytest.mark.django_db
-def test_nao_gerencia_unidade_de_outro_tenant(cenario):
+def test_nao_cria_link_em_unidade_de_outro_tenant(cenario):
     outro = TenantFactory(modulo_people=True)
     alheia = Unidade.all_tenants.create(tenant=outro, nome='Alheia', codigo='alheia')
     cliente = _cliente(cenario['tenant'])
 
-    assert cliente.post(f'/people/links/{alheia.pk}/gerar/').status_code == 404
+    assert cliente.post('/people/links/novo/', {'unidade': alheia.pk}).status_code == 404
+
+
+@pytest.mark.django_db
+def test_nao_rotaciona_link_de_outro_tenant(cenario):
+    outro = TenantFactory(modulo_people=True)
+    alheia = Unidade.all_tenants.create(tenant=outro, nome='Alheia', codigo='alheia')
+    link_alheio = criar_link(alheia)
+    cliente = _cliente(cenario['tenant'])
+
+    assert cliente.post(f'/people/links/{link_alheio.pk}/rotacionar/').status_code == 404
+
+
+@pytest.mark.django_db
+def test_qr_do_link_e_svg(cenario):
+    """SVG e nao PNG: o uso real e cartaz na parede e precisa escalar."""
+    link = criar_link(cenario['unidade'])
+    resposta = _cliente(cenario['tenant']).get(f'/people/links/{link.pk}/qr.svg')
+
+    assert resposta.status_code == 200
+    assert resposta['Content-Type'] == 'image/svg+xml'
+    assert b'<svg' in resposta.content
+    assert 'attachment' in resposta['Content-Disposition']
 
 
 @pytest.mark.django_db

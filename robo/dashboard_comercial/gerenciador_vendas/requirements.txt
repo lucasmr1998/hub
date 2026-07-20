@@ -20,3 +20,6 @@ channels-redis==4.2.0
 daphne==4.1.0
 pgvector==0.3.6
 openai==1.54.4
+
+# QR code do link publico de cadastro do People (pure python, gera SVG)
+segno==1.6.6
