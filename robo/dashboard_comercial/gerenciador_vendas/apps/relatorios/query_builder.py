@@ -890,15 +890,25 @@ class WidgetQueryBuilder:
                 dias = int((self.widget.agrupamento or {}).get('dias') or 30)
             except (TypeError, ValueError):
                 pass
-            # Override global de periodo (barra do dashboard)
+            # Override global de periodo (barra do dashboard).
+            # Este transform monta o cutoff sozinho (nao passa pelo
+            # _janela_e_fonte), entao o calendario precisa ser tratado AQUI
+            # tambem — senao o funil e o unico card que ignora o intervalo.
             dias_override = self.overrides.get('dias')
-            if dias_override == 'tudo':
+            _ini, _fim = _limites_intervalo(self.overrides)
+            if _ini or _fim:
+                cutoff = _ini
+                self._fim_janela = _fim
+            elif dias_override == 'tudo':
                 cutoff = None
+                self._fim_janela = None
             elif dias_override:
                 dias = int(dias_override)
                 cutoff = dj_tz.now() - td(days=dias)
+                self._fim_janela = None
             else:
                 cutoff = dj_tz.now() - td(days=dias)
+                self._fim_janela = None
 
             # Override global de fonte: filtra leads/ops/vendas/perdidas.
             # Atendimentos (HistoricoContato) nao tem atribuicao de fonte —

@@ -214,6 +214,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='tarefa',
+    campo_data='data_criacao',
     label='Tarefas CRM',
     model_path='crm.TarefaCRM',
     descricao='Tarefas de follow-up (pendentes, vencidas, concluidas).',
@@ -346,6 +347,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='cliente_hubsoft',
+    campo_data='data_cadastro_hubsoft',
     label='Clientes HubSoft',
     model_path='integracoes.ClienteHubsoft',
     descricao='Base de clientes HubSoft (espelho sincronizado). Pra relatorios de CS, churn, retencao, perfil demografico.',
@@ -464,6 +466,7 @@ registrar(DataSource(
 
 registrar(DataSource(
     slug='os_hubsoft',
+    campo_data='data_abertura',
     label='OS HubSoft',
     model_path='integracoes.OrdemServicoHubsoft',
     descricao='Ordens de servico reais (status atual no HubSoft).',

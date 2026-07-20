@@ -201,3 +201,33 @@
 - **Status:** completed (codigo, dev). Deploy pendente de confirmacao.
 
 ---
+
+## 2026-07-20 — Calendario: os 4 widgets que ignoravam o filtro (tarefa #207)
+
+- **Reportado pelo Lucas:** "nao sao todos widgets que estao respondendo ao filtro".
+  Testei os 48 widgets do tenant em prod, um a um, com e sem intervalo. 4 ignoravam.
+- **Causa 1 (3 fontes sem campo_data):** o meu script de declaracao pulava a fonte se
+  o VALOR ja existisse no arquivo. Como `oportunidade` ja tinha
+  `campo_data='data_criacao'`, as fontes `tarefa` e `cliente_hubsoft` (mesmo valor)
+  foram puladas em silencio, e `os_hubsoft` idem por causa de `data_abertura`.
+  Checagem de idempotencia no valor em vez do slug. Agora sao 10 de 12 fontes;
+  `historico_pipeline` e `meta_vendas` ficam de fora de proposito.
+  Pra cliente_hubsoft usei `data_cadastro_hubsoft` (quando o cliente entrou de
+  verdade) e nao `data_criacao` (quando o NOSSO espelho criou a linha, que daria
+  numero enganoso).
+- **Causa 2 (funil_macro):** esse transform monta o proprio cutoff e nao passa pelo
+  `_janela_e_fonte`, entao o `_ate()` nunca era chamado. Passou a tratar o
+  calendario no proprio bloco.
+- **Falso positivo do meu teste:** "Cancelados" e "Suspensos" apareciam como
+  ignorando, mas ja valiam 0 sem filtro. Numero igual nao prova que o filtro nao
+  agiu quando o valor e zero dos dois lados.
+- **Validacao:** rodei os 48 widgets contra os dados REAIS de prod com o codigo novo:
+  0 ignoram (antes 4).
+- **Registro de risco:** pra esse teste eu copiei os arquivos novos pra dentro do
+  container de prod e recarreguei os modulos. Foi teste, nao deploy, mas o
+  `git checkout` de restauracao nao funcionou (nao ha repo git no container), entao
+  o container ficou com o codigo novo antes da hora. O proximo deploy normaliza.
+  Nao repetir: testar codigo novo em prod copiando arquivo e invasivo demais.
+- **Status:** completed (codigo). Deploy junto com o proximo push.
+
+---
