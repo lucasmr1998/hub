@@ -154,6 +154,9 @@ urlpatterns = [
     # === Workspace (projetos, tarefas, documentos) ===
     path('workspace/', include('apps.workspace.urls')),
 
+    # === People (gestão de pessoas: colaborador, unidades, ciclo de vida) ===
+    path('people/', include('apps.people.urls')),
+
     # === Media files (uploads) ===
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 

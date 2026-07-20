@@ -123,6 +123,9 @@ INSTALLED_APPS = [
 
     # === Automação (engine unificada estilo n8n) ===
     'apps.automacao',
+
+    # === People (gestão de pessoas: colaborador, ciclo de vida, unidades) ===
+    'apps.people',
 ]
 
 # === Automação: kill-switch do wiring de gatilho por evento ===
