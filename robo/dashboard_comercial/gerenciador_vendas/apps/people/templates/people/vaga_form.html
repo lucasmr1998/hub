@@ -33,69 +33,80 @@
 
   {# ── Aba: Dados da vaga ── #}
   <div id="tab-dados" class="tabs-panel is-active">
-    <form method="post" class="form-stack" style="max-width: 680px;">
+    <form method="post">
       {% csrf_token %}
 
       {% if form.non_field_errors %}
         <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
       {% endif %}
 
-      <div class="form-grid-2">
-        {% include "components/select.html" with name="unidade" label="Unidade" options=form.unidade.field.choices value=form.unidade.value required=True error=form.unidade.errors.0 %}
-        {% include "components/select.html" with name="cargo" label="Cargo" options=form.cargo.field.choices value=form.cargo.value required=True error=form.cargo.errors.0 %}
-      </div>
-
-      {% include "components/input.html" with name="titulo" label="Título da vaga" value=form.titulo.value error=form.titulo.errors.0 placeholder="Ex: Atendente noturno" helper="Em branco usa o nome do cargo." %}
-
-      <div class="form-grid-2">
-        {% include "components/input.html" with name="tipo_contratacao" label="Tipo de contratação" value=form.tipo_contratacao.value error=form.tipo_contratacao.errors.0 placeholder="Ex: CLT" %}
-        {% include "components/select.html" with name="turno" label="Turno esperado" options=form.turno.field.choices value=form.turno.value error=form.turno.errors.0 %}
-      </div>
-
-      <h2 class="form-section-title">O anúncio</h2>
-      <p class="field-helper" style="margin-top: calc(-1 * var(--sp-2));">
-        É o que o candidato lê. Requisitos e diferenciais ficam na aba Requisitos.
-      </p>
-
-      <div class="field">
-        <label class="field-label" for="descricao">Descrição da vaga</label>
-        <div class="field-input-wrap">
-          <textarea class="field-input" id="descricao" name="descricao" rows="8"
-                    placeholder="Sobre a vaga, o que a pessoa vai fazer, o que a empresa oferece.">{{ form.descricao.value|default:"" }}</textarea>
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-card-title">Identificação</h2>
         </div>
-        {% if form.descricao.errors %}
-          <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.descricao.errors.0 }}</p>
-        {% else %}
-          <p class="field-helper">A narrativa. Requisitos objetivos saem da aba Requisitos.</p>
-        {% endif %}
-      </div>
-
-      <div class="form-grid-3">
-        {% include "components/select.html" with name="modelo_trabalho" label="Modelo de trabalho" options=form.modelo_trabalho.field.choices value=form.modelo_trabalho.value error=form.modelo_trabalho.errors.0 %}
-        {% include "components/input.html" with name="carga_horaria" label="Carga horária" value=form.carga_horaria.value error=form.carga_horaria.errors.0 placeholder="Ex: 30h semanais" %}
-        {% include "components/input.html" with name="remuneracao" label="Remuneração" value=form.remuneracao.value error=form.remuneracao.errors.0 placeholder="Ex: Bolsa de R$ 700,00" %}
-      </div>
-
-      <h2 class="form-section-title">Por que esta vaga existe</h2>
-
-      {% include "components/select.html" with name="justificativa" label="Justificativa" options=form.justificativa.field.choices value=form.justificativa.value required=True error=form.justificativa.errors.0 %}
-
-      {% include "components/select.html" with name="colaborador_substituido" label="Colaborador substituído" options=form.colaborador_substituido.field.choices value=form.colaborador_substituido.value error=form.colaborador_substituido.errors.0 helper="Só quando a justificativa for substituição. É o que evita a loja contratar e esquecer de desligar quem sai, virando custo dobrado." %}
-
-      {% include "components/input.html" with name="limite_aprovados" label="Limite de aprovados" type="number" value=form.limite_aprovados.value|default:50 error=form.limite_aprovados.errors.0 helper="Ao atingir, a triagem para. A captação continua." %}
-
-      <div class="field">
-        <label class="field-label" for="observacoes">Observações internas</label>
-        <div class="field-input-wrap">
-          <textarea class="field-input" id="observacoes" name="observacoes" rows="4"
-                    placeholder="Contexto que ajuda quem for triar. Não aparece pro candidato.">{{ form.observacoes.value|default:"" }}</textarea>
+        <div class="section-card-body form-stack">
+          <div class="form-grid-2">
+            {% include "components/select.html" with name="unidade" label="Unidade" options=form.unidade.field.choices value=form.unidade.value required=True error=form.unidade.errors.0 %}
+            {% include "components/select.html" with name="cargo" label="Cargo" options=form.cargo.field.choices value=form.cargo.value required=True error=form.cargo.errors.0 %}
+          </div>
+          {% include "components/input.html" with name="titulo" label="Título da vaga" value=form.titulo.value error=form.titulo.errors.0 placeholder="Ex: Atendente noturno" helper="Em branco usa o nome do cargo." %}
+          <div class="form-grid-2">
+            {% include "components/input.html" with name="tipo_contratacao" label="Tipo de contratação" value=form.tipo_contratacao.value error=form.tipo_contratacao.errors.0 placeholder="Ex: CLT" %}
+            {% include "components/select.html" with name="turno" label="Turno esperado" options=form.turno.field.choices value=form.turno.value error=form.turno.errors.0 %}
+          </div>
         </div>
-        {% if form.observacoes.errors %}
-          <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.observacoes.errors.0 }}</p>
-        {% endif %}
       </div>
 
-      <div class="form-actions">
+      <div class="section-card" style="margin-top: var(--sp-4);">
+        <div class="section-card-header">
+          <h2 class="section-card-title">O anúncio</h2>
+        </div>
+        <div class="section-card-body form-stack">
+          <p class="field-helper" style="margin: 0;">
+            É o que o candidato lê. Requisitos e diferenciais ficam na aba Requisitos.
+          </p>
+          <div class="field">
+            <label class="field-label" for="descricao">Descrição da vaga</label>
+            <div class="field-input-wrap">
+              <textarea class="field-input" id="descricao" name="descricao" rows="7"
+                        placeholder="Sobre a vaga, o que a pessoa vai fazer, o que a empresa oferece.">{{ form.descricao.value|default:"" }}</textarea>
+            </div>
+            {% if form.descricao.errors %}
+              <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.descricao.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div class="form-grid-3">
+            {% include "components/select.html" with name="modelo_trabalho" label="Modelo de trabalho" options=form.modelo_trabalho.field.choices value=form.modelo_trabalho.value error=form.modelo_trabalho.errors.0 %}
+            {% include "components/input.html" with name="carga_horaria" label="Carga horária" value=form.carga_horaria.value error=form.carga_horaria.errors.0 placeholder="Ex: 30h semanais" %}
+            {% include "components/input.html" with name="remuneracao" label="Remuneração" value=form.remuneracao.value error=form.remuneracao.errors.0 placeholder="Ex: Bolsa de R$ 700,00" %}
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card" style="margin-top: var(--sp-4);">
+        <div class="section-card-header">
+          <h2 class="section-card-title">Por que esta vaga existe</h2>
+        </div>
+        <div class="section-card-body form-stack">
+          <div class="form-grid-2">
+            {% include "components/select.html" with name="justificativa" label="Justificativa" options=form.justificativa.field.choices value=form.justificativa.value required=True error=form.justificativa.errors.0 %}
+            {% include "components/input.html" with name="limite_aprovados" label="Limite de aprovados" type="number" value=form.limite_aprovados.value|default:50 error=form.limite_aprovados.errors.0 helper="Ao atingir, a triagem para. A captação continua." %}
+          </div>
+          {% include "components/select.html" with name="colaborador_substituido" label="Colaborador substituído" options=form.colaborador_substituido.field.choices value=form.colaborador_substituido.value error=form.colaborador_substituido.errors.0 helper="Só quando a justificativa for substituição. É o que evita a loja contratar e esquecer de desligar quem sai, virando custo dobrado." %}
+          <div class="field">
+            <label class="field-label" for="observacoes">Observações internas</label>
+            <div class="field-input-wrap">
+              <textarea class="field-input" id="observacoes" name="observacoes" rows="3"
+                        placeholder="Contexto que ajuda quem for triar. Não aparece pro candidato.">{{ form.observacoes.value|default:"" }}</textarea>
+            </div>
+            {% if form.observacoes.errors %}
+              <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.observacoes.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions" style="margin-top: var(--sp-4);">
         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
         <a href="{% url 'people:vagas_lista' %}" class="btn btn-ghost">Cancelar</a>
       </div>
@@ -105,13 +116,13 @@
   {% if vaga %}
     {# ── Aba: Requisitos ── #}
     <div id="tab-requisitos" class="tabs-panel">
-      <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      <p class="field-helper" style="margin-bottom: var(--sp-4);">
         Cada requisito pode ir pro anúncio, servir de critério de triagem, ou os
         dois. Separar permite filtrar por algo que não convém publicar, como
         tempo mínimo de experiência.
       </p>
 
-      <div class="section-card" style="max-width: 680px;">
+      <div class="section-card">
         <div class="section-card-body">
           {% if requisitos %}
             <div class="table-wrap">
@@ -176,12 +187,12 @@
 
     {# ── Aba: Formulário da candidatura ── #}
     <div id="tab-formulario" class="tabs-panel">
-      <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      <p class="field-helper" style="margin-bottom: var(--sp-4);">
         O que o candidato preenche. Nome e WhatsApp são sempre pedidos e por isso
         não aparecem na lista.
       </p>
       <form method="post" action="{% url 'people:vaga_campos_salvar' vaga.pk %}"
-            class="section-card" style="max-width: 680px;">
+            class="section-card">
         {% csrf_token %}
         <div class="section-card-body">
           <div class="table-wrap">
@@ -221,13 +232,13 @@
 
     {# ── Aba: Divulgação ── #}
     <div id="tab-divulgacao" class="tabs-panel">
-      <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      <p class="field-helper" style="margin-bottom: var(--sp-4);">
         Um link por canal. É assim que dá pra saber depois qual canal trouxe
         candidato, em vez de gastar onde não converte. O texto sai da vaga e pode
         ser ajustado.
       </p>
 
-      <div class="section-card" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      <div class="section-card" style="margin-bottom: var(--sp-4);">
         <div class="section-card-body">
           {% if links %}
             <div class="table-wrap">
@@ -318,7 +329,7 @@
 
       {% if transicoes %}
         <h2 class="form-section-title">Publicação</h2>
-        <div class="section-card" style="max-width: 680px;">
+        <div class="section-card">
           <div class="section-card-body">
             <p class="field-helper" style="margin-bottom: var(--sp-3);">
               Vaga publicada aceita candidatura. Pausada guarda o que já chegou e
