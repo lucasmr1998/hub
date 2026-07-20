@@ -574,6 +574,59 @@ class Candidato(TenantMixin):
         self.save()
 
 
+class HistoricoCandidato(TenantMixin):
+    """
+    Cada movimento do candidato no pipeline.
+
+    Espelho do HistoricoSituacao do DP, e pelo mesmo motivo: e a fonte primaria
+    da telemetria de funil. Tempo medio por etapa e taxa de conversao por canal
+    viram GROUP BY aqui, sem ferramenta externa.
+
+    Guarda `de_etapa`/`para_etapa` como TEXTO, e nao FK, de proposito: etapa e
+    configuravel e pode ser desativada ou renomeada, e o historico precisa
+    continuar legivel depois disso. FK viraria "etapa apagada" na tela; o nome
+    congelado no momento do movimento conta a verdade do que aconteceu.
+    """
+
+    candidato = models.ForeignKey(
+        'people.Candidato', on_delete=models.CASCADE, related_name='historico',
+        verbose_name="Candidato",
+    )
+    de_etapa = models.CharField(max_length=80, blank=True, default='',
+                                verbose_name="De (etapa)")
+    para_etapa = models.CharField(max_length=80, blank=True, default='',
+                                  verbose_name="Para (etapa)")
+    para_saida = models.CharField(
+        max_length=20, choices=estados_rs.SAIDAS, blank=True, default='',
+        verbose_name="Para (saída)",
+    )
+    motivo = models.TextField(blank=True, default='', verbose_name="Motivo")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+    origem = models.CharField(max_length=20, default='painel',
+                              verbose_name="Origem")
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_historico_candidato'
+        verbose_name = 'Histórico do candidato'
+        verbose_name_plural = 'Histórico dos candidatos'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'candidato', '-criado_em'],
+                         name='people_hist_cand_idx'),
+            models.Index(fields=['tenant', 'para_saida', '-criado_em'],
+                         name='people_hist_cand_saida_idx'),
+        ]
+
+    def __str__(self):
+        destino = self.para_saida or self.para_etapa or 'entrada'
+        return f'{self.candidato_id}: {self.de_etapa or "entrada"} para {destino}'
+
+
 class LinkCandidatura(TenantMixin):
     """
     Link publico de candidatura, um por CANAL.

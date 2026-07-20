@@ -19,11 +19,10 @@ from django.views.decorators.http import require_http_methods
 from django_ratelimit.decorators import ratelimit
 
 from apps.people.models import ConfiguracaoPeople, LinkCandidatura
-from apps.people.models_recrutamento import Candidato  # noqa: F401  (documenta o alvo)
 from apps.people.services.candidaturas import (
-    MENSAGEM_CONFLITO, contabilizar_candidatura, gravar_consentimento,
-    registrar_candidatura,
+    contabilizar_candidatura, gravar_consentimento, registrar_candidatura,
 )
+from apps.people.services.pipeline import garantir_etapa_inicial
 from apps.people.tenant_scope import escopo_tenant
 
 
@@ -112,6 +111,9 @@ def enviar(request, token):
 
         gravar_consentimento(resultado.candidato, request, config)
         contabilizar_candidatura(link)
+        # Poe o candidato na primeira etapa pra ele aparecer no board. Sem
+        # usuario: quem "moveu" foi o proprio candidato ao se inscrever.
+        garantir_etapa_inicial(resultado.candidato)
 
     return render(request, 'people/candidatura_ok.html',
                   {'unidade': link.unidade, 'vaga': link.vaga})

@@ -252,6 +252,9 @@ Uso em template que extende layout_app:
         <a href="{% url 'people:vagas_lista' %}" class="app-subnav-item {% if 'vaga' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-megaphone"></i><span>Vagas</span>
         </a>
+        <a href="{% url 'people:pipeline_board' %}" class="app-subnav-item {% if 'pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-diagram-3"></i><span>Candidatos</span>
+        </a>
       </nav>
 
       <div class="app-subnav-section">Cadastro</div>

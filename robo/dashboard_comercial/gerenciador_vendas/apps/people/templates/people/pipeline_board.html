@@ -1,0 +1,110 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  {% csrf_token %}
+
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Recrutamento</p>
+        <h1 class="page-title">Candidatos</h1>
+        <p class="page-subtitle">Arraste pra mudar de etapa. Pra tirar do processo, use o botão do card e registre o motivo.</p>
+      </div>
+      <form method="get" id="filtro-pipeline" style="display: flex; gap: var(--sp-3); align-items: flex-end;">
+        {% include "components/select.html" with name="vaga" label="Vaga" options=vagas_opcoes value=vaga_selecionada blank_label="Todas" size="sm" %}
+        {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas" size="sm" %}
+        <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
+      </form>
+    </div>
+  </div>
+
+  {% if not tem_etapas %}
+    {% include "components/empty_state.html" with icon="bi-diagram-3" text="O pipeline ainda não tem etapas" subtext="As etapas padrão são criadas quando o módulo é ativado. Fale com o suporte se esta unidade precisa de um fluxo próprio." %}
+  {% else %}
+    {% if sem_etapa %}
+      {% comment %}
+        Candidato numa etapa que foi desativada depois que ele entrou. Nao some:
+        aparece aqui em cima pra ser realocado, senao ficaria invisivel e a
+        conta do funil nao fecharia.
+      {% endcomment %}
+      <div class="section-card section-card-warning" style="margin-bottom: var(--sp-4);">
+        <div class="section-card-header">
+          <h2 class="section-card-title"><i class="bi bi-exclamation-triangle"></i> Fora de etapa ({{ sem_etapa|length }})</h2>
+        </div>
+        <div class="section-card-body">
+          <p class="field-helper" style="margin-bottom: var(--sp-3);">
+            Estes candidatos estavam numa etapa que foi desativada. Arraste cada um para uma etapa ativa.
+          </p>
+          <div class="kanban-col-body" style="flex-direction: row; flex-wrap: wrap; gap: var(--sp-2);">
+            {% for candidato in sem_etapa %}
+              {% include "people/_pipeline_card.html" with candidato=candidato saidas=saidas %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="kanban-board"
+         style="grid-template-columns: repeat({{ colunas|length }}, minmax(240px, 1fr));"
+         data-pode-mover="{% if pode_mover %}1{% else %}0{% endif %}"
+         data-url-mover="{% url 'people:pipeline_mover' 0 %}"
+         data-url-saida="{% url 'people:pipeline_saida' 0 %}">
+      {% for coluna in colunas %}
+        <div class="kanban-col" data-etapa-id="{{ coluna.etapa.pk }}">
+          <div class="kanban-col-header">
+            <h2 class="kanban-col-title">{{ coluna.etapa.nome }}</h2>
+            <span class="kanban-col-count">{{ coluna.total }}</span>
+          </div>
+          <div class="kanban-col-body">
+            {% for candidato in coluna.cards %}
+              {% include "people/_pipeline_card.html" with candidato=candidato saidas=saidas %}
+            {% empty %}
+              <p class="kanban-empty">Vazio</p>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% comment %} Modal de saida: exige escolher pra onde e um motivo. {% endcomment %}
+    <div id="modal-saida" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <h2 class="modal-title">Tirar do processo</h2>
+          <button type="button" class="modal-close" onclick="fecharModal('modal-saida')" aria-label="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" data-saida-valor value="">
+          <p class="field-label">Para onde</p>
+          <div class="form-stack" style="gap: var(--sp-2); margin-bottom: var(--sp-4);">
+            {% for saida in saidas %}
+              <button type="button" class="btn btn-secondary btn-sm" data-saida-opcao="{{ saida.valor }}" style="justify-content: flex-start;">
+                {{ saida.rotulo }}
+              </button>
+            {% endfor %}
+          </div>
+          <div class="field">
+            <label class="field-label" for="motivo-saida">Motivo <span class="field-required">*</span></label>
+            <div class="field-input-wrap">
+              <textarea class="field-input" id="motivo-saida" data-motivo rows="3"
+                        placeholder="Fica no card do candidato e alimenta a análise do funil."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-saida')">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-confirmar-saida>Confirmar</button>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <script src="{% static 'people/js/pipeline.js' %}"></script>
+{% endblock %}

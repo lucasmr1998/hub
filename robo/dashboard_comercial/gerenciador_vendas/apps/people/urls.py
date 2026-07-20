@@ -1,8 +1,8 @@
 from django.urls import path
 
 from apps.people.views import (
-    analises, board, cargos, colaboradores, configuracao, links, unidades,
-    vagas,
+    analises, board, cargos, colaboradores, configuracao, links, pipeline,
+    unidades, vagas,
 )
 
 app_name = 'people'
@@ -37,6 +37,12 @@ urlpatterns = [
     path('config/formularios/<int:pk>/', configuracao.template_editar,
          name='config_template_editar'),
     path('config/geral/', configuracao.geral, name='config_geral'),
+
+    # Recrutamento: board do pipeline
+    path('candidatos/', pipeline.board, name='pipeline_board'),
+    path('candidatos/<int:pk>/mover/', pipeline.api_mover, name='pipeline_mover'),
+    path('candidatos/<int:pk>/saida/', pipeline.api_dar_saida,
+         name='pipeline_saida'),
 
     # Recrutamento: vagas
     path('vagas/', vagas.lista, name='vagas_lista'),

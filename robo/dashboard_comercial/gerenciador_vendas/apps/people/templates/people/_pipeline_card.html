@@ -1,0 +1,24 @@
+{% comment %}
+Card de candidato no board. Extraido porque aparece em dois lugares: nas colunas
+de etapa e na area "fora de etapa".
+{% endcomment %}
+<div class="kanban-card" data-candidato-id="{{ candidato.pk }}">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-2);">
+    <p class="kanban-card-title">{{ candidato.nome_completo }}</p>
+    <button type="button" class="btn btn-ghost btn-sm" data-abrir-saida
+            title="Tirar do processo" style="padding: 2px 6px; margin: -4px -4px 0 0;">
+      <i class="bi bi-box-arrow-right"></i>
+    </button>
+  </div>
+  <p class="kanban-card-sub">
+    {% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}Banco de talentos{% endif %} · {{ candidato.unidade.nome }}
+  </p>
+  <div class="kanban-card-tags">
+    {% if candidato.canal_origem %}
+      {% include "components/badge.html" with variant="info" label=candidato.canal_origem size="sm" %}
+    {% endif %}
+    {% if candidato.colaborador_id %}
+      {% include "components/badge.html" with variant="success" label="Admitido" size="sm" %}
+    {% endif %}
+  </div>
+</div>
