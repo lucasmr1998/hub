@@ -36,6 +36,21 @@ JUSTIFICATIVA_CHOICES = [
     (JUSTIFICATIVA_SUBSTITUICAO, 'Substituição'),
 ]
 
+# Canal de divulgacao. E choices e nao texto livre pelo mesmo motivo que Cargo
+# virou entidade: "Facebook", "facebook" e "face" viram tres canais distintos e
+# corrompem a atribuicao de origem, que e justamente o que o link existe pra
+# medir. A lista sai do que a origem descreve em uso real.
+CANAL_CHOICES = [
+    ('facebook',  'Facebook'),
+    ('instagram', 'Instagram'),
+    ('whatsapp',  'WhatsApp'),
+    ('linkedin',  'LinkedIn'),
+    ('indeed',    'Indeed'),
+    ('cartaz',    'Cartaz ou QR impresso'),
+    ('indicacao', 'Indicação'),
+    ('outro',     'Outro'),
+]
+
 
 class EtapaPipeline(TenantMixin):
     """
@@ -363,3 +378,161 @@ class RequisitoVaga(TenantMixin):
 
     def __str__(self):
         return self.texto
+
+
+class LinkCandidatura(TenantMixin):
+    """
+    Link publico de candidatura, um por CANAL.
+
+    Irmao do LinkCadastroUnidade do DP, e nao o mesmo model, por tres diferencas
+    que nao sao cosmeticas:
+
+    VARIOS POR VAGA, um por canal. E o mecanismo de atribuicao de origem: sem
+    link por canal, o franqueado gasta em canal que nao converte sem saber. A
+    spec lista isso entre as consequencias medidas do problema.
+
+    NAO EXPIRA SOZINHO. Decisao consciente da origem, com motivo declarado:
+    "hoje nao tem um prazo. Voce pode vir aqui no link e desativar ele. A gente
+    fez isso porque a gente usa muito Facebook, entao as vezes as pessoas entram
+    la no grupo antigo, publicacao ta la, elas se candidatam." Publicacao antiga
+    em grupo continua rendendo candidato meses depois. O link do DP tem
+    `expira_em`; este nao tem, de proposito.
+
+    SEM TETO DE SUBMISSAO. A regra de parada mora na vaga (`limite_aprovados`) e
+    e sobre APROVADOS, nao sobre candidaturas: ao atingir, a triagem para e a
+    captacao continua. Um teto no link cortaria a captacao junto, que e o
+    contrario do desenho.
+
+    O token e unique GLOBAL, e nao por tenant, pelo mesmo motivo do DP: a URL
+    publica nao carrega tenant, entao o proprio token e o mecanismo que resolve
+    de quem e o link.
+    """
+
+    vaga = models.ForeignKey(
+        Vaga, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='links', verbose_name="Vaga",
+        help_text="Em branco, o link e de banco de talentos: capta sem vaga "
+                  "aberta.",
+    )
+    unidade = models.ForeignKey(
+        'people.Unidade', on_delete=models.CASCADE,
+        related_name='links_candidatura', verbose_name="Unidade",
+    )
+    canal = models.CharField(
+        max_length=20, choices=CANAL_CHOICES, verbose_name="Canal",
+        help_text="Onde este link vai ser divulgado. É o que permite saber "
+                  "depois qual canal trouxe candidato.",
+    )
+    apelido_interno = models.CharField(
+        max_length=120, blank=True, default='', verbose_name="Apelido interno",
+        help_text="Como o RH distingue este link dos outros. Ex: Grupo de "
+                  "empregos da zona sul.",
+    )
+    token = models.CharField(
+        max_length=64, unique=True, db_index=True, verbose_name="Token",
+        help_text="secrets.token_urlsafe(32). Nao editar na mao.",
+    )
+    cta = models.CharField(
+        max_length=140, blank=True, default='',
+        verbose_name="Chamada para ação",
+        help_text="Frase que abre o anúncio.",
+    )
+    telefone_contato = models.CharField(
+        max_length=20, blank=True, default='', verbose_name="Telefone de contato",
+    )
+    texto_compartilhamento = models.TextField(
+        blank=True, default='', verbose_name="Texto de divulgação",
+        help_text="Gerado a partir da vaga e editável. A vaga continua sendo a "
+                  "fonte da verdade.",
+    )
+    candidaturas = models.PositiveIntegerField(
+        default=0, verbose_name="Candidaturas",
+        help_text="Quantas chegaram por este link. É a atribuição de canal.",
+    )
+    ultima_candidatura_em = models.DateTimeField(null=True, blank=True)
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    desativado_em = models.DateTimeField(null=True, blank=True)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='links_candidatura_criados',
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_link_candidatura'
+        verbose_name = 'Link de candidatura'
+        verbose_name_plural = 'Links de candidatura'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'vaga', 'ativo'],
+                         name='people_link_cand_vaga_idx'),
+            models.Index(fields=['tenant', 'unidade', 'canal'],
+                         name='people_link_cand_canal_idx'),
+        ]
+        # Sem unique por (vaga, canal): dois links no mesmo canal e caso real,
+        # tipo dois grupos de Facebook diferentes. Quem distingue e o apelido.
+
+    def __str__(self):
+        alvo = self.vaga.nome_exibido if self.vaga_id else 'banco de talentos'
+        return f'{self.get_canal_display()} · {alvo}'
+
+    def esta_valido(self):
+        """
+        Aceita candidatura? So depende de estar ativo e de a vaga aceitar.
+
+        Sem checagem de prazo nem de teto, ao contrario do link do DP: ver o
+        docstring da classe pra saber por que cada um esta fora.
+        """
+        if not self.ativo:
+            return False
+        if self.vaga_id and not self.vaga.aceita_candidatura:
+            return False
+        return True
+
+    @property
+    def caminho_publico(self):
+        return f'/people/candidatura/{self.token}/'
+
+    def desativar(self):
+        """
+        Desativa sem apagar.
+
+        Apagar levaria junto as candidaturas que vieram por ele e destruiria a
+        atribuicao de canal, que e a razao de o link existir. Efeito colateral
+        conhecido e aceito: QR ja impresso para de funcionar.
+        """
+        self.ativo = False
+        self.desativado_em = timezone.now()
+        self.save(update_fields=['ativo', 'desativado_em'])
+
+    def texto_padrao(self):
+        """
+        Monta o texto de divulgacao A PARTIR DA VAGA.
+
+        E aqui que "a vaga e a fonte da verdade" deixa de ser frase e vira
+        codigo: o RH nao redigita requisito no link, ele sai do que ja foi
+        cadastrado. So entram os requisitos marcados pra aparecer no anuncio; o
+        que e criterio de triagem calado nao vaza pro texto publicado.
+        """
+        if not self.vaga_id:
+            return ('Deixe seu currículo com a gente. Assim que abrir uma vaga '
+                    'no seu perfil, entramos em contato.')
+
+        linhas = [self.cta or f'Vaga para {self.vaga.nome_exibido}',
+                  f'Local: {self.unidade.nome}']
+
+        if self.vaga.turno:
+            linhas.append(f'Turno: {self.vaga.get_turno_display()}')
+
+        requisitos = list(self.vaga.requisitos_do_anuncio())
+        if requisitos:
+            linhas.append('')
+            linhas.append('O que buscamos:')
+            linhas += [f'- {r.texto}' for r in requisitos]
+
+        if self.telefone_contato:
+            linhas.append('')
+            linhas.append(f'Dúvidas: {self.telefone_contato}')
+
+        return '\n'.join(linhas)

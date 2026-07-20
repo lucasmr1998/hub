@@ -148,6 +148,90 @@
       </div>
     </div>
 
+    {% comment %}
+      Divulgacao mora aqui dentro, e nao numa tela de configuracao separada. E a
+      correcao que a spec pede: separar obriga a redigitar no link o que ja foi
+      cadastrado na vaga.
+    {% endcomment %}
+    <h2 class="form-section-title">Divulgação</h2>
+    <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      Um link por canal. É assim que dá pra saber depois qual canal trouxe
+      candidato, em vez de gastar onde não converte. O texto sai da vaga e pode
+      ser ajustado.
+    </p>
+
+    <div class="section-card" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      <div class="section-card-body">
+        {% if links %}
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Canal</th>
+                  <th>Apelido</th>
+                  <th>Candidaturas</th>
+                  <th>Situação</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for link in links %}
+                  <tr>
+                    <td>{{ link.get_canal_display }}</td>
+                    <td>{{ link.apelido_interno|default:"—" }}</td>
+                    <td>{{ link.candidaturas }}</td>
+                    <td>
+                      {% if link.ativo %}
+                        {% include "components/badge.html" with variant="success" label="Ativo" size="sm" dot=True %}
+                      {% else %}
+                        {% include "components/badge.html" with variant="neutral" label="Desativado" size="sm" %}
+                      {% endif %}
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                      {% if link.ativo %}
+                        <a href="{% url 'people:vaga_link_qr' vaga.pk link.pk %}"
+                           class="btn btn-ghost btn-sm" title="Baixar QR Code em SVG">
+                          <i class="bi bi-qr-code"></i>
+                        </a>
+                        <form method="post" action="{% url 'people:vaga_link_desativar' vaga.pk link.pk %}"
+                              style="display: inline;"
+                              onsubmit="return confirm('O link para de funcionar agora, e QR já impresso deixa de levar a lugar nenhum. As candidaturas que já chegaram por ele são preservadas.');">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-ghost btn-sm" title="Desativar link">
+                            <i class="bi bi-pause-circle"></i>
+                          </button>
+                        </form>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {% include "components/empty_state.html" with icon="bi-link-45deg" text="Nenhum link ainda" subtext="Sem link, não há por onde o candidato se candidatar." size="sm" %}
+        {% endif %}
+
+        <form method="post" action="{% url 'people:vaga_link_criar' vaga.pk %}"
+              class="form-stack" style="margin-top: var(--sp-4);">
+          {% csrf_token %}
+          <div class="form-grid-2">
+            {% include "components/select.html" with name="canal" label="Canal" options=canais blank_label="Selecione" required=True %}
+            {% include "components/input.html" with name="apelido_interno" label="Apelido interno" placeholder="Ex: Grupo de empregos da zona sul" %}
+          </div>
+          <div class="form-grid-2">
+            {% include "components/input.html" with name="cta" label="Chamada para ação" placeholder="Ex: Estamos contratando!" %}
+            {% include "components/input.html" with name="telefone_contato" label="Telefone de contato" %}
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary btn-sm">
+              <i class="bi bi-plus-lg"></i> Gerar link
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     {% if transicoes %}
       <h2 class="form-section-title">Publicação</h2>
       <div class="section-card" style="max-width: 680px;">
@@ -158,10 +242,14 @@
           </p>
           <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
             {% for transicao in transicoes %}
-              <form method="post" action="{% url 'people:vaga_mudar_status' vaga.pk %}" style="display: inline;">
+              <form method="post" action="{% url 'people:vaga_mudar_status' vaga.pk %}"
+                    style="display: inline;"
+                    {% if transicao.destrutiva %}onsubmit="return confirm('Encerrar a vaga é definitivo: ela não reabre, e os links param de aceitar candidatura. Para captar de novo, será preciso abrir uma vaga nova.');"{% endif %}>
                 {% csrf_token %}
                 <input type="hidden" name="status" value="{{ transicao.valor }}">
-                <button type="submit" class="btn btn-secondary btn-sm">{{ transicao.rotulo }}</button>
+                <button type="submit" class="btn {% if transicao.destrutiva %}btn-ghost{% else %}btn-primary{% endif %} btn-sm">
+                  {{ transicao.rotulo }}
+                </button>
               </form>
             {% endfor %}
           </div>

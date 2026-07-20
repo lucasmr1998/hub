@@ -47,6 +47,11 @@ urlpatterns = [
          name='vaga_requisito_criar'),
     path('vagas/<int:pk>/requisitos/<int:requisito_pk>/remover/',
          vagas.requisito_remover, name='vaga_requisito_remover'),
+    path('vagas/<int:pk>/links/', vagas.link_criar, name='vaga_link_criar'),
+    path('vagas/<int:pk>/links/<int:link_pk>/desativar/', vagas.link_desativar,
+         name='vaga_link_desativar'),
+    path('vagas/<int:pk>/links/<int:link_pk>/qr.svg', vagas.link_qr,
+         name='vaga_link_qr'),
 
     # Cargos
     path('cargos/', cargos.lista, name='cargos_lista'),

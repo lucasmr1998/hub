@@ -6,16 +6,24 @@ cargo e criterio vivem aqui, e o link de candidatura do passo 3 vai derivar
 disto. Por isso os requisitos sao editados dentro da propria vaga, e nao numa
 tela separada.
 """
+import io
+import secrets
+
 from django import forms
 from django.contrib import messages
 from django.db.models import Count
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.people import estados_recrutamento as estados_rs
 from apps.people.excecoes import TransicaoInvalida
-from apps.people.models import Cargo, Colaborador, RequisitoVaga, Unidade, Vaga
-from apps.people.models_recrutamento import JUSTIFICATIVA_SUBSTITUICAO
+from apps.people.models import (
+    Cargo, Colaborador, LinkCandidatura, RequisitoVaga, Unidade, Vaga,
+)
+from apps.people.models_recrutamento import (
+    CANAL_CHOICES, JUSTIFICATIVA_SUBSTITUICAO,
+)
 from apps.people import estados
 from apps.people.permissoes import pode_acessar, requer_people
 from apps.sistema.utils import registrar_acao
@@ -167,9 +175,17 @@ def editar(request, pk):
         'vaga': vaga,
         'requisitos': vaga.requisitos.all(),
         'form_requisito': RequisitoForm(),
+        'links': vaga.links.all(),
+        'canais': CANAL_CHOICES,
+        # Ordem canonica da maquina, e nao alfabetica. Alfabetica punha
+        # "Encerrada", que e irreversivel, antes de "Publicada", que e a acao
+        # que o usuario quer 9 vezes em 10.
         'transicoes': [
-            {'valor': destino, 'rotulo': estados_rs.rotulo_status_vaga(destino)}
-            for destino in sorted(estados_rs.TRANSICOES_VAGA.get(vaga.status, set()))
+            {'valor': destino,
+             'rotulo': estados_rs.rotulo_status_vaga(destino),
+             'destrutiva': destino == estados_rs.STATUS_VAGA_ENCERRADA}
+            for destino in estados_rs.VALORES_STATUS_VAGA
+            if destino in estados_rs.TRANSICOES_VAGA.get(vaga.status, set())
         ],
     })
 
@@ -230,3 +246,85 @@ def requisito_remover(request, pk, requisito_pk):
 
     messages.success(request, f'Requisito "{texto}" removido.')
     return redirect('people:vaga_editar', pk=vaga.pk)
+
+
+# ── Divulgacao ───────────────────────────────────────────────────────────────
+#
+# Os links vivem DENTRO da pagina da vaga, e nao numa tela de configuracao
+# separada. E a correcao que a spec de origem pede: la os dois sao fluxos
+# distintos e a propria criadora aponta como defeito, porque obriga a redigitar
+# no link o que ja foi cadastrado na vaga.
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def link_criar(request, pk):
+    vaga = get_object_or_404(Vaga.objects.select_related('unidade'), pk=pk)
+
+    canal = (request.POST.get('canal') or '').strip()
+    if canal not in dict(CANAL_CHOICES):
+        messages.error(request, 'Escolha um canal para o link.')
+        return redirect('people:vaga_editar', pk=vaga.pk)
+
+    link = LinkCandidatura(
+        tenant=request.tenant,
+        vaga=vaga,
+        unidade=vaga.unidade,
+        canal=canal,
+        apelido_interno=(request.POST.get('apelido_interno') or '').strip(),
+        cta=(request.POST.get('cta') or '').strip(),
+        telefone_contato=(request.POST.get('telefone_contato') or '').strip(),
+        token=secrets.token_urlsafe(32),
+        criado_por=request.user,
+    )
+    # Texto derivado da vaga, no ato da criacao. Fica editavel depois: a vaga
+    # continua sendo a fonte, e o texto e um retrato dela que o RH pode ajustar.
+    link.texto_compartilhamento = link.texto_padrao()
+    link.save()
+
+    registrar_acao('people', 'criar', 'link_candidatura', link.pk,
+                   f'Link de {link.get_canal_display()} criado para '
+                   f'"{vaga.nome_exibido}".', request=request)
+    messages.success(request, f'Link de {link.get_canal_display()} criado.')
+    return redirect('people:vaga_editar', pk=vaga.pk)
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def link_desativar(request, pk, link_pk):
+    vaga = get_object_or_404(Vaga.objects, pk=pk)
+    link = get_object_or_404(LinkCandidatura.objects, pk=link_pk, vaga=vaga)
+
+    link.desativar()
+
+    registrar_acao('people', 'editar', 'link_candidatura', link.pk,
+                   f'Link de {link.get_canal_display()} desativado.',
+                   request=request)
+    messages.success(
+        request,
+        f'Link de {link.get_canal_display()} desativado. QR já impresso para '
+        f'de funcionar.')
+    return redirect('people:vaga_editar', pk=vaga.pk)
+
+
+@requer_people('people.gerir_vagas')
+def link_qr(request, pk, link_pk):
+    """
+    QR do link, em SVG.
+
+    SVG e nao PNG pelo mesmo motivo do link do DP: o uso real e cartaz na parede
+    da loja, e precisa escalar sem borrar na impressao. Uma campanha citada na
+    origem abriu a sexta loja com QR impresso em ponto de onibus.
+    """
+    import segno
+
+    vaga = get_object_or_404(Vaga.objects, pk=pk)
+    link = get_object_or_404(LinkCandidatura.objects, pk=link_pk, vaga=vaga)
+    url = request.build_absolute_uri(link.caminho_publico)
+
+    buffer = io.BytesIO()
+    segno.make(url, error='m').save(buffer, kind='svg', scale=8, border=2)
+
+    resposta = HttpResponse(buffer.getvalue(), content_type='image/svg+xml')
+    resposta['Content-Disposition'] = (
+        f'attachment; filename="qr-{link.canal}-{link.pk}.svg"')
+    return resposta
