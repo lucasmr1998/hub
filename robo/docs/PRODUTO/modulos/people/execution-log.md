@@ -124,3 +124,39 @@ A `UniqueConstraint` usa `nulls_distinct=False`. Unidade nula significa "vale pr
 - **Nota de ambiente**: a suite colidiu de novo com outra sessao rodando pytest na mesma pasta (`database "test_aurora_dev" already exists`). Resolvido com o `settings_teste_people.py` do scratchpad, que so troca o nome do banco de teste, em vez de derrubar a conexao da outra rodada.
 - **Output**: 28 testes novos, 333 no modulo, `manage.py check` limpo, migration 0005 aplicada em dev.
 - **Status**: completed. Proximo: passo 2 (Vaga mais RequisitoVaga).
+
+## 2026-07-20 — Recrutamento, passo 2 (tarefa 211)
+
+- **Acao**: Vaga e RequisitoVaga, models mais CRUD. Commits f4a5465 (models) e 13dc8aa (telas).
+
+**A correcao de produto que este passo carrega**
+
+A VAGA E A FONTE DA VERDADE DA DIVULGACAO. No produto de origem, criar a vaga e configurar o link de divulgacao sao fluxos separados, e a criadora aponta isso como o defeito de UX dela, duas vezes, em duas conversas diferentes: *"a ideia e juntar essa etapa de divulgacao com a etapa de vaga. Entao a fonte de verdade vai ser a vaga."* Aqui os requisitos sao editados dentro da propria pagina da vaga, e o LinkCandidatura do passo 3 vai apontar pra ela, nao o contrario.
+
+**Requisito com dois usos, e nao um enum**
+
+`aparece_no_anuncio` e `usar_na_triagem` sao booleanos separados. A spec avisa pra nao colapsar: e o mecanismo que permite filtrar por coisa que nao convem publicar. Um enum de tres valores parece mais enxuto e destroi o caso do meio, que e o mais comum. Exemplo real: "disponibilidade aos domingos" convem publicar; "experiencia minima de 6 meses" o RH prefere filtrar calado, pra nao afastar quem se candidataria.
+
+**Tres constraints, cada uma fechando um estado que a tela deixaria passar**
+
+- `limite_aprovados >= 1`, a regra de parada da triagem (default 50).
+- `colaborador_substituido` so existe com justificativa de substituicao. Sem isso, trocar a justificativa depois deixa pendurada a referencia a alguem que ninguem esta substituindo, e o alerta de pendencia no DP passa a apontar pro nada.
+- requisito precisa de pelo menos um uso. Um que nem publica nem filtra e dado morto, e a unica forma de descobrir seria estranhar o anuncio ja publicado.
+
+O form espelha as duas primeiras em mensagem no campo certo. A constraint continua sendo a garantia; a validacao de form e a cortesia de nao entregar `IntegrityError` na cara.
+
+**Status da vaga e fixo em codigo**, ao contrario das etapas do pipeline que sao dado. Nao e incoerencia: etapa de processo seletivo e preferencia de cliente, ciclo de vida de vaga nao e. Encerrada nao reabre, porque juntaria duas janelas de captacao no mesmo funil. Republicar depois de pausar preserva a `publicada_em` original, senao o tempo de captacao encolhe sozinho a cada pausa e a vaga parece mais eficiente do que foi.
+
+**Dois erros meus que so aparecem renderizando**
+
+- Passei lista de dicts pro `components/select.html`, que desempacota `for valor, rotulo in options`. Dict ali renderiza as CHAVES como se fossem as opcoes. O resto do modulo ja usava `values_list('pk', 'nome')`; passei a usar tambem.
+- Os selects saiam com o `---------` default do Django em vez do "Selecione" que o modulo usa.
+
+Os dois passam por `manage.py check` e por teste de model sem reclamar. Por isso ha teste de render, e por isso a captura com Playwright virou parte do fim de cada passo.
+
+**Seguranca**: o queryset de cada select e filtrado por tenant no `__init__` do form. `ForeignKey.validate()` so confere existencia, nao dono, entao sem isso um POST forjado criaria vaga apontando pra loja de outro tenant. Ha teste que tenta exatamente isso.
+
+- **Permissao**: `people.gerir_vagas` nova, com back-fill nos perfis existentes. Gestor entra junto de Admin, porque na rede de franquia e o gerente de loja quem sabe que esta faltando gente.
+- **Fora de escopo, conforme a origem**: o fluxo de aprovacao de vaga (aguardando aprovacao, aprovada, rejeitada) existe no produto porem esta formalmente deferido la, classificado como edge case de rede grande.
+- **Output**: 41 testes novos no passo 2 (24 de model, 17 de view), 374 no modulo. Migration 0006 aplicada em dev.
+- **Status**: completed. Proximo: passo 3 (LinkCandidatura com QR e atribuicao por canal), que sai derivado da vaga.
