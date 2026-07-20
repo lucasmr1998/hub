@@ -1,0 +1,244 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Colaboradores</p>
+        <h1 class="page-title">{{ colaborador.nome_completo }}</h1>
+        <p class="page-subtitle">
+          {% include "components/badge.html" with variant="primary" label=colaborador.situacao_rotulo %}
+          {{ colaborador.unidade.nome }}
+          {% if colaborador.cargo %}· {{ colaborador.cargo }}{% endif %}
+        </p>
+      </div>
+      <a href="{% url 'people:board' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar ao board
+      </a>
+    </div>
+  </div>
+
+  {% if colaborador.pendente_revisao %}
+    <div class="section-card section-card-warning" style="margin-bottom: var(--sp-4);">
+      <div class="section-card-body" style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);">
+        <div>
+          <strong>Cadastro pendente de revisao.</strong>
+          <p class="field-helper" style="margin: 2px 0 0;">
+            {% if not colaborador.cpf %}
+              Falta o CPF, que e o que impede a mesma pessoa de ser cadastrada duas vezes.
+            {% elif not colaborador.cpf_valido %}
+              O CPF informado nao passa na conferencia do digito verificador.
+            {% else %}
+              Houve suspeita de duplicata que ninguem resolveu.
+            {% endif %}
+          </p>
+        </div>
+        {% if pode_editar %}
+          <form method="post" action="{% url 'people:colaborador_revisar' colaborador.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-sm">
+              <i class="bi bi-check2"></i> Marcar revisado
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% include "components/tabs.html" with items=abas %}
+
+  {# ---------- Resumo ---------- #}
+  <div id="aba-resumo" class="tabs-panel is-active">
+    <div class="form-grid-2" style="margin-top: var(--sp-4);">
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-card-title"><i class="bi bi-person-badge"></i> Vinculo</h2>
+        </div>
+        <div class="section-card-body">
+          <dl class="form-stack">
+            <div><dt class="field-label">Situacao</dt><dd>{{ colaborador.situacao_rotulo }}</dd></div>
+            <div><dt class="field-label">Unidade</dt><dd>{{ colaborador.unidade.nome }}</dd></div>
+            <div><dt class="field-label">Cargo</dt><dd>{{ colaborador.cargo|default:"Nao definido" }}</dd></div>
+            <div><dt class="field-label">Regime</dt><dd>{{ colaborador.get_regime_contratacao_display|default:"Nao definido" }}</dd></div>
+            <div><dt class="field-label">Admissao</dt><dd>{{ colaborador.data_admissao|default:"—" }}</dd></div>
+            <div>
+              <dt class="field-label">Fim da experiencia</dt>
+              <dd>
+                {{ colaborador.data_fim_experiencia|default:"—" }}
+                {% if colaborador.prorrogacoes_experiencia %}
+                  {% include "components/badge.html" with variant="info" label="Prorrogado" size="sm" %}
+                {% endif %}
+              </dd>
+            </div>
+            {% if colaborador.data_desligamento %}
+              <div><dt class="field-label">Desligado em</dt><dd>{{ colaborador.data_desligamento }}</dd></div>
+              <div><dt class="field-label">Motivo</dt><dd>{{ colaborador.motivo_desligamento|default:"—" }}</dd></div>
+            {% endif %}
+          </dl>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-card-title"><i class="bi bi-signpost-split"></i> Proximas fases</h2>
+        </div>
+        <div class="section-card-body">
+          <p class="field-helper" style="margin-bottom: var(--sp-3);">
+            A partir de <strong>{{ colaborador.situacao_rotulo }}</strong>, a maquina
+            de estados permite ir para:
+          </p>
+          <div class="kanban-card-tags">
+            {% for destino in destinos %}
+              {% include "components/badge.html" with variant="neutral" label=destino.rotulo %}
+            {% empty %}
+              <p class="field-helper">Nenhuma. Esta e uma fase final.</p>
+            {% endfor %}
+          </div>
+          <p class="field-helper" style="margin-top: var(--sp-3);">
+            A mudanca acontece no board, arrastando o card. E la que a transicao
+            e validada e o historico e gravado.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" style="margin-top: var(--sp-4);">
+      <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-shield-check"></i> Origem e conformidade</h2>
+      </div>
+      <div class="section-card-body">
+        <dl class="form-grid-3">
+          <div><dt class="field-label">Como entrou</dt><dd>{{ colaborador.get_ponto_entrada_display }}</dd></div>
+          <div><dt class="field-label">Origem do cadastro</dt><dd>{{ colaborador.get_origem_cadastro_display }}</dd></div>
+          <div><dt class="field-label">Cadastrado em</dt><dd>{{ colaborador.criado_em|date:"d/m/Y H:i" }}</dd></div>
+          <div>
+            <dt class="field-label">Consentimento LGPD</dt>
+            <dd>
+              {% if colaborador.consentimento_lgpd %}
+                {% include "components/badge.html" with variant="success" label="Aceito" dot=True %}
+                <span class="field-helper">{{ colaborador.consentimento_lgpd_em|date:"d/m/Y H:i" }} · versao {{ colaborador.consentimento_lgpd_versao }}</span>
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Nao aplicavel" %}
+                <span class="field-helper">Cadastro feito pelo RH, nao pelo proprio colaborador.</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div>
+            <dt class="field-label">Elegivel a recontratacao</dt>
+            <dd>{% if colaborador.elegivel_recontratacao %}Sim{% else %}Nao{% endif %}</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Dados pessoais ---------- #}
+  <div id="aba-dados" class="tabs-panel">
+    <form method="post" class="form-stack" style="max-width: 820px; margin-top: var(--sp-4);">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
+      {% endif %}
+
+      <h2 class="form-section-title">Identificacao</h2>
+      <div class="form-grid-2">
+        {% include "components/input.html" with name="nome_completo" label="Nome completo" value=form.nome_completo.value required=True error=form.nome_completo.errors.0 %}
+        {% include "components/input.html" with name="primeiro_nome" label="Primeiro nome" value=form.primeiro_nome.value error=form.primeiro_nome.errors.0 %}
+      </div>
+      <div class="form-grid-3">
+        {% include "components/input.html" with name="cpf" label="CPF" value=form.cpf.value error=form.cpf.errors.0 %}
+        {% include "components/input.html" with name="rg" label="RG" value=form.rg.value error=form.rg.errors.0 %}
+        {% include "components/input.html" with name="pis" label="PIS" value=form.pis.value error=form.pis.errors.0 %}
+      </div>
+      <div class="form-grid-3">
+        {% include "components/input.html" with name="data_nascimento" label="Data de nascimento" type="date" value=form.data_nascimento.value error=form.data_nascimento.errors.0 %}
+        {% include "components/input.html" with name="telefone" label="Telefone" value=form.telefone.value error=form.telefone.errors.0 %}
+        {% include "components/input.html" with name="email" label="Email" type="email" value=form.email.value error=form.email.errors.0 %}
+      </div>
+
+      <h2 class="form-section-title">Endereco</h2>
+      <div class="form-grid-3">
+        {% include "components/input.html" with name="cep" label="CEP" value=form.cep.value error=form.cep.errors.0 %}
+        {% include "components/input.html" with name="rua" label="Rua" value=form.rua.value error=form.rua.errors.0 %}
+        {% include "components/input.html" with name="numero" label="Numero" value=form.numero.value error=form.numero.errors.0 %}
+      </div>
+      <div class="form-grid-3">
+        {% include "components/input.html" with name="complemento" label="Complemento" value=form.complemento.value error=form.complemento.errors.0 %}
+        {% include "components/input.html" with name="bairro" label="Bairro" value=form.bairro.value error=form.bairro.errors.0 %}
+        {% include "components/input.html" with name="cidade" label="Cidade" value=form.cidade.value error=form.cidade.errors.0 %}
+      </div>
+      {% include "components/select.html" with name="estado" label="Estado" options=ufs value=form.estado.value blank_label="Selecione" error=form.estado.errors.0 %}
+
+      <h2 class="form-section-title">Pagamento</h2>
+      <div class="form-grid-2">
+        {% include "components/select.html" with name="tipo_chave_pix" label="Tipo de chave Pix" options=pix_opcoes value=form.tipo_chave_pix.value blank_label="Nao informado" error=form.tipo_chave_pix.errors.0 %}
+        {% include "components/input.html" with name="chave_pix" label="Chave Pix" value=form.chave_pix.value error=form.chave_pix.errors.0 %}
+      </div>
+
+      <h2 class="form-section-title">Vinculo</h2>
+      <p class="field-helper">
+        As datas e a fase mudam pelo board, nao aqui, pra que cada mudanca gere historico.
+      </p>
+      <div class="form-grid-2">
+        {% include "components/input.html" with name="cargo" label="Cargo" value=form.cargo.value error=form.cargo.errors.0 %}
+        {% include "components/select.html" with name="regime_contratacao" label="Regime de contratacao" options=regimes_opcoes value=form.regime_contratacao.value error=form.regime_contratacao.errors.0 %}
+      </div>
+      {% include "components/checkbox.html" with name="elegivel_recontratacao" label="Elegivel a recontratacao" checked=form.elegivel_recontratacao.value helper="Desmarcado, o dedup recusa reativar esta pessoa se ela tentar se cadastrar de novo." %}
+
+      {% include "components/input.html" with name="observacoes" label="Observacoes" value=form.observacoes.value error=form.observacoes.errors.0 %}
+
+      {% if pode_editar %}
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+        </div>
+      {% else %}
+        <p class="field-helper">Voce tem acesso de leitura nesta ficha.</p>
+      {% endif %}
+    </form>
+  </div>
+
+  {# ---------- Historico ---------- #}
+  <div id="aba-historico" class="tabs-panel">
+    <p class="field-helper" style="margin: var(--sp-4) 0;">
+      Toda mudanca de fase entra aqui, com quem fez, por onde e o que mudou.
+      E desta trilha que sai o tempo medio de cada etapa do ciclo.
+    </p>
+    <table class="entity-table">
+      <thead>
+        <tr>
+          <th>Quando</th>
+          <th>De</th>
+          <th>Para</th>
+          <th>Motivo</th>
+          <th>Quem</th>
+          <th>Origem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entrada in historico %}
+          <tr>
+            <td>{{ entrada.criado_em|date:"d/m/Y H:i" }}</td>
+            <td>{% if entrada.de %}{{ entrada.de }}{% else %}<em>entrada</em>{% endif %}</td>
+            <td><strong>{{ entrada.para }}</strong></td>
+            <td>
+              {{ entrada.motivo|default:"—" }}
+              {% if entrada.dados.calculados %}
+                <br><span class="field-helper">calculado: {{ entrada.dados.calculados }}</span>
+              {% endif %}
+              {% if entrada.dados.limpos %}
+                <br><span class="field-helper">limpo: {{ entrada.dados.limpos }}</span>
+              {% endif %}
+            </td>
+            <td>{{ entrada.usuario|default:"sistema" }}</td>
+            <td>{{ entrada.get_origem_display }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -41,9 +41,12 @@
         </div>
         <div class="kanban-col-body">
           {% for colaborador in coluna.cards %}
-            <div class="kanban-card"
-                 data-colaborador-id="{{ colaborador.pk }}"
-                 data-destinos="{{ colaborador.destinos_possiveis|join:"," }}">
+            {# <a> em vez de <div>: o card e arrastavel E clicavel. O drag
+               nativo cancela o clique, entao as duas coisas convivem. #}
+            <a class="kanban-card"
+               href="{% url 'people:colaborador_detalhe' colaborador.pk %}"
+               data-colaborador-id="{{ colaborador.pk }}"
+               data-destinos="{{ colaborador.destinos_possiveis|join:"," }}">
               <p class="kanban-card-title">{{ colaborador.nome_completo }}</p>
               <p class="kanban-card-sub">
                 {{ colaborador.cargo|default:"Cargo nao definido" }} · {{ colaborador.unidade.nome }}

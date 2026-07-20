@@ -144,3 +144,61 @@ class ColaboradorForm(forms.Form):
         dados = dict(self.cleaned_data)
         dados.pop('unidade', None)
         return {chave: valor for chave, valor in dados.items() if valor not in (None, '')}
+
+
+class ColaboradorDadosForm(forms.ModelForm):
+    """
+    Edicao dos dados de uma pessoa que JA existe.
+
+    Aqui ModelForm e seguro, diferente do cadastro: nao ha criacao, entao nao ha
+    dedup a furar. O `save()` cai no `Colaborador.save()`, e a guarda de situacao
+    nao dispara porque nenhum campo de fase esta no form.
+
+    O que NAO entra: situacao, ponto_entrada e as datas de vinculo. Elas mudam
+    por transicao, no board, pra que cada mudanca gere historico. Editar aqui
+    seria um caminho paralelo sem rastro.
+    """
+
+    class Meta:
+        from apps.people.models import Colaborador as _Colaborador
+        model = _Colaborador
+        fields = [
+            'nome_completo', 'primeiro_nome', 'cpf', 'rg', 'pis', 'data_nascimento',
+            'telefone', 'email',
+            'cep', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'estado',
+            'tipo_chave_pix', 'chave_pix',
+            'cargo', 'regime_contratacao',
+            'elegivel_recontratacao', 'observacoes',
+        ]
+
+    def clean_cpf(self):
+        """
+        A unique de CPF por tenant tambem vale na edicao. Sem esta checagem, o
+        RH corrigindo um CPF pra um que ja existe tomaria IntegrityError 500 em
+        vez de uma mensagem no campo.
+        """
+        from apps.people.models import Colaborador
+
+        cpf = normalizar_cpf(self.cleaned_data.get('cpf'))
+        if not cpf:
+            return None
+
+        conflito = (Colaborador.all_tenants
+                    .filter(tenant_id=self.instance.tenant_id, cpf=cpf)
+                    .exclude(pk=self.instance.pk)
+                    .first())
+        if conflito is not None:
+            raise forms.ValidationError(
+                f'Este CPF ja e de {conflito.nome_completo}. '
+                f'Se for a mesma pessoa, o cadastro dela deve ser reaproveitado.'
+            )
+        return cpf
+
+    def clean_telefone(self):
+        return normalizar_e164(self.cleaned_data.get('telefone'))
+
+    def clean_estado(self):
+        return normalizar_estado(self.cleaned_data.get('estado'))
+
+    def clean_cep(self):
+        return normalizar_cep(self.cleaned_data.get('cep'))

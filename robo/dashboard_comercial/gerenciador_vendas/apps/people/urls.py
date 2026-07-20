@@ -10,6 +10,8 @@ urlpatterns = [
 
     # Colaboradores
     path('colaboradores/novo/', colaboradores.criar, name='colaborador_criar'),
+    path('colaboradores/<int:pk>/', colaboradores.detalhe, name='colaborador_detalhe'),
+    path('colaboradores/<int:pk>/revisar/', colaboradores.revisar, name='colaborador_revisar'),
 
     # Unidades (lojas e filiais)
     path('unidades/', unidades.lista, name='unidades_lista'),
