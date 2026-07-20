@@ -198,3 +198,29 @@ A pagina publica `/people/candidatura/<token>/` ainda nao existe. Ate o passo 4,
 
 - **Output**: 24 testes novos, 392 no modulo. Migration 0007 aplicada em dev.
 - **Status**: completed. Proximo: passo 4, formulario publico de candidatura com dedup por WhatsApp em constraint e o consentimento LGPD com prazo (decisao D3).
+
+## 2026-07-20 — Recrutamento, passo 4 (tarefa 211)
+
+- **Acao**: formulario publico de candidatura, model Candidato, dedup por WhatsApp e retencao LGPD. Commit 38731bf.
+- **O que fecha**: o QR do passo 3 apontava pra 404. Agora leva a uma pagina real, mobile-first, sem login.
+
+**Candidato em tabela propria (decisao D1)**
+
+Nao e situacao do Colaborador. Fosse, toda consulta de RH teria que excluir candidato, e o vocabulario racharia. A ponte pro DP anda por `Candidato.colaborador`, FK nula preenchida so na admissao: nao e o candidato que vira colaborador, e o colaborador que passa a referenciar de qual candidatura veio. Os dois coexistem porque respondem perguntas diferentes.
+
+**Dedup por WhatsApp (decisao D2)**
+
+O formulario nao coleta CPF de proposito: a origem testou e descartou por atrito de conversao, e a dor numero um do cliente e "nao chega candidato". CPF entra depois, na aprovacao, pelo formulario do DP, onde a constraint de CPF ja mora. Mesmo tratamento de NULL que o CPF: ausente e NULL, presente e unico por tenant, mais CheckConstraint de formato e normalizacao pra None no save.
+
+O dedup NAO devolve conflito com candidatos, ao contrario do DP. A pagina e publica: confirmar quem esta na base diria "fulano se candidatou aqui" pra qualquer um, e o unico dado pra perguntar e um telefone. Resposta generica. O que o visitante digitou volta pra ele nao redigitar, mas nada do candidato existente vaza. Teste dessa distincao.
+
+**Retencao LGPD (decisao D3)**
+
+Prazo (`dias_retencao_candidato`, default 365) gravado em cada candidato NO ATO, nao calculado na hora do expurgo: se o prazo mudar depois, quem se candidatou sob a regra antiga tem direito a ela. O consentimento mostra o prazo pro candidato na tela. `anonimizar()` tira a pessoa e mantem a linha, porque se a linha sumisse o funil de tres meses atras diria que chegaram menos candidatos do que chegaram. O curriculo e apagado de verdade. O cron que chama isso e o passo 7.
+
+**Seguranca**
+
+Mesma postura da view publica do DP: tenant pelo token com escopo mais tenant explicito, 404 generico, CSRF ligado, rate limit por IP e por token, honeypot com sucesso falso, upload so PDF ou Word ate 5 MB. Rota com prefixo proprio (`people/candidatura/`), e nao sufixo do link do DP, porque sao publicos diferentes. O teste de isolamento suja o thread local com outro tenant DE PROPOSITO antes da request, pra provar que a protecao existe e nao que teve sorte numa suite limpa.
+
+- **Output**: 24 testes novos, 423 no modulo. Migration 0009 aplicada em dev.
+- **Status**: completed. Proximo: passo 5, o board do pipeline, onde as etapas viram tela e o candidato passa a se mover por elas ate uma saida.
