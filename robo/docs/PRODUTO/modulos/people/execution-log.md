@@ -59,3 +59,37 @@ Trilha do que foi executado no modulo. Entrada mais nova embaixo.
 - **Bugs proprios encontrados e corrigidos**: card do board abria `<a>` e fechava `</div>`; classes de CSS inexistentes no formulario de unidade; erro de sintaxe de template que passou pelo `manage.py check`. Os tres levaram a testes novos (varredura de render entre eles).
 - **Output**: 293 testes verdes, 20 telas renderizando. Tarefa 208 criada pro que sobrou.
 - **Status**: completed
+
+## 2026-07-20 — Auditoria de UX com Playwright
+
+- **Acao**: captura das 23 telas do modulo (desktop e mobile) e comparacao contra o Design System, a pedido do Lucas, que apontou que varias coisas estavam fora do padrao.
+- **Output**: commits db3689b (lote de UX) e 9b0594b (rotulo no historico). Script reutilizavel em `tests/e2e/people_visual.py`.
+
+**O que estava errado**
+
+- **Tabelas sem estilo em 6 telas.** Usei a classe `entity-table`, que nao existe no CSS. O componente `entity_table.html` do DS e outra coisa: uma LINHA de entidade pra lista, nao uma tabela. O correto e `.table-wrap` + `.table`. Terceira vez na mesma sessao que inventei nome de classe em vez de copiar do DS.
+- **Funil de admissao** montado a mao com flex inline, usando o `progress_bar` (componente de 160px pra celula de tabela) esticado a 1200px, o que virava um traco. O DS ja tinha `breakdown_row`, que e exatamente rotulo + meta + barra + percentual. O proprio docstring do `progress_bar` apontava pra ele.
+- **Percentual do funil sobre a maior fase**, o que fazia tres das quatro linhas marcarem 100%. Passou a ser sobre o total.
+- **Board com a ultima coluna cortada**: o inline dizia `minmax(186px, 1fr)` e o DS ja da `min-width: 240px` em `.kanban-col`. O item vence a track, entao a conta de largura saia errada.
+- **Aba Historico da ficha** mostrava `em_admissao` em vez de `Em admissao`. O `__str__` do model ja usava `estados.rotulo()`; so a tela nao usava.
+- **Acentuacao**, terceira ocorrencia no modulo: ~25 strings de interface, rotulos de situacao e etapa, choices de model, itens da sidebar e o catalogo de campos.
+
+**Bug em componente compartilhado**
+
+`breakdown_row` tinha o mesmo defeito de locale que o `progress_bar`: em pt-br com USE_L10N o Django renderiza 28.6 como "28,6", que dentro de `style="width: ...%"` e CSS invalido. O navegador descarta a regra e a barra aparece CHEIA. Falha calada, nao quebra pagina. **O relatorio win/loss do CRM usa esse componente e esta sujeito ao mesmo problema em prod hoje.** Corrigido no componente, entao o CRM se beneficia junto.
+
+**Divida encontrada, nao corrigida**
+
+O shell do layout (`base.html`, `layout_app.html`, `sidebar.html`, `sidebar_subnav.html`) tem ZERO media query. Em largura de celular, sidebar e subnav ocupam 300px e sobra quase nada pro conteudo. **Nao e especifico do People**: toda pagina logada com subnav quebra igual. Nao mexi porque muda o layout de todos os modulos e ha outras sessoes na mesma arvore. O formulario publico do People, que e o unico que o colaborador abre no celular, tem tratamento mobile proprio e funciona.
+
+**Decisao: guard em teste, nao vigilancia**
+
+Cacar esses erros print a print nao estava funcionando (o de acento voltou tres vezes). Dois testes novos em `tests/test_templates_contrato.py`:
+
+- varredura de acento no texto visivel do People. Distingue texto de comentario, ignora atributo de tag multilinha, e promove os parametros de include que viram tela (`label`, `helper`, `title`) sem promover identificador (`name`, `type`). Pegou 25 ocorrencias.
+- compilacao de todo template do projeto, que `manage.py check` nao faz.
+
+Os dois tem meta teste provando que pegam o caso real e nao acusam o falso. Motivo: a primeira versao do guard de acento acusava o proprio comentario que explicava o codigo, e uma varredura quebrada passa calada dando falsa seguranca.
+
+- **Limpeza**: `campos_formulario` tinha a chave `label` que ninguem lia, duplicando `rotulo_padrao` e ja divergindo dela (`Numero` contra `Número`). Removida.
+- **Status**: completed
