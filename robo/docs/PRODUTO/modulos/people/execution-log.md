@@ -160,3 +160,41 @@ Os dois passam por `manage.py check` e por teste de model sem reclamar. Por isso
 - **Fora de escopo, conforme a origem**: o fluxo de aprovacao de vaga (aguardando aprovacao, aprovada, rejeitada) existe no produto porem esta formalmente deferido la, classificado como edge case de rede grande.
 - **Output**: 41 testes novos no passo 2 (24 de model, 17 de view), 374 no modulo. Migration 0006 aplicada em dev.
 - **Status**: completed. Proximo: passo 3 (LinkCandidatura com QR e atribuicao por canal), que sai derivado da vaga.
+
+## 2026-07-20 — Recrutamento, passo 3 (tarefa 211)
+
+- **Acao**: LinkCandidatura por canal, com QR e atribuicao de origem. Commit e6d4d3e.
+
+**Onde o link mora, e por que importa**
+
+Dentro da pagina da vaga, junto dos requisitos, e nao numa tela de configuracao. E a mesma correcao do passo 2, agora completa: separar obriga a redigitar no link o que ja esta na vaga, e e o defeito que a criadora do produto de origem aponta duas vezes.
+
+`LinkCandidatura.texto_padrao()` e onde "a vaga e a fonte da verdade" deixa de ser frase e vira codigo: o texto de divulgacao sai do cargo, turno e requisitos da vaga. **So entram os requisitos marcados pra aparecer no anuncio**, entao criterio de triagem calado nao vaza pro texto publicado. Ha teste especifico desse nao vazamento, porque e o mecanismo inteiro dos dois booleanos separados do passo 2.
+
+**Tres diferencas deliberadas em relacao ao LinkCadastroUnidade do DP**
+
+| | Link do DP | Link de candidatura | Por que |
+|---|---|---|---|
+| Quantidade | Varios por unidade | Varios por vaga, **um por canal** | E a atribuicao de origem. Sem ela o franqueado gasta em canal que nao converte sem saber |
+| Expiracao | Tem `expira_em` | **Nao expira** | Decisao consciente da origem: *"a gente usa muito Facebook, entao as vezes as pessoas entram la no grupo antigo, publicacao ta la, elas se candidatam"* |
+| Teto | Tem `max_submissoes` | **Sem teto** | A regra de parada mora na vaga e e sobre APROVADOS: ao atingir, a triagem para e a captacao continua. Teto no link cortaria a captacao junto |
+
+A ausencia de expiracao tem teste que olha o schema. Ausencia de campo nao quebra nada sozinha, e alguem poderia "consertar" adicionando expiracao sem saber que a falta dela e proposital.
+
+**Decisoes menores**
+
+- **Canal e choices, nao texto livre**, pelo mesmo motivo que Cargo virou entidade: "Facebook", "facebook" e "face" viram tres canais e corrompem justamente a atribuicao que o link existe pra medir.
+- **Desativar nao apaga.** Apagar levaria junto as candidaturas que vieram pelo link. Efeito colateral conhecido e avisado na confirmacao: QR ja impresso para de funcionar.
+- **QR em SVG**, como no DP: o uso real e cartaz na parede da loja. Uma campanha citada na origem abriu a sexta loja com QR impresso em ponto de onibus.
+- **Sem unique por (vaga, canal)**: dois grupos de Facebook diferentes e caso real. Quem distingue e o apelido interno.
+
+**Correcao de UX pega na captura com Playwright**
+
+As transicoes de status saiam em ordem alfabetica, o que punha "Encerrada", que e irreversivel, antes de "Publicada", que e a acao desejada quase sempre. Passaram a sair na ordem canonica da maquina; encerrar virou acao secundaria e ganhou confirmacao explicando que nao reabre.
+
+**PENDENCIA que atravessa pro passo 4**
+
+A pagina publica `/people/candidatura/<token>/` ainda nao existe. Ate o passo 4, o QR gerado aponta pra rota que responde 404. **Nao publicar QR impresso antes disso.** Registrado tambem no commit.
+
+- **Output**: 24 testes novos, 392 no modulo. Migration 0007 aplicada em dev.
+- **Status**: completed. Proximo: passo 4, formulario publico de candidatura com dedup por WhatsApp em constraint e o consentimento LGPD com prazo (decisao D3).
