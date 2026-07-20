@@ -14,14 +14,19 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.core.paginator import Paginator
+from django.db.models import Count, Max
 from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from apps.sistema.decorators import user_tem_funcionalidade
 from apps.sistema.utils import registrar_acao
+
+# Quantas entidades por pagina na tela "Em andamento".
+ENTIDADES_POR_PAGINA = 25
 
 
 # ============================================================================
@@ -104,6 +109,106 @@ def editar_page(request, pk=None):
         'estrategia_erro_choices': ItemChecklist.ESTRATEGIA_ERRO_CHOICES,
         'ura_titulo_choices': ItemChecklist.URA_TITULO_CHOICES,
         'pagetitle': checklist.nome if checklist else 'Novo checklist',
+    })
+
+
+@login_required
+def respostas_page(request, pk):
+    """Tela "Em andamento": uma linha por entidade que ja comecou a responder
+    este checklist, com progresso, em qual item parou e quando respondeu por
+    ultimo. E a unica janela pro que o bot coletou.
+
+    DESEMPENHO (a escolha feita aqui): chamar `progresso()`/`proximo_item()` por
+    entidade custaria 2 queries por linha (N+1 classico). Em vez disso:
+      1. UMA query agregada lista as entidades e a data da ultima resposta
+         (`values(...).annotate(Max(...))`), ja ordenada e paginada no banco;
+      2. os itens do checklist sao carregados UMA vez (`itens_ativos`);
+      3. as respostas das 25 entidades da pagina vem em UMA query
+         (`respostas_por_entidade`);
+      4. os leads da pagina vem em UMA query (`pk__in`).
+    O calculo em si continua sendo o do servico (`progresso_de` /
+    `proximo_item_de`, as mesmas funcoes que `progresso()` usa por dentro), entao
+    a regra nao foi duplicada. Custo total: constante, nao cresce com a lista.
+    """
+    if not user_tem_funcionalidade(request, 'workspace.ver'):
+        return HttpResponseForbidden('Sem permissao pra acessar Workspace.')
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return HttpResponseForbidden('sem tenant')
+    from apps.automacao.models import Checklist, RespostaChecklist
+    from apps.automacao.services import checklist as servico
+
+    checklist = Checklist.all_tenants.filter(tenant=tenant, pk=pk).first()
+    if checklist is None:
+        raise Http404('checklist nao encontrado')
+
+    agregado = (
+        RespostaChecklist.all_tenants
+        .filter(tenant=tenant, checklist=checklist)
+        .values('entidade_tipo', 'entidade_id')
+        .annotate(ultima_resposta=Max('atualizado_em'))
+        .order_by('-ultima_resposta')
+    )
+    paginator = Paginator(agregado, ENTIDADES_POR_PAGINA)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    pares = [(linha['entidade_tipo'], linha['entidade_id']) for linha in page_obj]
+    itens = servico.itens_ativos(checklist)
+    respostas_por_par = servico.respostas_por_entidade(checklist, pares)
+
+    # Rotulo do tipo de entidade sai das choices do model, nunca de string solta.
+    rotulos = dict(Checklist.ENTIDADE_ALVO_CHOICES)
+
+    ids_lead = [ident for tipo, ident in pares if tipo == servico.ENTIDADE_LEAD]
+    leads = {}
+    if ids_lead:
+        from apps.comercial.leads.models import LeadProspecto
+        leads = {
+            lead.pk: lead
+            for lead in LeadProspecto.all_tenants.filter(tenant=tenant, pk__in=ids_lead)
+        }
+
+    linhas = []
+    for registro in page_obj:
+        tipo = registro['entidade_tipo']
+        entidade_id = registro['entidade_id']
+        respostas = respostas_por_par.get((tipo, entidade_id), {})
+        rotulo = rotulos.get(tipo, tipo)
+        lead = leads.get(entidade_id) if tipo == servico.ENTIDADE_LEAD else None
+
+        if lead is not None:
+            nome = lead.nome_razaosocial
+            telefone = lead.telefone
+            url_detalhe = reverse('comercial_leads:lead_detail', args=[entidade_id])
+        elif tipo == servico.ENTIDADE_LEAD:
+            # Lead apagado depois de responder: a resposta continua no banco.
+            # A tela mostra o registro orfao em vez de quebrar.
+            nome = f'{rotulo} #{entidade_id} (removido)'
+            telefone = ''
+            url_detalhe = ''
+        else:
+            nome = f'{rotulo} #{entidade_id}'
+            telefone = ''
+            url_detalhe = ''
+
+        progresso = servico.progresso_de(itens, respostas)
+        linhas.append({
+            'nome': nome,
+            'telefone': telefone,
+            'url_detalhe': url_detalhe,
+            'progresso': progresso,
+            'rotulo_progresso': f"{progresso['respondidos']}/{progresso['total']}",
+            'proximo_item': servico.proximo_item_de(itens, respostas),
+            'ultima_resposta': registro['ultima_resposta'],
+        })
+
+    return render(request, 'workspace/checklist_respostas.html', {
+        'checklist': checklist,
+        'linhas': linhas,
+        'page_obj': page_obj,
+        'total_entidades': paginator.count,
+        'pode_editar': user_tem_funcionalidade(request, 'workspace.editar_todos'),
+        'pagetitle': f'Em andamento, {checklist.nome}',
     })
 
 

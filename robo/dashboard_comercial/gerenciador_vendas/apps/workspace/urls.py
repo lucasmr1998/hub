@@ -35,6 +35,7 @@ urlpatterns = [
     path('checklists/', checklists.lista, name='checklists_lista'),
     path('checklists/novo/', checklists.editar_page, name='checklist_novo'),
     path('checklists/<int:pk>/editar/', checklists.editar_page, name='checklist_editar'),
+    path('checklists/<int:pk>/respostas/', checklists.respostas_page, name='checklist_respostas'),
     path('api/checklists/salvar/', checklists.salvar, name='checklist_salvar'),
     path('api/checklists/<int:pk>/excluir/', checklists.excluir, name='checklist_excluir'),
     path('api/checklists/<int:pk>/itens/salvar/', checklists.item_salvar, name='checklist_item_salvar'),

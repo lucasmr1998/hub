@@ -43,7 +43,12 @@
         <p class="page-eyebrow">Workspace · Checklists</p>
         <h1 class="page-title">{{ pagetitle }}</h1>
       </div>
-      <a href="{% url 'workspace:checklists_lista' %}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+      <div class="page-actions">
+        {% if checklist %}
+          <a href="{% url 'workspace:checklist_respostas' checklist.pk %}" class="btn btn-secondary"><i class="bi bi-people"></i> Em andamento</a>
+        {% endif %}
+        <a href="{% url 'workspace:checklists_lista' %}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+      </div>
     </div>
   </div>
 

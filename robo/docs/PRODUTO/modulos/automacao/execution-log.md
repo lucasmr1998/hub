@@ -883,3 +883,33 @@
   roteiro semeado e rascunho estrutural, nao a ordem real de producao) e
   remocao do `validacao_ia.py` hardcoded, ja substituido pelo `Agente`.
 - **Status:** completed
+
+## 2026-07-20 — Telas de leitura das respostas do checklist
+
+- **Acao:** o bot ja coletava respostas em `RespostaChecklist` mas ninguem
+  enxergava. Criadas as duas telas que faltavam:
+  1. `/workspace/checklists/<pk>/respostas/` ("Em andamento"): uma linha por
+     entidade que comecou o roteiro, com progresso, item em que parou e data da
+     ultima resposta. Paginada de 25 em 25.
+  2. Bloco "Respostas do bot" no detalhe do lead, agrupado por checklist e na
+     ordem dos itens, mostrando bruto e normalizado quando diferem.
+- **Decisao (desempenho):** `progresso()` e `proximo_item()` batem no banco por
+  entidade, o que seria N+1 numa lista. Em vez de reimplementar a regra na view,
+  o servico foi partido em duas camadas: `progresso_de` / `proximo_item_de` /
+  `itens_elegiveis_de` recebem itens e respostas JA carregados e concentram a
+  regra; as funcoes antigas viraram wrappers que so buscam os dados e delegam.
+  A tela carrega os itens uma vez (`itens_ativos`), as respostas da pagina em
+  uma query (`respostas_por_entidade`) e os leads em outra. Custo constante,
+  regra em um lugar so.
+- **Decisao (entidade orfa):** `entidade_id` e generico e nao tem FK, entao
+  lead apagado deixa resposta orfa. A tela mostra "Lead #N (removido)" sem link
+  em vez de quebrar. Coberto por teste.
+- **Output:** `services/checklist.py` (novas `itens_ativos`,
+  `itens_elegiveis_de`, `progresso_de`, `proximo_item_de`,
+  `respostas_por_entidade`, `texto_legivel`, constantes `ENTIDADE_*`);
+  `workspace/views/checklists.py::respostas_page` + rota
+  `workspace:checklist_respostas`; template `workspace/checklist_respostas.html`;
+  componente novo `components/progress_bar.html` (+ CSS e showcase);
+  `leads/views.py::_respostas_checklist_do_lead` + secao no `lead_detail.html`.
+  16 testes novos em `tests/test_workspace_checklist_respostas.py`.
+- **Status:** completed

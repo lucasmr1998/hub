@@ -580,6 +580,22 @@
     </div>
   </section>
 
+  {# ========== PROGRESS BAR ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Progress bar</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/progress_bar.html" with percent=42 label="3/7" %}{% endverbatim %}</code>.
+      Barra fina pra celula de tabela ou linha de lista. Pra dashboard de distribuicao (label + meta + pct), usar <code>breakdown_row.html</code>.
+    </p>
+
+    <span class="showcase-label">Variantes</span>
+    <div class="showcase-row" style="display: flex; gap: var(--sp-5); padding: var(--sp-4); background: var(--color-bg);">
+      {% include "components/progress_bar.html" with percent=30 label="3/10 respondidos" %}
+      {% include "components/progress_bar.html" with percent=70 variant="warning" label="7/10 respondidos" %}
+      {% include "components/progress_bar.html" with percent=100 variant="success" label="Completo" %}
+    </div>
+  </section>
+
   {# ========== PAGE HEADER ========== #}
   <section class="showcase-section">
     <h2 class="showcase-section-title">Page header (padrao unico)</h2>

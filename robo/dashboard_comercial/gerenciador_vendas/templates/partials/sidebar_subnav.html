@@ -220,7 +220,7 @@ Uso em template que extende layout_app:
         <a href="{% url 'workspace:agentes_lista' %}" class="app-subnav-item {% if 'agente' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-robot"></i><span>Agentes</span>
         </a>
-        <a href="{% url 'workspace:checklists_lista' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'checklists_lista' or request.resolver_match.url_name == 'checklist_novo' or request.resolver_match.url_name == 'checklist_editar' %}is-active{% endif %}">
+        <a href="{% url 'workspace:checklists_lista' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'checklists_lista' or request.resolver_match.url_name == 'checklist_novo' or request.resolver_match.url_name == 'checklist_editar' or request.resolver_match.url_name == 'checklist_respostas' %}is-active{% endif %}">
           <i class="bi bi-list-check"></i><span>Checklists</span>
         </a>
         <a href="{% url 'workspace:tools_lista' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'tools_lista' %}is-active{% endif %}">

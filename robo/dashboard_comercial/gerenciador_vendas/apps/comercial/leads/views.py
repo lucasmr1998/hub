@@ -224,6 +224,44 @@ def api_lead_editar(request, lead_id):
     return JsonResponse({'success': True, 'campos': campos_atualizados})
 
 
+def _respostas_checklist_do_lead(lead):
+    """O que o bot ja coletou deste lead via checklist, agrupado por checklist e
+    na ordem do roteiro. Lista vazia = o template nao renderiza a secao.
+
+    Uma query so (`select_related` de checklist e item); o agrupamento e feito em
+    Python aproveitando a propria ordenacao do banco.
+    """
+    from apps.automacao.models import RespostaChecklist
+    from apps.automacao.services.checklist import ENTIDADE_LEAD, texto_legivel
+
+    respostas = (
+        RespostaChecklist.all_tenants
+        .filter(tenant_id=lead.tenant_id, entidade_tipo=ENTIDADE_LEAD, entidade_id=lead.pk)
+        .select_related('checklist', 'item')
+        .order_by('checklist__nome', 'checklist_id', 'item__ordem', 'item__id')
+    )
+
+    grupos = []
+    por_checklist = {}
+    for resposta in respostas:
+        grupo = por_checklist.get(resposta.checklist_id)
+        if grupo is None:
+            grupo = {'checklist': resposta.checklist, 'respostas': []}
+            por_checklist[resposta.checklist_id] = grupo
+            grupos.append(grupo)
+        normalizado = texto_legivel(resposta.valor_processado)
+        grupo['respostas'].append({
+            'pergunta': resposta.item.pergunta,
+            'valor': resposta.valor,
+            # So mostra o normalizado quando ele acrescenta informacao: repetir o
+            # bruto ao lado dele so polui a leitura.
+            'valor_normalizado': normalizado if normalizado != resposta.valor else '',
+            'origem': resposta.get_origem_display(),
+            'atualizado_em': resposta.atualizado_em,
+        })
+    return grupos
+
+
 @login_required(login_url='sistema:login')
 def lead_detail_view(request, lead_id):
     """View para a página de detalhes de um lead"""
@@ -253,6 +291,7 @@ def lead_detail_view(request, lead_id):
         'campos_custom': campos_custom,
         'dados_custom': dados_custom,
         'conversas_inbox': conversas_inbox,
+        'grupos_respostas_bot': _respostas_checklist_do_lead(lead),
     }
     return render(request, 'comercial/leads/lead_detail.html', context)
 
@@ -619,14 +658,34 @@ def registrar_lead_api(request):
                     'mensagem': 'CPF ja eh cliente ativo — direcionar atendimento para SAC/suporte, nao abrir CRM.',
                 }, status=200)
             # 2) LeadProspecto ativo com mesmo CPF no tenant?
+            #    Em vez de so reaproveitar, ATUALIZA com os campos novos
+            #    que o bot mandou (endereco, plano, telefone, email, etc).
+            #    Se o cliente reiniciou o flow Matrix, dados podem ter mudado.
             lead_existente = LeadProspecto.objects.filter(
                 cpf_cnpj=cpf_limpo, ativo=True,
             ).order_by('-data_cadastro').first()
             if lead_existente:
+                # Aplica os campos novos do payload (so os preenchidos)
+                campos_atualizados = []
+                for k, v in payload.items():
+                    if k in ('id', 'tenant', 'tenant_id', 'data_cadastro'):
+                        continue
+                    if v in (None, '') :
+                        continue
+                    valor_atual = getattr(lead_existente, k, None)
+                    if valor_atual != v:
+                        setattr(lead_existente, k, v)
+                        campos_atualizados.append(k)
+                if campos_atualizados:
+                    lead_existente.save(update_fields=campos_atualizados + ['data_atualizacao'])
                 _criar_log_sistema(
                     nivel='INFO', modulo='registrar_lead_api',
-                    mensagem=f'CPF {cpf_limpo} ja tem lead ativo (id={lead_existente.id}) — reaproveitado',
-                    dados_extras={'cpf': cpf_limpo, 'lead_existente_id': lead_existente.id},
+                    mensagem=(
+                        f'CPF {cpf_limpo} ja tem lead ativo (id={lead_existente.id}) — '
+                        f'atualizado {len(campos_atualizados)} campo(s): {", ".join(campos_atualizados) or "(nenhum novo)"}'
+                    ),
+                    dados_extras={'cpf': cpf_limpo, 'lead_existente_id': lead_existente.id,
+                                  'campos_atualizados': campos_atualizados},
                     request=request,
                 )
                 from apps.comercial.crm.models import OportunidadeVenda
@@ -634,9 +693,16 @@ def registrar_lead_api(request):
                 return JsonResponse({
                     'sucesso': True,
                     'reaproveitado': True,
+                    'atualizado': bool(campos_atualizados),
+                    'campos_atualizados': campos_atualizados,
                     'lead_id': lead_existente.id,
                     'oportunidade_id': op_existente.id if op_existente else None,
-                    'mensagem': 'Lead ja existe pra esse CPF — reaproveitado em vez de criar novo.',
+                    'estagio': op_existente.estagio.nome if (op_existente and op_existente.estagio) else None,
+                    'mensagem': (
+                        f'Lead existente atualizado com {len(campos_atualizados)} novo(s) dado(s).'
+                        if campos_atualizados
+                        else 'Lead ja existe pra esse CPF — sem novidades pra atualizar.'
+                    ),
                 }, status=200)
 
         # Campo `empresa` nao eh do modelo — eh um marcador do flow Matrix pra

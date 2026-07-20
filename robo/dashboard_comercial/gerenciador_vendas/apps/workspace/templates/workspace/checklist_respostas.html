@@ -1,0 +1,80 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace · Checklists</p>
+        <h1 class="page-title">{{ checklist.nome }}</h1>
+        <p class="page-subtitle">Quem ja comecou a responder este roteiro, em que ponto parou e quando respondeu por ultimo.</p>
+      </div>
+      <div class="page-actions">
+        {% if pode_editar %}
+          <a href="{% url 'workspace:checklist_editar' checklist.pk %}" class="btn btn-secondary btn-sm"><i class="bi bi-pencil"></i> Editar roteiro</a>
+        {% endif %}
+        <a href="{% url 'workspace:checklists_lista' %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+      </div>
+    </div>
+  </div>
+
+  {% if linhas %}
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); margin-top: var(--sp-5); overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+        <thead>
+          <tr style="text-align: left; color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;">
+            <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Quem respondeu</th>
+            <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Progresso</th>
+            <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Parou em</th>
+            <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Ultima resposta</th>
+            <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in linhas %}
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td style="padding: var(--sp-3);">
+                {% if linha.url_detalhe %}
+                  <a href="{{ linha.url_detalhe }}" style="color: inherit; text-decoration: none; font-weight: 600;">{{ linha.nome }}</a>
+                {% else %}
+                  <span style="font-weight: 600; color: var(--color-text-muted);">{{ linha.nome }}</span>
+                {% endif %}
+                {% if linha.telefone %}
+                  <div style="font-size: 0.76rem; color: var(--color-text-muted);">{{ linha.telefone }}</div>
+                {% endif %}
+              </td>
+              <td style="padding: var(--sp-3);">
+                {% if linha.progresso.completo %}
+                  {% include "components/progress_bar.html" with percent=linha.progresso.percentual variant="success" label=linha.rotulo_progresso %}
+                {% else %}
+                  {% include "components/progress_bar.html" with percent=linha.progresso.percentual label=linha.rotulo_progresso %}
+                {% endif %}
+              </td>
+              <td style="padding: var(--sp-3);">
+                {% if linha.proximo_item %}
+                  <span style="color: var(--color-text-muted);">{{ linha.proximo_item.pergunta|truncatechars:70 }}</span>
+                {% else %}
+                  {% include "components/badge.html" with variant="success" label="Completo" dot=True %}
+                {% endif %}
+              </td>
+              <td style="padding: var(--sp-3); color: var(--color-text-muted); white-space: nowrap;">{{ linha.ultima_resposta|date:"d/m/Y H:i" }}</td>
+              <td style="padding: var(--sp-3); text-align: right;">
+                {% if linha.url_detalhe %}
+                  <a href="{{ linha.url_detalhe }}" style="color: var(--color-accent);">abrir</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    {% include "components/pagination.html" with page_obj=page_obj %}
+  {% else %}
+    {% include "components/empty_state.html" with icon="bi-inbox" text="Ninguem respondeu este checklist ainda" subtext="Assim que o bot coletar a primeira resposta, a pessoa aparece aqui." %}
+  {% endif %}
+{% endblock %}

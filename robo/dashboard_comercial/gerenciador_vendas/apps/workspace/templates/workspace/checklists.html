@@ -56,9 +56,10 @@
                 {% include "components/badge.html" with variant="neutral" label="Inativo" dot=True %}
               {% endif %}
             </td>
-            <td style="padding: var(--sp-3); text-align: right;">
+            <td style="padding: var(--sp-3); text-align: right; white-space: nowrap;">
+              <a href="{% url 'workspace:checklist_respostas' c.pk %}" style="color: var(--color-accent);">em andamento</a>
               {% if pode_editar %}
-                <a href="{% url 'workspace:checklist_editar' c.pk %}" style="color: var(--color-accent);">editar</a>
+                <a href="{% url 'workspace:checklist_editar' c.pk %}" style="color: var(--color-accent); margin-left: var(--sp-3);">editar</a>
               {% endif %}
             </td>
           </tr>

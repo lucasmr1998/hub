@@ -1,5 +1,6 @@
 {% extends "sistema/base.html" %}
 {% load leads_tags %}
+{% load crm_extras %}
 
 {% block title %}{{ lead.nome_razaosocial }} — Lead #{{ lead.id }}{% endblock %}
 
@@ -143,6 +144,39 @@
           {% endfor %}
         </div>
       </div>
+    {% endif %}
+
+    {% if grupos_respostas_bot %}
+      {% for grupo in grupos_respostas_bot %}
+        <div class="card" style="margin-top: var(--sp-4);">
+          <div class="card-header">
+            <h3 class="card-title"><i class="bi bi-robot"></i> Respostas do bot
+              <span style="font-weight: var(--fw-regular); color: var(--color-text-muted);">· {{ grupo.checklist.nome }}</span>
+            </h3>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            {% for r in grupo.respostas %}
+              <div class="lead-conv-row" style="align-items: flex-start;">
+                <div style="min-width: 0; flex: 1;">
+                  <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ r.pergunta }}</div>
+                  <div style="font-weight: var(--fw-semibold); font-size: var(--fs-sm); margin-top: 2px;">
+                    {{ r.valor|valor_amigavel|default:"—" }}
+                  </div>
+                  {% if r.valor_normalizado %}
+                    <div style="font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: 2px;">
+                      Normalizado: {{ r.valor_normalizado|valor_amigavel }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; text-align: right;">
+                  {% include "components/badge.html" with variant="neutral" label=r.origem size="sm" %}
+                  <div style="margin-top: 2px;">{{ r.atualizado_em|date:"d/m H:i" }}</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
     {% endif %}
   </div>
 
