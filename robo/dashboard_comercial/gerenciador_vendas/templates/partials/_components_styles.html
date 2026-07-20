@@ -248,6 +248,60 @@ Tokens base (cores, tipografia, spacing) ficam em layouts/base.html.
   .field.has-error .field-input { border-color: var(--color-danger); }
   .field.has-error .field-input:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); }
 
+  /* Select — herda .field-input e troca a seta nativa por uma consistente */
+  .field-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236b7280'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    cursor: pointer;
+  }
+  .field-select:disabled { cursor: not-allowed; }
+
+  /* Checkbox — area de clique inteira, alinhada com o resto dos campos */
+  .field-check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .field-check:hover { border-color: var(--color-text-muted); }
+  .field-check input[type=checkbox] {
+    margin: 2px 0 0;
+    width: 16px; height: 16px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .field-check-text { display: flex; flex-direction: column; gap: 2px; }
+  .field-check-label { font-size: var(--fs-sm); color: var(--color-text); }
+  .field-check.is-disabled { opacity: .6; cursor: not-allowed; }
+  .field-check.is-disabled input { cursor: not-allowed; }
+
+  /* Layout de formulario. Existe pra que pagina de produto nao precise de grid
+     inline: campo em duas colunas e o arranjo mais comum e ja se repete. */
+  .form-stack { display: flex; flex-direction: column; gap: var(--sp-4); }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-4); }
+  .form-section-title {
+    margin: var(--sp-4) 0 0;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+  }
+  .form-actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-2); }
+  @media (max-width: 720px) {
+    .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+  }
+
   /* ============================================
      BADGE
      ============================================ */

@@ -156,6 +156,30 @@
       </div>
     </div>
 
+    <span class="showcase-label">Select</span>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/select.html" with name="estado" label="Estado" options=lista value=atual blank_label="Selecione" %}{% endverbatim %}</code><br>
+      <code>options</code> e uma lista de pares (valor, rotulo).
+    </p>
+    <div class="showcase-row" style="display:block;">
+      <div class="showcase-grid-2">
+        {% include "components/select.html" with name="ds_estado" label="Estado" options=ds_estados blank_label="Selecione o estado" %}
+        {% include "components/select.html" with name="ds_regime" label="Regime" options=ds_regimes value="clt" helper="Define quais campos ficam obrigatorios" %}
+      </div>
+    </div>
+
+    <span class="showcase-label">Checkbox</span>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/checkbox.html" with name="ativo" label="Unidade ativa" checked=True %}{% endverbatim %}</code><br>
+      A caixa inteira e clicavel, nao so o quadradinho.
+    </p>
+    <div class="showcase-row" style="display:block;">
+      <div class="showcase-grid-2">
+        {% include "components/checkbox.html" with name="ds_ativo" label="Unidade ativa" checked=True helper="Unidade inativa some das listas mas preserva o historico" %}
+        {% include "components/checkbox.html" with name="ds_lgpd" label="Li e aceito o tratamento dos meus dados" %}
+      </div>
+    </div>
+
     <span class="showcase-label">Estados</span>
     <div class="showcase-row" style="display:block;">
       <div class="showcase-grid-2">

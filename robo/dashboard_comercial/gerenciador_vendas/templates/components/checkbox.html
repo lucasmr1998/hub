@@ -1,0 +1,25 @@
+{% comment %}
+Checkbox component. A caixa inteira e clicavel, nao so o quadradinho.
+
+Params:
+  name: identificador do field
+  id: id do elemento (default: name)
+  label: texto ao lado da caixa
+  helper: texto auxiliar abaixo do label
+  checked: bool
+  value: valor enviado quando marcado (default: "on")
+  disabled: bool
+
+Exemplo:
+  {% include "components/checkbox.html" with name="ativo" label="Unidade ativa" checked=unidade.ativo helper="Unidade inativa some das listas." %}
+{% endcomment %}
+<label class="field-check{% if disabled %} is-disabled{% endif %}" for="{{ id|default:name }}">
+  <input type="checkbox" name="{{ name }}" id="{{ id|default:name }}"
+         value="{{ value|default:'on' }}"
+         {% if checked %}checked{% endif %}
+         {% if disabled %}disabled{% endif %}>
+  <span class="field-check-text">
+    <span class="field-check-label">{{ label }}</span>
+    {% if helper %}<span class="field-helper">{{ helper }}</span>{% endif %}
+  </span>
+</label>

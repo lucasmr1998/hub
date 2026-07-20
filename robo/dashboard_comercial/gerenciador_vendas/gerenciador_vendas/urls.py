@@ -39,6 +39,8 @@ class DesignSystemComponentsView(TemplateView):
             {'id': 'p3', 'label': 'Inativos', 'badge': '2'},
             {'id': 'p4', 'label': 'Arquivados'},
         ]
+        ctx['ds_estados'] = [('PI', 'Piaui'), ('SP', 'Sao Paulo'), ('RS', 'Rio Grande do Sul')]
+        ctx['ds_regimes'] = [('clt', 'CLT'), ('pj', 'PJ'), ('estagio', 'Estagio')]
         ctx['crumbs'] = [
             {'label': 'Hubtrix Admin', 'href': '/aurora-admin/'},
             {'label': 'Tenants', 'href': '/aurora-admin/tenants/'},

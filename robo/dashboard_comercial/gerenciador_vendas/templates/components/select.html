@@ -1,0 +1,43 @@
+{% comment %}
+Select component. Mesma anatomia do input.html (label, helper, erro), com a
+seta nativa trocada por uma consistente entre navegadores.
+
+Params:
+  name: identificador do field
+  id: id do elemento (default: name)
+  label: texto do label
+  options: lista de pares (valor, rotulo). Ex: [('pi', 'Piaui'), ('sp', 'Sao Paulo')]
+  value: valor selecionado
+  blank_label: texto da opcao vazia (omitido se ausente)
+  helper: texto auxiliar abaixo
+  error: mensagem de erro (ativa estado de erro)
+  required: bool
+  disabled: bool
+  size: sm | md (default) | lg
+
+Exemplo:
+  {% include "components/select.html" with name="estado" label="Estado" options=estados value=unidade.estado blank_label="Selecione" %}
+{% endcomment %}
+<div class="field{% if error %} has-error{% endif %}{% if disabled %} is-disabled{% endif %}{% if size %} field-{{ size }}{% endif %}">
+  {% if label %}
+    <label for="{{ id|default:name }}" class="field-label">
+      {{ label }}{% if required %} <span class="field-required">*</span>{% endif %}
+    </label>
+  {% endif %}
+  <div class="field-input-wrap">
+    <select name="{{ name }}" id="{{ id|default:name }}"
+            class="field-input field-select"
+            {% if required %}required{% endif %}
+            {% if disabled %}disabled{% endif %}>
+      {% if blank_label %}<option value="">{{ blank_label }}</option>{% endif %}
+      {% for opcao_valor, opcao_rotulo in options %}
+        <option value="{{ opcao_valor }}" {% if opcao_valor|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ opcao_rotulo }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if error %}
+    <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ error }}</p>
+  {% elif helper %}
+    <p class="field-helper">{{ helper }}</p>
+  {% endif %}
+</div>

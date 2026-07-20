@@ -5,11 +5,29 @@
 {% block main_mod %} has-subnav{% endblock %}
 
 {% block content %}
-  <h1>Unidades</h1>
-  <p class="text-muted">Cada colaborador pertence a uma unidade, e o acesso do gestor e recortado por ela.</p>
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People</p>
+        <h1 class="page-title">Unidades</h1>
+        <p class="page-subtitle">Cada colaborador pertence a uma unidade, e o acesso do gestor e recortado por ela.</p>
+      </div>
+      {% if pode_gerir %}
+        <a href="{% url 'people:unidade_criar' %}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Nova unidade
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-check-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
 
   {% if unidades %}
-    <table class="table">
+    <table class="entity-table">
       <thead>
         <tr>
           <th>Nome</th>
@@ -17,14 +35,23 @@
           <th>Cidade</th>
           <th>Colaboradores</th>
           <th>Situacao</th>
+          {% if pode_gerir %}<th></th>{% endif %}
         </tr>
       </thead>
       <tbody>
         {% for unidade in unidades %}
           <tr>
-            <td>{{ unidade.nome }}</td>
+            <td>
+              {% if pode_gerir %}
+                <a href="{% url 'people:unidade_editar' unidade.pk %}">{{ unidade.nome }}</a>
+              {% else %}
+                {{ unidade.nome }}
+              {% endif %}
+            </td>
             <td><code>{{ unidade.codigo }}</code></td>
-            <td>{{ unidade.cidade|default:"—" }}{% if unidade.estado %}/{{ unidade.estado }}{% endif %}</td>
+            <td>
+              {% if unidade.cidade %}{{ unidade.cidade }}{% if unidade.estado %}/{{ unidade.estado }}{% endif %}{% else %}—{% endif %}
+            </td>
             <td>{{ unidade.total_colaboradores }}</td>
             <td>
               {% if unidade.ativo %}
@@ -33,11 +60,23 @@
                 {% include "components/badge.html" with variant="neutral" label="Inativa" %}
               {% endif %}
             </td>
+            {% if pode_gerir %}
+              <td style="text-align: right;">
+                <form method="post" action="{% url 'people:unidade_alternar_ativo' unidade.pk %}" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm"
+                          title="{% if unidade.ativo %}Desativar. A unidade some das listas de escolha e preserva o historico.{% else %}Reativar{% endif %}">
+                    <i class="bi {% if unidade.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+                    {% if unidade.ativo %}Desativar{% else %}Reativar{% endif %}
+                  </button>
+                </form>
+              </td>
+            {% endif %}
           </tr>
         {% endfor %}
       </tbody>
     </table>
   {% else %}
-    {% include "components/empty_state.html" with icon="bi-shop" text="Nenhuma unidade cadastrada" subtext="Cadastre as lojas antes de cadastrar colaboradores." %}
+    {% include "components/empty_state.html" with icon="bi-shop" text="Nenhuma unidade cadastrada" subtext="Cadastre as lojas antes de cadastrar colaboradores." cta_label="Nova unidade" cta_href="/people/unidades/nova/" %}
   {% endif %}
 {% endblock %}
