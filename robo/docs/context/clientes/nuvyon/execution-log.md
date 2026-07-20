@@ -356,3 +356,61 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Fixes (tarefa #179): (1) PRIMARIO: toggle "Remover quebra de linhas = SIM" no api_consulta_cep + revisar os demais nodes API do flow que interpolam resposta de cliente; (2) prompt estrito no Validator1 do n8n; (3) URL antiga no UpdateCellphone1 (3 workflows); (4) resgatar a cliente (op 2353).
 - Aprendizado de diagnostico: webhook n8n rejeitado por body invalido NAO gera execucao — "sumico" de log no n8n com resposta instantanea do bot e assinatura de JSON quebrado no lado Matrix.
 - Status: pending (fixes a aplicar)
+
+## 2026-07-20 — Bot de venda: Matrix ligado ao fluxo da engine, 3 defeitos achados no teste real
+
+- **Acao:** primeiro teste ponta a ponta do bot de venda novo, com o Matrix
+  chamando o fluxo da engine de automacao em producao (fluxo 33 do tenant
+  nuvyon, checklist 1 com 22 perguntas).
+- **Arquitetura:** o Matrix aponta direto pro webhook do fluxo
+  (`/automacao/webhook/<token>/`), com o campo `acao` no corpo escolhendo o
+  ramo (`proximo_passo` / `validar` / `recontato`). A logica da conversa vive
+  no GRAFO, nao no caminho Python de `apps/comercial/atendimento_ia`, que
+  segue existindo e nao foi usado neste teste.
+- **Resultado:** loop completo funcionando. Pergunta, valida, grava
+  normalizado (CPF sem pontuacao, data em ISO) e avanca pro proximo item. As
+  respostas caem em `RespostaChecklist` com origem `bot`.
+
+### Defeito 1: `message` vazio travava a conversa (corrigido, commit c25f670)
+
+O bot do Matrix envia o campo `message` direto no WhatsApp em dois ramos
+(`msg_resultado` no caminho valido, `msg_pre_transbordo` no transbordo). Tres
+dos cinco corpos de resposta mandavam esse campo em branco. Efeito: a resposta
+gravava do nosso lado e o bot emudecia do lado do cliente, porque o no de
+envio dele nao completava e o fluxo nunca voltava a perguntar. **So apareceu
+no teste com o emulador**: a simulacao por HTTP recebia o campo vazio e nao
+estranhava. Fix: `checklist_validar` passou a expor `mensagem_sucesso` (do
+item, com padrao quando o item nao configurou).
+
+### Defeito 2: `resposta_correta` como booleano (corrigido, commit 91a93ed)
+
+O Matrix nao compara booleano JSON cru na condicao do no de decisao: recebendo
+`resposta_correta: true` ele caia no ramo do erro do mesmo jeito. Os outros
+dois campos de sim/nao do contrato (`needsReception`, `deve_transbordar`) ja
+eram TEXTO `"true"`/`"false"`, o que indica que alguem ja tinha batido nisso
+antes e este campo passou batido. Fix dos dois lados: passamos a devolver
+texto, e a condicao do `dec_resultado` no Matrix compara com `"false"` ENTRE
+ASPAS.
+
+### Defeito 3: lead duplicado a cada mensagem (corrigido no Matrix pelo dono)
+
+O flow buscava lead com `GET /api/consultar/leads/?search=<telefone>&origem=whatsapp`
+mas CRIAVA com `origem: "conta <N>"`. A busca filtrava por uma origem que a
+criacao nunca gravava, entao ele nunca achava o lead que ele mesmo tinha
+criado: 12 leads para o mesmo telefone durante o teste. Fix: remover
+`&origem=whatsapp` da URL de busca. A chave de deduplicacao e o TELEFONE; a
+origem descreve procedencia e nao serve pra identificar pessoa.
+
+- **Medicao do impacto em producao (read only):** 1065 leads no tenant, apenas
+  **2 telefones com mais de um lead** (excluindo o numero de teste). O defeito
+  estava no flow NOVO, ainda em teste, e nao no que roda hoje. Nenhuma acao
+  corretiva de dado necessaria.
+- **Pendente:** 12 leads de teste (telefone 34999999456, nome "Teste") e 15
+  respostas de checklist seguem em prod, incluindo CPF e email REAIS do dono
+  usados no teste. A limpeza foi preparada mas NAO executada (bloqueada pelo
+  guard de acao destrutiva); o script esta pronto pra rodar no console do
+  EasyPanel, com `assert` que aborta se algum alvo nao for o lead de teste.
+- **Nao testado ainda:** ramos de transbordo e recontato; textos dos planos
+  seguem impresentaveis (nome interno do ERP vazando, plano de 1 GIGA com
+  preco R$ 0,00 vindo do catalogo).
+- **Status:** completed
