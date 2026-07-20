@@ -243,6 +243,9 @@ Uso em template que extende layout_app:
       </nav>
       <div class="app-subnav-section">Cadastro</div>
       <nav class="app-subnav-list">
+        <a href="{% url 'people:links_lista' %}" class="app-subnav-item {% if 'link' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-link-45deg"></i><span>Cadastro via link</span>
+        </a>
         <a href="{% url 'people:unidades_lista' %}" class="app-subnav-item {% if 'unidade' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-shop"></i><span>Unidades</span>
         </a>

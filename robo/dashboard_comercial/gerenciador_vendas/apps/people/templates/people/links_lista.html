@@ -1,0 +1,153 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People</p>
+        <h1 class="page-title">Cadastro via link</h1>
+        <p class="page-subtitle">
+          Cada loja tem um link proprio. O colaborador abre no celular, preenche
+          os proprios dados e cai no board, sem ninguem digitar por ele.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-info-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  {% if cartoes %}
+    <div class="form-grid-2">
+      {% for cartao in cartoes %}
+        <div class="section-card">
+          <div class="section-card-header">
+            <h2 class="section-card-title"><i class="bi bi-shop"></i> {{ cartao.unidade.nome }}</h2>
+            {% if cartao.link %}
+              {% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
+            {% else %}
+              {% include "components/badge.html" with variant="neutral" label="Sem link" %}
+            {% endif %}
+          </div>
+          <div class="section-card-body">
+            {% if cartao.link %}
+              <div class="field">
+                <label class="field-label" for="url-{{ cartao.unidade.pk }}">Link publico</label>
+                <div class="field-input-wrap">
+                  <input class="field-input" id="url-{{ cartao.unidade.pk }}"
+                         value="{{ cartao.url }}" readonly
+                         onclick="this.select()">
+                </div>
+                <p class="field-helper">
+                  {{ cartao.link.submissoes }} cadastro{{ cartao.link.submissoes|pluralize }} recebido{{ cartao.link.submissoes|pluralize }}
+                  {% if cartao.link.ultima_submissao_em %}
+                    · ultimo em {{ cartao.link.ultima_submissao_em|date:"d/m/Y H:i" }}
+                  {% endif %}
+                  {% if cartao.link.expira_em %}
+                    · expira em {{ cartao.link.expira_em|date:"d/m/Y" }}
+                  {% endif %}
+                </p>
+              </div>
+
+              {% if pode_gerir %}
+                <div class="form-actions">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          data-copiar="url-{{ cartao.unidade.pk }}">
+                    <i class="bi bi-clipboard"></i> Copiar link
+                  </button>
+                  <form method="post" action="{% url 'people:link_rotacionar' cartao.unidade.pk %}"
+                        onsubmit="return confirm('O link atual para de funcionar na hora. Quem tiver o QR antigo ou o link antigo nao vai mais conseguir se cadastrar. Continuar?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm">
+                      <i class="bi bi-arrow-repeat"></i> Novo link
+                    </button>
+                  </form>
+                  <form method="post" action="{% url 'people:link_desativar' cartao.unidade.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm">
+                      <i class="bi bi-pause-circle"></i> Desativar
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            {% else %}
+              <p class="field-helper">Esta unidade ainda nao tem link de cadastro.</p>
+              {% if pode_gerir %}
+                <form method="post" action="{% url 'people:link_gerar' cartao.unidade.pk %}" class="form-actions">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-link-45deg"></i> Gerar link
+                  </button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% include "components/empty_state.html" with icon="bi-shop" text="Nenhuma unidade ativa" subtext="O link de cadastro e por loja, entao cadastre as unidades primeiro." cta_label="Ir para unidades" cta_href="/people/unidades/" %}
+  {% endif %}
+
+  {% if ultimas %}
+    <h2 class="form-section-title">Ultimos envios</h2>
+    <p class="field-helper">
+      Serve pra responder "por que o cadastro do fulano nao apareceu". Recusa em
+      volume costuma ser formulario confuso ou link vazado.
+    </p>
+    <table class="entity-table">
+      <thead>
+        <tr><th>Quando</th><th>Unidade</th><th>Resultado</th><th>Pessoa</th><th>Observacao</th></tr>
+      </thead>
+      <tbody>
+        {% for envio in ultimas %}
+          <tr>
+            <td>{{ envio.criado_em|date:"d/m/Y H:i" }}</td>
+            <td>{{ envio.link.unidade.nome }}</td>
+            <td>
+              {% if envio.resultado == 'criado' %}
+                {% include "components/badge.html" with variant="success" label="Criado" size="sm" %}
+              {% elif envio.resultado == 'rejeitado' %}
+                {% include "components/badge.html" with variant="danger" label="Rejeitado" size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="info" label=envio.get_resultado_display size="sm" %}
+              {% endif %}
+            </td>
+            <td>
+              {% if envio.colaborador %}
+                <a href="{% url 'people:colaborador_detalhe' envio.colaborador.pk %}">{{ envio.colaborador.nome_completo }}</a>
+              {% else %}—{% endif %}
+            </td>
+            <td>{{ envio.erro|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <script>
+    // Copiar link. Fallback pra select quando a Clipboard API nao esta
+    // disponivel (http sem localhost, navegador antigo).
+    document.querySelectorAll('[data-copiar]').forEach(function (botao) {
+      botao.addEventListener('click', function () {
+        const campo = document.getElementById(botao.dataset.copiar);
+        if (!campo) return;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(campo.value).then(function () {
+            toast('Link copiado', 'Cole no grupo da loja ou mande pro colaborador.', 'success');
+          });
+        } else {
+          campo.select();
+          toast('Selecionado', 'Use Ctrl+C pra copiar.', 'info');
+        }
+      });
+    });
+  </script>
+{% endblock %}

@@ -17,14 +17,28 @@ from apps.people.services.colaboradores import (
     registrar_colaborador,
 )
 from apps.people.services.configuracao import config_efetiva, unidade_sentinela
+from apps.people.services.links import (
+    criar_link,
+    desativar_link,
+    link_ativo,
+    registrar_submissao,
+    resolver_por_token,
+    rotacionar_link,
+)
 
 __all__ = [
     'Candidato',
     'ResultadoCadastro',
     'buscar_colaborador',
     'config_efetiva',
+    'criar_link',
+    'desativar_link',
+    'link_ativo',
     'marcar_revisado',
     'mover_situacao',
     'registrar_colaborador',
+    'registrar_submissao',
+    'resolver_por_token',
+    'rotacionar_link',
     'unidade_sentinela',
 ]

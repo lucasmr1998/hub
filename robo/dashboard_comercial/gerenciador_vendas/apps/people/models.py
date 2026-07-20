@@ -23,6 +23,7 @@ from contextlib import contextmanager
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from apps.people import estados
 from apps.people.excecoes import PeopleError, TransicaoNaoAutorizada
@@ -516,3 +517,138 @@ class HistoricoSituacao(TenantMixin):
     def __str__(self):
         origem = estados.rotulo(self.de) if self.de else 'entrada'
         return f'{self.colaborador_id}: {origem} para {estados.rotulo(self.para)}'
+
+
+RESULTADO_SUBMISSAO_CHOICES = [
+    ('criado',        'Criado'),
+    ('reaproveitado', 'Reaproveitado'),
+    ('reativado',     'Reativado'),
+    ('rejeitado',     'Rejeitado'),
+]
+
+
+class LinkCadastroUnidade(TenantMixin):
+    """
+    Link publico de auto cadastro, um por unidade.
+
+    E o mecanismo que tira o cadastro do WhatsApp pessoal do RH: a loja tem uma
+    URL (e um QR pra colar na parede), o colaborador abre no celular, preenche
+    os proprios dados e cai no board.
+
+    O token e unique GLOBAL, nao por tenant, e isso e proposital: a URL publica
+    nao carrega tenant nenhum, entao e o proprio token que resolve de quem e o
+    cadastro. Por isso ele tem 32 bytes de entropia.
+
+    Link nao se apaga, se desativa. A trilha de submissoes aponta pra ele, e
+    saber por qual link alguem entrou e parte da auditoria.
+    """
+
+    unidade = models.ForeignKey(
+        Unidade, on_delete=models.CASCADE, related_name='links_cadastro',
+        verbose_name="Unidade",
+    )
+    token = models.CharField(
+        max_length=64, unique=True, db_index=True, verbose_name="Token",
+        help_text="secrets.token_urlsafe(32). Nao editar na mao.",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    expira_em = models.DateTimeField(
+        null=True, blank=True, verbose_name="Expira em",
+        help_text="Nulo significa que nao expira sozinho.",
+    )
+    max_submissoes = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Maximo de submissoes",
+        help_text="Nulo significa ilimitado. Ao estourar, o link se desativa.",
+    )
+    submissoes = models.PositiveIntegerField(default=0, verbose_name="Submissoes")
+    ultima_submissao_em = models.DateTimeField(
+        null=True, blank=True, verbose_name="Ultima submissao")
+
+    rotacionado_de = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='rotacoes', verbose_name="Rotacionado de",
+        help_text="Link anterior, quando este nasceu de um Novo Link.",
+    )
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='people_links_criados', verbose_name="Criado por",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    desativado_em = models.DateTimeField(null=True, blank=True, verbose_name="Desativado em")
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_link_cadastro'
+        verbose_name = 'Link de cadastro'
+        verbose_name_plural = 'Links de cadastro'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'unidade', 'ativo'], name='people_link_und_idx'),
+        ]
+        constraints = [
+            # Um cartao por loja, como na tela de origem. Se a rotacao tentar
+            # criar o novo antes de desativar o velho, isto falha alto em vez de
+            # deixar dois links vivos pra mesma unidade.
+            models.UniqueConstraint(
+                fields=['unidade'], condition=models.Q(ativo=True),
+                name='people_link_ativo_unico_por_unidade',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Link de {self.unidade}'
+
+    def esta_valido(self):
+        """Aceita submissao? Ativo, dentro do prazo e abaixo do teto."""
+        if not self.ativo:
+            return False
+        if self.expira_em is not None and self.expira_em <= timezone.now():
+            return False
+        if self.max_submissoes is not None and self.submissoes >= self.max_submissoes:
+            return False
+        return True
+
+    @property
+    def caminho_publico(self):
+        return f'/people/publico/{self.token}/'
+
+
+class SubmissaoLinkCadastro(TenantMixin):
+    """
+    Registro de cada envio do formulario publico.
+
+    O colaborador ja fica no `Colaborador`; isto aqui serve pra responder "por
+    que o cadastro do fulano nao apareceu" e pra medir abuso. O payload guarda o
+    que foi submetido com o CPF MASCARADO: reduzir a superficie LGPD custa nada
+    e a pessoa ja esta registrada do lado certo.
+    """
+
+    link = models.ForeignKey(
+        LinkCadastroUnidade, on_delete=models.CASCADE, related_name='submissoes_registro',
+        verbose_name="Link",
+    )
+    colaborador = models.ForeignKey(
+        Colaborador, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='submissoes', verbose_name="Colaborador",
+    )
+    resultado = models.CharField(
+        max_length=20, choices=RESULTADO_SUBMISSAO_CHOICES, verbose_name="Resultado")
+    erro = models.CharField(max_length=200, blank=True, default='', verbose_name="Erro")
+    payload = models.JSONField(default=dict, blank=True, verbose_name="Payload (CPF mascarado)")
+    ip_origem = models.CharField(max_length=64, blank=True, default='', verbose_name="IP")
+    user_agent = models.CharField(max_length=300, blank=True, default='', verbose_name="User agent")
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_submissao_link'
+        verbose_name = 'Submissao de link'
+        verbose_name_plural = 'Submissoes de link'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'link', '-criado_em'], name='people_subm_link_idx'),
+            models.Index(fields=['tenant', 'resultado', '-criado_em'], name='people_subm_res_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.get_resultado_display()} em {self.criado_em:%d/%m/%Y %H:%M}'
