@@ -111,24 +111,27 @@
         {% for secao in secoes %}
           <div class="pub-secao">
             <h2 class="pub-secao-titulo"><i class="bi {{ secao.icone }}"></i> {{ secao.titulo }}</h2>
-            {% for campo in secao.itens %}
-              {% if campo.tipo == 'file' %}
-                <div class="field{% if campo.erro %} has-error{% endif %}">
-                  <label class="field-label" for="{{ campo.nome }}">{{ campo.rotulo }}{% if campo.obrigatorio %} <span class="field-required">*</span>{% endif %}</label>
-                  <div class="field-input-wrap">
-                    <input type="file" class="field-input" id="{{ campo.nome }}" name="{{ campo.nome }}"
-                           accept=".pdf,.doc,.docx"{% if campo.obrigatorio %} required{% endif %}>
+            {# form-stack da o espacamento entre campos; sem ele o helper de um encosta no label do proximo #}
+            <div class="form-stack">
+              {% for campo in secao.itens %}
+                {% if campo.tipo == 'file' %}
+                  <div class="field{% if campo.erro %} has-error{% endif %}">
+                    <label class="field-label" for="{{ campo.nome }}">{{ campo.rotulo }}{% if campo.obrigatorio %} <span class="field-required">*</span>{% endif %}</label>
+                    <div class="field-input-wrap">
+                      <input type="file" class="field-input" id="{{ campo.nome }}" name="{{ campo.nome }}"
+                             accept=".pdf,.doc,.docx"{% if campo.obrigatorio %} required{% endif %}>
+                    </div>
+                    {% if campo.erro %}
+                      <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ campo.erro }}</p>
+                    {% elif campo.ajuda %}
+                      <p class="field-helper">{{ campo.ajuda }}</p>
+                    {% endif %}
                   </div>
-                  {% if campo.erro %}
-                    <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ campo.erro }}</p>
-                  {% elif campo.ajuda %}
-                    <p class="field-helper">{{ campo.ajuda }}</p>
-                  {% endif %}
-                </div>
-              {% else %}
-                {% include "components/input.html" with name=campo.nome label=campo.rotulo type=campo.tipo value=campo.valor required=campo.obrigatorio error=campo.erro helper=campo.ajuda placeholder=campo.placeholder %}
-              {% endif %}
-            {% endfor %}
+                {% else %}
+                  {% include "components/input.html" with name=campo.nome label=campo.rotulo type=campo.tipo value=campo.valor required=campo.obrigatorio error=campo.erro helper=campo.ajuda placeholder=campo.placeholder %}
+                {% endif %}
+              {% endfor %}
+            </div>
           </div>
         {% endfor %}
 

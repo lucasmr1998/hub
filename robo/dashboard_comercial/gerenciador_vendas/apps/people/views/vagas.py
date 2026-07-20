@@ -177,13 +177,33 @@ def editar(request, pk):
         for campo in catalogo.CAMPOS_SISTEMA
     ]
 
+    requisitos = list(vaga.requisitos.all())
+    # URL absoluta por link, pro botao de copiar (o candidato precisa do link
+    # completo, nao so do caminho).
+    links = [{'link': l, 'url': request.build_absolute_uri(l.caminho_publico)}
+             for l in vaga.links.all()]
+
+    # Tabs, no padrao dos outros modulos de configuracao. Badge so quando ha
+    # conteudo, pra nao poluir com "0".
+    tabs = [
+        {'id': 'tab-dados', 'label': 'Dados da vaga', 'icon': 'bi-card-text',
+         'active': True},
+        {'id': 'tab-requisitos', 'label': 'Requisitos', 'icon': 'bi-list-check',
+         'badge': str(len(requisitos)) if requisitos else ''},
+        {'id': 'tab-formulario', 'label': 'Formulário',
+         'icon': 'bi-ui-checks-grid'},
+        {'id': 'tab-divulgacao', 'label': 'Divulgação', 'icon': 'bi-megaphone',
+         'badge': str(len(links)) if links else ''},
+    ]
+
     return render(request, 'people/vaga_form.html', {
         'pagetitle': vaga.nome_exibido,
         'form': form,
         'vaga': vaga,
-        'requisitos': vaga.requisitos.all(),
+        'requisitos': requisitos,
         'form_requisito': RequisitoForm(),
-        'links': vaga.links.all(),
+        'links': links,
+        'tabs': tabs,
         'canais': CANAL_CHOICES,
         'campos_config': campos_config,
         # Ordem canonica da maquina, e nao alfabetica. Alfabetica punha

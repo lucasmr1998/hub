@@ -29,197 +29,318 @@
     {% endfor %}
   {% endif %}
 
-  <form method="post" class="form-stack" style="max-width: 680px;">
-    {% csrf_token %}
+  {% if vaga %}{% include "components/tabs.html" with items=tabs %}{% endif %}
 
-    {% if form.non_field_errors %}
-      <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
-    {% endif %}
+  {# ── Aba: Dados da vaga ── #}
+  <div id="tab-dados" class="tabs-panel is-active">
+    <form method="post" class="form-stack" style="max-width: 680px;">
+      {% csrf_token %}
 
-    <div class="form-grid-2">
-      {% include "components/select.html" with name="unidade" label="Unidade" options=form.unidade.field.choices value=form.unidade.value required=True error=form.unidade.errors.0 %}
-      {% include "components/select.html" with name="cargo" label="Cargo" options=form.cargo.field.choices value=form.cargo.value required=True error=form.cargo.errors.0 %}
-    </div>
-
-    {% include "components/input.html" with name="titulo" label="Título da vaga" value=form.titulo.value error=form.titulo.errors.0 placeholder="Ex: Atendente noturno" helper="Em branco usa o nome do cargo." %}
-
-    <div class="form-grid-2">
-      {% include "components/input.html" with name="tipo_contratacao" label="Tipo de contratação" value=form.tipo_contratacao.value error=form.tipo_contratacao.errors.0 placeholder="Ex: CLT" %}
-      {% include "components/select.html" with name="turno" label="Turno esperado" options=form.turno.field.choices value=form.turno.value error=form.turno.errors.0 %}
-    </div>
-
-    <h2 class="form-section-title">O anúncio</h2>
-    <p class="field-helper" style="margin-top: calc(-1 * var(--sp-2));">
-      É o que o candidato lê. Requisitos e diferenciais ficam mais abaixo, na
-      seção Requisitos.
-    </p>
-
-    <div class="field">
-      <label class="field-label" for="descricao">Descrição da vaga</label>
-      <div class="field-input-wrap">
-        <textarea class="field-input" id="descricao" name="descricao" rows="8"
-                  placeholder="Sobre a vaga, o que a pessoa vai fazer, o que a empresa oferece.">{{ form.descricao.value|default:"" }}</textarea>
-      </div>
-      {% if form.descricao.errors %}
-        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.descricao.errors.0 }}</p>
-      {% else %}
-        <p class="field-helper">A narrativa. Requisitos objetivos não precisam entrar aqui, eles saem da seção Requisitos.</p>
+      {% if form.non_field_errors %}
+        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
       {% endif %}
-    </div>
 
-    <div class="form-grid-3">
-      {% include "components/select.html" with name="modelo_trabalho" label="Modelo de trabalho" options=form.modelo_trabalho.field.choices value=form.modelo_trabalho.value error=form.modelo_trabalho.errors.0 %}
-      {% include "components/input.html" with name="carga_horaria" label="Carga horária" value=form.carga_horaria.value error=form.carga_horaria.errors.0 placeholder="Ex: 30h semanais" %}
-      {% include "components/input.html" with name="remuneracao" label="Remuneração" value=form.remuneracao.value error=form.remuneracao.errors.0 placeholder="Ex: Bolsa de R$ 700,00" %}
-    </div>
-
-    <h2 class="form-section-title">Por que esta vaga existe</h2>
-
-    {% include "components/select.html" with name="justificativa" label="Justificativa" options=form.justificativa.field.choices value=form.justificativa.value required=True error=form.justificativa.errors.0 %}
-
-    {% include "components/select.html" with name="colaborador_substituido" label="Colaborador substituído" options=form.colaborador_substituido.field.choices value=form.colaborador_substituido.value error=form.colaborador_substituido.errors.0 helper="Só quando a justificativa for substituição. É o que evita a loja contratar e esquecer de desligar quem sai, virando custo dobrado." %}
-
-    {% include "components/input.html" with name="limite_aprovados" label="Limite de aprovados" type="number" value=form.limite_aprovados.value|default:50 error=form.limite_aprovados.errors.0 helper="Ao atingir, a triagem para. A captação continua." %}
-
-    <div class="field">
-      <label class="field-label" for="observacoes">Observações</label>
-      <div class="field-input-wrap">
-        <textarea class="field-input" id="observacoes" name="observacoes" rows="4"
-                  placeholder="Contexto que ajuda quem for triar.">{{ form.observacoes.value|default:"" }}</textarea>
+      <div class="form-grid-2">
+        {% include "components/select.html" with name="unidade" label="Unidade" options=form.unidade.field.choices value=form.unidade.value required=True error=form.unidade.errors.0 %}
+        {% include "components/select.html" with name="cargo" label="Cargo" options=form.cargo.field.choices value=form.cargo.value required=True error=form.cargo.errors.0 %}
       </div>
-      {% if form.observacoes.errors %}
-        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.observacoes.errors.0 }}</p>
-      {% endif %}
-    </div>
 
-    <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
-      <a href="{% url 'people:vagas_lista' %}" class="btn btn-ghost">Cancelar</a>
-    </div>
-  </form>
+      {% include "components/input.html" with name="titulo" label="Título da vaga" value=form.titulo.value error=form.titulo.errors.0 placeholder="Ex: Atendente noturno" helper="Em branco usa o nome do cargo." %}
+
+      <div class="form-grid-2">
+        {% include "components/input.html" with name="tipo_contratacao" label="Tipo de contratação" value=form.tipo_contratacao.value error=form.tipo_contratacao.errors.0 placeholder="Ex: CLT" %}
+        {% include "components/select.html" with name="turno" label="Turno esperado" options=form.turno.field.choices value=form.turno.value error=form.turno.errors.0 %}
+      </div>
+
+      <h2 class="form-section-title">O anúncio</h2>
+      <p class="field-helper" style="margin-top: calc(-1 * var(--sp-2));">
+        É o que o candidato lê. Requisitos e diferenciais ficam na aba Requisitos.
+      </p>
+
+      <div class="field">
+        <label class="field-label" for="descricao">Descrição da vaga</label>
+        <div class="field-input-wrap">
+          <textarea class="field-input" id="descricao" name="descricao" rows="8"
+                    placeholder="Sobre a vaga, o que a pessoa vai fazer, o que a empresa oferece.">{{ form.descricao.value|default:"" }}</textarea>
+        </div>
+        {% if form.descricao.errors %}
+          <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.descricao.errors.0 }}</p>
+        {% else %}
+          <p class="field-helper">A narrativa. Requisitos objetivos saem da aba Requisitos.</p>
+        {% endif %}
+      </div>
+
+      <div class="form-grid-3">
+        {% include "components/select.html" with name="modelo_trabalho" label="Modelo de trabalho" options=form.modelo_trabalho.field.choices value=form.modelo_trabalho.value error=form.modelo_trabalho.errors.0 %}
+        {% include "components/input.html" with name="carga_horaria" label="Carga horária" value=form.carga_horaria.value error=form.carga_horaria.errors.0 placeholder="Ex: 30h semanais" %}
+        {% include "components/input.html" with name="remuneracao" label="Remuneração" value=form.remuneracao.value error=form.remuneracao.errors.0 placeholder="Ex: Bolsa de R$ 700,00" %}
+      </div>
+
+      <h2 class="form-section-title">Por que esta vaga existe</h2>
+
+      {% include "components/select.html" with name="justificativa" label="Justificativa" options=form.justificativa.field.choices value=form.justificativa.value required=True error=form.justificativa.errors.0 %}
+
+      {% include "components/select.html" with name="colaborador_substituido" label="Colaborador substituído" options=form.colaborador_substituido.field.choices value=form.colaborador_substituido.value error=form.colaborador_substituido.errors.0 helper="Só quando a justificativa for substituição. É o que evita a loja contratar e esquecer de desligar quem sai, virando custo dobrado." %}
+
+      {% include "components/input.html" with name="limite_aprovados" label="Limite de aprovados" type="number" value=form.limite_aprovados.value|default:50 error=form.limite_aprovados.errors.0 helper="Ao atingir, a triagem para. A captação continua." %}
+
+      <div class="field">
+        <label class="field-label" for="observacoes">Observações internas</label>
+        <div class="field-input-wrap">
+          <textarea class="field-input" id="observacoes" name="observacoes" rows="4"
+                    placeholder="Contexto que ajuda quem for triar. Não aparece pro candidato.">{{ form.observacoes.value|default:"" }}</textarea>
+        </div>
+        {% if form.observacoes.errors %}
+          <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.observacoes.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+        <a href="{% url 'people:vagas_lista' %}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
 
   {% if vaga %}
-    {% comment %}
-      Requisitos vivem dentro da vaga, e nao em tela propria, porque a vaga e a
-      fonte da verdade da divulgacao. Separar foi o defeito de UX mais citado no
-      produto de origem.
-    {% endcomment %}
-    <h2 class="form-section-title" style="margin-top: var(--sp-6);">Requisitos</h2>
-    <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
-      Cada requisito pode ir pro anúncio, servir de critério de triagem, ou os
-      dois. Separar permite filtrar por algo que não convém publicar, como tempo
-      mínimo de experiência.
-    </p>
+    {# ── Aba: Requisitos ── #}
+    <div id="tab-requisitos" class="tabs-panel">
+      <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+        Cada requisito pode ir pro anúncio, servir de critério de triagem, ou os
+        dois. Separar permite filtrar por algo que não convém publicar, como
+        tempo mínimo de experiência.
+      </p>
 
-    <div class="section-card" style="max-width: 680px; margin-bottom: var(--sp-4);">
-      <div class="section-card-body">
-        {% if requisitos %}
+      <div class="section-card" style="max-width: 680px;">
+        <div class="section-card-body">
+          {% if requisitos %}
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Requisito</th>
+                    <th>Peso</th>
+                    <th>Anúncio</th>
+                    <th>Triagem</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for requisito in requisitos %}
+                    <tr>
+                      <td>{{ requisito.texto }}</td>
+                      <td>
+                        {% if requisito.obrigatorio %}
+                          {% include "components/badge.html" with variant="danger" label="Obrigatório" size="sm" %}
+                        {% else %}
+                          {% include "components/badge.html" with variant="neutral" label="Desejável" size="sm" %}
+                        {% endif %}
+                      </td>
+                      <td>{% if requisito.aparece_no_anuncio %}<i class="bi bi-check2"></i>{% else %}—{% endif %}</td>
+                      <td>{% if requisito.usar_na_triagem %}<i class="bi bi-check2"></i>{% else %}—{% endif %}</td>
+                      <td style="text-align: right;">
+                        <form method="post" action="{% url 'people:vaga_requisito_remover' vaga.pk requisito.pk %}" style="display: inline;">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-ghost btn-sm" title="Remover requisito">
+                            <i class="bi bi-x-lg"></i>
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            {% include "components/empty_state.html" with icon="bi-list-check" text="Nenhum requisito ainda" subtext="Sem requisito, o anúncio sai vazio e não há critério de triagem." size="sm" %}
+          {% endif %}
+
+          <form method="post" action="{% url 'people:vaga_requisito_criar' vaga.pk %}"
+                class="form-stack" style="margin-top: var(--sp-4);">
+            {% csrf_token %}
+            {% include "components/input.html" with name="texto" label="Novo requisito" required=True placeholder="Ex: Disponibilidade aos domingos" %}
+            <div class="form-grid-3">
+              {% include "components/checkbox.html" with name="obrigatorio" label="Obrigatório" checked=True %}
+              {% include "components/checkbox.html" with name="aparece_no_anuncio" label="Aparece no anúncio" checked=True %}
+              {% include "components/checkbox.html" with name="usar_na_triagem" label="Critério de triagem" %}
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-secondary btn-sm">
+                <i class="bi bi-plus-lg"></i> Adicionar requisito
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {# ── Aba: Formulário da candidatura ── #}
+    <div id="tab-formulario" class="tabs-panel">
+      <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+        O que o candidato preenche. Nome e WhatsApp são sempre pedidos e por isso
+        não aparecem na lista.
+      </p>
+      <form method="post" action="{% url 'people:vaga_campos_salvar' vaga.pk %}"
+            class="section-card" style="max-width: 680px;">
+        {% csrf_token %}
+        <div class="section-card-body">
           <div class="table-wrap">
             <table class="table">
               <thead>
-                <tr>
-                  <th>Requisito</th>
-                  <th>Peso</th>
-                  <th>Anúncio</th>
-                  <th>Triagem</th>
-                  <th></th>
-                </tr>
+                <tr><th>Campo</th><th>Pedir</th><th>Obrigatório</th></tr>
               </thead>
               <tbody>
-                {% for requisito in requisitos %}
-                  <tr>
-                    <td>{{ requisito.texto }}</td>
-                    <td>
-                      {% if requisito.obrigatorio %}
-                        {% include "components/badge.html" with variant="danger" label="Obrigatório" size="sm" %}
-                      {% else %}
-                        {% include "components/badge.html" with variant="neutral" label="Desejável" size="sm" %}
-                      {% endif %}
-                    </td>
-                    <td>{% if requisito.aparece_no_anuncio %}<i class="bi bi-check2"></i>{% else %}—{% endif %}</td>
-                    <td>{% if requisito.usar_na_triagem %}<i class="bi bi-check2"></i>{% else %}—{% endif %}</td>
-                    <td style="text-align: right;">
-                      <form method="post" action="{% url 'people:vaga_requisito_remover' vaga.pk requisito.pk %}" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-ghost btn-sm" title="Remover requisito">
-                          <i class="bi bi-x-lg"></i>
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
+                {% for campo in campos_config %}
+                  {% if not campo.travado %}
+                    <tr>
+                      <td>{{ campo.rotulo }}</td>
+                      <td>
+                        <input type="checkbox" name="solicitar_{{ campo.nome }}"
+                               {% if campo.solicitar %}checked{% endif %}
+                               data-solicitar="{{ campo.nome }}">
+                      </td>
+                      <td>
+                        <input type="checkbox" name="obrigatorio_{{ campo.nome }}"
+                               {% if campo.obrigatorio %}checked{% endif %}
+                               data-obrigatorio="{{ campo.nome }}">
+                      </td>
+                    </tr>
+                  {% endif %}
                 {% endfor %}
               </tbody>
             </table>
           </div>
-        {% else %}
-          {% include "components/empty_state.html" with icon="bi-list-check" text="Nenhum requisito ainda" subtext="Sem requisito, o anúncio sai vazio e não há critério de triagem." size="sm" %}
-        {% endif %}
-
-        <form method="post" action="{% url 'people:vaga_requisito_criar' vaga.pk %}"
-              class="form-stack" style="margin-top: var(--sp-4);">
-          {% csrf_token %}
-          {% include "components/input.html" with name="texto" label="Novo requisito" required=True placeholder="Ex: Disponibilidade aos domingos" %}
-          <div class="form-grid-3">
-            {% include "components/checkbox.html" with name="obrigatorio" label="Obrigatório" checked=True %}
-            {% include "components/checkbox.html" with name="aparece_no_anuncio" label="Aparece no anúncio" checked=True %}
-            {% include "components/checkbox.html" with name="usar_na_triagem" label="Critério de triagem" %}
-          </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-secondary btn-sm">
-              <i class="bi bi-plus-lg"></i> Adicionar requisito
+              <i class="bi bi-check-lg"></i> Salvar campos
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
 
-    {% comment %}
-      Campos que a candidatura pede, por vaga. Uma vaga de estagio pede GitHub,
-      uma de motoboy pede CNH. Nome e WhatsApp nao aparecem aqui: sao travados
-      (dedup e canal de retorno).
-    {% endcomment %}
-    <h2 class="form-section-title">Campos da candidatura</h2>
-    <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
-      O que o candidato preenche. Nome e WhatsApp são sempre pedidos e por isso
-      não aparecem na lista.
-    </p>
-    <form method="post" action="{% url 'people:vaga_campos_salvar' vaga.pk %}"
-          class="section-card" style="max-width: 680px; margin-bottom: var(--sp-4);">
-      {% csrf_token %}
-      <div class="section-card-body">
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr><th>Campo</th><th>Pedir</th><th>Obrigatório</th></tr>
-            </thead>
-            <tbody>
-              {% for campo in campos_config %}
-                {% if not campo.travado %}
+    {# ── Aba: Divulgação ── #}
+    <div id="tab-divulgacao" class="tabs-panel">
+      <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+        Um link por canal. É assim que dá pra saber depois qual canal trouxe
+        candidato, em vez de gastar onde não converte. O texto sai da vaga e pode
+        ser ajustado.
+      </p>
+
+      <div class="section-card" style="max-width: 680px; margin-bottom: var(--sp-4);">
+        <div class="section-card-body">
+          {% if links %}
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
                   <tr>
-                    <td>{{ campo.rotulo }}</td>
-                    <td>
-                      <input type="checkbox" name="solicitar_{{ campo.nome }}"
-                             {% if campo.solicitar %}checked{% endif %}
-                             data-solicitar="{{ campo.nome }}">
-                    </td>
-                    <td>
-                      <input type="checkbox" name="obrigatorio_{{ campo.nome }}"
-                             {% if campo.obrigatorio %}checked{% endif %}
-                             data-obrigatorio="{{ campo.nome }}">
-                    </td>
+                    <th>Canal</th>
+                    <th>Link</th>
+                    <th>Candidaturas</th>
+                    <th>Situação</th>
+                    <th></th>
                   </tr>
-                {% endif %}
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-secondary btn-sm">
-            <i class="bi bi-check-lg"></i> Salvar campos
-          </button>
+                </thead>
+                <tbody>
+                  {% for item in links %}
+                    <tr>
+                      <td>
+                        {{ item.link.get_canal_display }}
+                        {% if item.link.apelido_interno %}
+                          <span class="field-helper" style="display: block;">{{ item.link.apelido_interno }}</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if item.link.ativo %}
+                          <input class="field-input" id="url-{{ item.link.pk }}" value="{{ item.url }}"
+                                 readonly onclick="this.select()"
+                                 style="max-width: 320px; font-size: var(--fs-xs);">
+                        {% else %}
+                          <span class="field-helper">Link desativado</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ item.link.candidaturas }}</td>
+                      <td>
+                        {% if item.link.ativo %}
+                          {% include "components/badge.html" with variant="success" label="Ativo" size="sm" dot=True %}
+                        {% else %}
+                          {% include "components/badge.html" with variant="neutral" label="Desativado" size="sm" %}
+                        {% endif %}
+                      </td>
+                      <td style="text-align: right; white-space: nowrap;">
+                        {% if item.link.ativo %}
+                          <button type="button" class="btn btn-ghost btn-sm"
+                                  data-copiar="url-{{ item.link.pk }}" title="Copiar link">
+                            <i class="bi bi-clipboard"></i>
+                          </button>
+                          <a href="{% url 'people:vaga_link_qr' vaga.pk item.link.pk %}"
+                             class="btn btn-ghost btn-sm" title="Baixar QR Code em SVG">
+                            <i class="bi bi-qr-code"></i>
+                          </a>
+                          <form method="post" action="{% url 'people:vaga_link_desativar' vaga.pk item.link.pk %}"
+                                style="display: inline;"
+                                onsubmit="return confirm('O link para de funcionar agora, e QR já impresso deixa de levar a lugar nenhum. As candidaturas que já chegaram por ele são preservadas.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-ghost btn-sm" title="Desativar link">
+                              <i class="bi bi-pause-circle"></i>
+                            </button>
+                          </form>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            {% include "components/empty_state.html" with icon="bi-link-45deg" text="Nenhum link ainda" subtext="Sem link, não há por onde o candidato se candidatar." size="sm" %}
+          {% endif %}
+
+          <form method="post" action="{% url 'people:vaga_link_criar' vaga.pk %}"
+                class="form-stack" style="margin-top: var(--sp-4);">
+            {% csrf_token %}
+            <div class="form-grid-2">
+              {% include "components/select.html" with name="canal" label="Canal" options=canais blank_label="Selecione" required=True %}
+              {% include "components/input.html" with name="apelido_interno" label="Apelido interno" placeholder="Ex: Grupo de empregos da zona sul" %}
+            </div>
+            <div class="form-grid-2">
+              {% include "components/input.html" with name="cta" label="Chamada para ação" placeholder="Ex: Estamos contratando!" %}
+              {% include "components/input.html" with name="telefone_contato" label="Telefone de contato" %}
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-secondary btn-sm">
+                <i class="bi bi-plus-lg"></i> Gerar link
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </form>
+
+      {% if transicoes %}
+        <h2 class="form-section-title">Publicação</h2>
+        <div class="section-card" style="max-width: 680px;">
+          <div class="section-card-body">
+            <p class="field-helper" style="margin-bottom: var(--sp-3);">
+              Vaga publicada aceita candidatura. Pausada guarda o que já chegou e
+              para de aceitar. Encerrada não reabre.
+            </p>
+            <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+              {% for transicao in transicoes %}
+                <form method="post" action="{% url 'people:vaga_mudar_status' vaga.pk %}"
+                      style="display: inline;"
+                      {% if transicao.destrutiva %}onsubmit="return confirm('Encerrar a vaga é definitivo: ela não reabre, e os links param de aceitar candidatura. Para captar de novo, será preciso abrir uma vaga nova.');"{% endif %}>
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="{{ transicao.valor }}">
+                  <button type="submit" class="btn {% if transicao.destrutiva %}btn-ghost{% else %}btn-primary{% endif %} btn-sm">
+                    {{ transicao.rotulo }}
+                  </button>
+                </form>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
 
     <script>
       // Campo nao pedido nao pode ser obrigatorio: desmarcar "pedir" desliga e
@@ -235,115 +356,22 @@
         pedir.addEventListener('change', sincronizar);
         sincronizar();
       });
+
+      // Copiar link, mesmo padrao do DP: Clipboard API com fallback pra select.
+      document.querySelectorAll('[data-copiar]').forEach(function (botao) {
+        botao.addEventListener('click', function () {
+          var campo = document.getElementById(botao.dataset.copiar);
+          if (!campo) return;
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(campo.value).then(function () {
+              toast('Link copiado', 'Cole onde quiser divulgar.', 'success');
+            });
+          } else {
+            campo.select();
+            toast('Selecionado', 'Use Ctrl+C pra copiar.', 'info');
+          }
+        });
+      });
     </script>
-
-    {% comment %}
-      Divulgacao mora aqui dentro, e nao numa tela de configuracao separada. E a
-      correcao que a spec pede: separar obriga a redigitar no link o que ja foi
-      cadastrado na vaga.
-    {% endcomment %}
-    <h2 class="form-section-title">Divulgação</h2>
-    <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
-      Um link por canal. É assim que dá pra saber depois qual canal trouxe
-      candidato, em vez de gastar onde não converte. O texto sai da vaga e pode
-      ser ajustado.
-    </p>
-
-    <div class="section-card" style="max-width: 680px; margin-bottom: var(--sp-4);">
-      <div class="section-card-body">
-        {% if links %}
-          <div class="table-wrap">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Canal</th>
-                  <th>Apelido</th>
-                  <th>Candidaturas</th>
-                  <th>Situação</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for link in links %}
-                  <tr>
-                    <td>{{ link.get_canal_display }}</td>
-                    <td>{{ link.apelido_interno|default:"—" }}</td>
-                    <td>{{ link.candidaturas }}</td>
-                    <td>
-                      {% if link.ativo %}
-                        {% include "components/badge.html" with variant="success" label="Ativo" size="sm" dot=True %}
-                      {% else %}
-                        {% include "components/badge.html" with variant="neutral" label="Desativado" size="sm" %}
-                      {% endif %}
-                    </td>
-                    <td style="text-align: right; white-space: nowrap;">
-                      {% if link.ativo %}
-                        <a href="{% url 'people:vaga_link_qr' vaga.pk link.pk %}"
-                           class="btn btn-ghost btn-sm" title="Baixar QR Code em SVG">
-                          <i class="bi bi-qr-code"></i>
-                        </a>
-                        <form method="post" action="{% url 'people:vaga_link_desativar' vaga.pk link.pk %}"
-                              style="display: inline;"
-                              onsubmit="return confirm('O link para de funcionar agora, e QR já impresso deixa de levar a lugar nenhum. As candidaturas que já chegaram por ele são preservadas.');">
-                          {% csrf_token %}
-                          <button type="submit" class="btn btn-ghost btn-sm" title="Desativar link">
-                            <i class="bi bi-pause-circle"></i>
-                          </button>
-                        </form>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          {% include "components/empty_state.html" with icon="bi-link-45deg" text="Nenhum link ainda" subtext="Sem link, não há por onde o candidato se candidatar." size="sm" %}
-        {% endif %}
-
-        <form method="post" action="{% url 'people:vaga_link_criar' vaga.pk %}"
-              class="form-stack" style="margin-top: var(--sp-4);">
-          {% csrf_token %}
-          <div class="form-grid-2">
-            {% include "components/select.html" with name="canal" label="Canal" options=canais blank_label="Selecione" required=True %}
-            {% include "components/input.html" with name="apelido_interno" label="Apelido interno" placeholder="Ex: Grupo de empregos da zona sul" %}
-          </div>
-          <div class="form-grid-2">
-            {% include "components/input.html" with name="cta" label="Chamada para ação" placeholder="Ex: Estamos contratando!" %}
-            {% include "components/input.html" with name="telefone_contato" label="Telefone de contato" %}
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-secondary btn-sm">
-              <i class="bi bi-plus-lg"></i> Gerar link
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {% if transicoes %}
-      <h2 class="form-section-title">Publicação</h2>
-      <div class="section-card" style="max-width: 680px;">
-        <div class="section-card-body">
-          <p class="field-helper" style="margin-bottom: var(--sp-3);">
-            Vaga publicada aceita candidatura. Pausada guarda o que já chegou e
-            para de aceitar. Encerrada não reabre.
-          </p>
-          <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
-            {% for transicao in transicoes %}
-              <form method="post" action="{% url 'people:vaga_mudar_status' vaga.pk %}"
-                    style="display: inline;"
-                    {% if transicao.destrutiva %}onsubmit="return confirm('Encerrar a vaga é definitivo: ela não reabre, e os links param de aceitar candidatura. Para captar de novo, será preciso abrir uma vaga nova.');"{% endif %}>
-                {% csrf_token %}
-                <input type="hidden" name="status" value="{{ transicao.valor }}">
-                <button type="submit" class="btn {% if transicao.destrutiva %}btn-ghost{% else %}btn-primary{% endif %} btn-sm">
-                  {{ transicao.rotulo }}
-                </button>
-              </form>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    {% endif %}
   {% endif %}
 {% endblock %}
