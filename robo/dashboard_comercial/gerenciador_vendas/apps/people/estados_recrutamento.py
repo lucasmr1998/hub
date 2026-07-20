@@ -97,6 +97,73 @@ ETAPAS_PADRAO = [
 ]
 
 
+# ── Status da vaga ───────────────────────────────────────────────────────────
+#
+# Repare no contraste com as etapas do pipeline logo acima: ali o vocabulario e
+# configuravel por unidade, aqui e FIXO em codigo. A diferenca nao e incoerencia.
+# Etapa de processo seletivo e preferencia de cliente; ciclo de vida de uma vaga
+# nao e. Vaga publicada aceita candidatura e vaga encerrada nao, e isso e regra
+# do produto em qualquer rede.
+#
+# O fluxo de APROVACAO de vaga (aguardando aprovacao, aprovada, rejeitada) existe
+# no produto de origem, porem foi classificado la como edge case de rede grande e
+# esta formalmente deferido. Nao entra aqui. Se entrar depois, entra como estado
+# ANTES de rascunho, sem mexer nos de baixo.
+
+STATUS_VAGA_RASCUNHO = 'rascunho'
+STATUS_VAGA_PUBLICADA = 'publicada'
+STATUS_VAGA_PAUSADA = 'pausada'
+STATUS_VAGA_ENCERRADA = 'encerrada'
+
+STATUS_VAGA = [
+    (STATUS_VAGA_RASCUNHO,  'Rascunho'),
+    (STATUS_VAGA_PUBLICADA, 'Publicada'),
+    (STATUS_VAGA_PAUSADA,   'Pausada'),
+    (STATUS_VAGA_ENCERRADA, 'Encerrada'),
+]
+
+VALORES_STATUS_VAGA = [valor for valor, _ in STATUS_VAGA]
+ROTULOS_STATUS_VAGA = dict(STATUS_VAGA)
+
+# So vaga publicada recebe candidatura. Pausada guarda o que ja chegou e para de
+# aceitar, que e o caso real de "temos candidato demais, segura um pouco".
+STATUS_VAGA_ACEITA_CANDIDATURA = (STATUS_VAGA_PUBLICADA,)
+
+TRANSICOES_VAGA = {
+    STATUS_VAGA_RASCUNHO:  {STATUS_VAGA_PUBLICADA, STATUS_VAGA_ENCERRADA},
+    STATUS_VAGA_PUBLICADA: {STATUS_VAGA_PAUSADA, STATUS_VAGA_ENCERRADA},
+    STATUS_VAGA_PAUSADA:   {STATUS_VAGA_PUBLICADA, STATUS_VAGA_ENCERRADA},
+    # Encerrada e final. Reabrir viraria uma vaga com duas janelas de captacao e
+    # um funil que soma periodos diferentes como se fossem um. Pra recontratar,
+    # abre vaga nova, que e o registro honesto de que e outro processo.
+    STATUS_VAGA_ENCERRADA: set(),
+}
+
+
+def rotulo_status_vaga(status):
+    return ROTULOS_STATUS_VAGA.get(status, status)
+
+
+def transicao_vaga_permitida(de, para):
+    return para in TRANSICOES_VAGA.get(de, set())
+
+
+def validar_transicao_vaga(de, para):
+    """Levanta TransicaoInvalida se a vaga nao pode ir de `de` pra `para`."""
+    if para not in VALORES_STATUS_VAGA:
+        raise TransicaoInvalida(f'Status de vaga desconhecido: "{para}".')
+    if not transicao_vaga_permitida(de, para):
+        if de == STATUS_VAGA_ENCERRADA:
+            raise TransicaoInvalida(
+                'Vaga encerrada nao reabre. Reabrir juntaria duas janelas de '
+                'captacao no mesmo funil. Abra uma vaga nova.'
+            )
+        raise TransicaoInvalida(
+            f'Vaga nao pode ir de "{rotulo_status_vaga(de)}" para '
+            f'"{rotulo_status_vaga(para)}".'
+        )
+
+
 # ── Consultas puras ──────────────────────────────────────────────────────────
 
 def rotulo_saida(saida):
