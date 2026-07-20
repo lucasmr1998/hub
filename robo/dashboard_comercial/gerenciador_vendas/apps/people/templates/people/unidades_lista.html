@@ -1,0 +1,43 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <h1>Unidades</h1>
+  <p class="text-muted">Cada colaborador pertence a uma unidade, e o acesso do gestor e recortado por ela.</p>
+
+  {% if unidades %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Codigo</th>
+          <th>Cidade</th>
+          <th>Colaboradores</th>
+          <th>Situacao</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for unidade in unidades %}
+          <tr>
+            <td>{{ unidade.nome }}</td>
+            <td><code>{{ unidade.codigo }}</code></td>
+            <td>{{ unidade.cidade|default:"—" }}{% if unidade.estado %}/{{ unidade.estado }}{% endif %}</td>
+            <td>{{ unidade.total_colaboradores }}</td>
+            <td>
+              {% if unidade.ativo %}
+                {% include "components/badge.html" with variant="success" label="Ativa" dot=True %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Inativa" %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    {% include "components/empty_state.html" with icon="bi-shop" text="Nenhuma unidade cadastrada" subtext="Cadastre as lojas antes de cadastrar colaboradores." %}
+  {% endif %}
+{% endblock %}

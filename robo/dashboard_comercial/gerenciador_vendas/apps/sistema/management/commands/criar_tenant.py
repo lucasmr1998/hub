@@ -28,11 +28,13 @@ from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 
-from apps.sistema.models import Tenant, PerfilUsuario, ConfiguracaoEmpresa
+from apps.sistema.models import Tenant, PerfilUsuario, ConfiguracaoEmpresa, Plano
 
 
 TIERS_VALIDOS = ('starter', 'start', 'pro')
-MODULOS_VALIDOS = ('comercial', 'marketing', 'cs', 'workspace')
+# Fonte unica: Plano.MODULO_CHOICES. Modulo novo entra la e aparece aqui
+# sozinho, nos argumentos --tier-*, na validacao e nos kwargs do Tenant.
+MODULOS_VALIDOS = tuple(modulo for modulo, _ in Plano.MODULO_CHOICES)
 
 # Presets — atalhos pra combinacoes comuns.
 PLANOS = {
@@ -62,10 +64,9 @@ class Command(BaseCommand):
         parser.add_argument('--modulos', default='',
                             help='CSV de modulos ativos (ex: "comercial,marketing"). '
                                  'Sobrepoe --plano. Validos: ' + ', '.join(MODULOS_VALIDOS))
-        parser.add_argument('--tier-comercial', dest='tier_comercial', choices=TIERS_VALIDOS)
-        parser.add_argument('--tier-marketing', dest='tier_marketing', choices=TIERS_VALIDOS)
-        parser.add_argument('--tier-cs', dest='tier_cs', choices=TIERS_VALIDOS)
-        parser.add_argument('--tier-workspace', dest='tier_workspace', choices=TIERS_VALIDOS)
+        for modulo in MODULOS_VALIDOS:
+            parser.add_argument(f'--tier-{modulo}', dest=f'tier_{modulo}',
+                                choices=TIERS_VALIDOS)
 
         # Admin
         parser.add_argument('--admin-user', required=True, help='Username do admin do tenant')
@@ -104,13 +105,9 @@ class Command(BaseCommand):
             if override:
                 tiers[mod] = override
 
-        return {
-            'modulos': modulos,
-            'comercial': tiers.get('comercial', 'starter'),
-            'marketing': tiers.get('marketing', 'starter'),
-            'cs': tiers.get('cs', 'starter'),
-            'workspace': tiers.get('workspace', 'starter'),
-        }
+        config = {'modulos': modulos}
+        config.update({mod: tiers.get(mod, 'starter') for mod in MODULOS_VALIDOS})
+        return config
 
     def handle(self, *args, **options):
         nome = options['nome']
@@ -128,16 +125,11 @@ class Command(BaseCommand):
             'nome': nome,
             'slug': slug,
             'cnpj': options['cnpj'] or None,
-            'modulo_comercial': 'comercial' in cfg['modulos'],
-            'modulo_marketing': 'marketing' in cfg['modulos'],
-            'modulo_cs': 'cs' in cfg['modulos'],
-            'modulo_workspace': 'workspace' in cfg['modulos'],
-            'plano_comercial': cfg['comercial'],
-            'plano_marketing': cfg['marketing'],
-            'plano_cs': cfg['cs'],
-            'plano_workspace': cfg['workspace'],
             'ativo': True,
         }
+        for modulo in MODULOS_VALIDOS:
+            tenant_kwargs[f'modulo_{modulo}'] = modulo in cfg['modulos']
+            tenant_kwargs[f'plano_{modulo}'] = cfg[modulo]
         if options['trial']:
             from datetime import date, timedelta
             tenant_kwargs['em_trial'] = True

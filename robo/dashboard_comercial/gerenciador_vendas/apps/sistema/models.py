@@ -20,6 +20,7 @@ class Plano(models.Model):
         ('marketing', 'Marketing'),
         ('cs', 'CS'),
         ('workspace', 'Workspace'),
+        ('people', 'People'),
     ]
     TIER_CHOICES = [
         ('starter', 'Starter'),
@@ -117,12 +118,14 @@ class Tenant(models.Model):
     modulo_marketing = models.BooleanField(default=False, verbose_name="Marketing ativo")
     modulo_cs = models.BooleanField(default=False, verbose_name="CS ativo")
     modulo_workspace = models.BooleanField(default=False, verbose_name="Workspace ativo")
+    modulo_people = models.BooleanField(default=False, verbose_name="People ativo")
 
     # Plano por módulo (string para compatibilidade, FK para features)
     plano_comercial = models.CharField(max_length=10, choices=PLANO_CHOICES, default='starter', verbose_name="Plano Comercial")
     plano_marketing = models.CharField(max_length=10, choices=PLANO_CHOICES, default='starter', verbose_name="Plano Marketing")
     plano_cs = models.CharField(max_length=10, choices=PLANO_CHOICES, default='starter', verbose_name="Plano CS")
     plano_workspace = models.CharField(max_length=10, choices=PLANO_CHOICES, default='starter', verbose_name="Plano Workspace")
+    plano_people = models.CharField(max_length=10, choices=PLANO_CHOICES, default='starter', verbose_name="Plano People")
 
     # FK para os planos (permite verificar features)
     plano_comercial_ref = models.ForeignKey(
@@ -144,6 +147,11 @@ class Tenant(models.Model):
         Plano, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='tenants_workspace', verbose_name="Plano Workspace (ref)",
         limit_choices_to={'modulo': 'workspace', 'ativo': True},
+    )
+    plano_people_ref = models.ForeignKey(
+        Plano, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tenants_people', verbose_name="Plano People (ref)",
+        limit_choices_to={'modulo': 'people', 'ativo': True},
     )
 
     # HubSoft
@@ -181,7 +189,7 @@ class Tenant(models.Model):
 
     def tem_feature(self, slug_feature):
         """Verifica se o tenant tem acesso a uma feature pelo slug."""
-        for modulo in ['comercial', 'marketing', 'cs', 'workspace']:
+        for modulo, _ in Plano.MODULO_CHOICES:
             plano = self.plano_ref(modulo)
             if plano and plano.features.filter(slug=slug_feature, ativo=True).exists():
                 return True
@@ -190,7 +198,7 @@ class Tenant(models.Model):
     def features_ativas(self):
         """Retorna todos os slugs de features ativas do tenant."""
         slugs = set()
-        for modulo in ['comercial', 'marketing', 'cs', 'workspace']:
+        for modulo, _ in Plano.MODULO_CHOICES:
             plano = self.plano_ref(modulo)
             if plano:
                 slugs.update(plano.features.filter(ativo=True).values_list('slug', flat=True))
@@ -266,6 +274,7 @@ class Funcionalidade(models.Model):
         ('inbox', 'Inbox / Suporte'),
         ('configuracoes', 'Configurações'),
         ('workspace', 'Workspace'),
+        ('people', 'People (RH)'),
     ]
 
     modulo = models.CharField(max_length=20, choices=MODULO_CHOICES, verbose_name="Módulo")
@@ -404,6 +413,12 @@ class PermissaoUsuario(models.Model):
         if not self.perfil:
             return False
         return self.perfil.funcionalidades.filter(modulo='workspace').exists()
+
+    @property
+    def acesso_people(self):
+        if not self.perfil:
+            return False
+        return self.perfil.funcionalidades.filter(modulo='people').exists()
 
     @property
     def papel_comercial(self):

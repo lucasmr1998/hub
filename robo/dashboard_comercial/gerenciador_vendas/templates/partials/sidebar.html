@@ -52,6 +52,12 @@ Rodape: notificacoes + avatar/menu do usuario (movidos do topbar removido).
         </a>
       {% endif %}
 
+      {% if modulo_people and is_superuser or modulo_people and perm.acesso_people %}
+        <a href="/people/" class="app-sidebar-item {% if modulo_atual == 'people' %}is-active{% endif %}" data-module="people" title="People">
+          <i class="bi bi-people"></i>
+        </a>
+      {% endif %}
+
       {% comment %}
         Relatorios LEGADO (/relatorios/, app dashboard) saiu do menu em
         14/07/2026: foi migrado pro modulo novo (/dashboards/). As paginas

@@ -18,10 +18,12 @@ def empresa_context(request):
         'modulo_marketing': False,
         'modulo_cs': False,
         'modulo_workspace': False,
+        'modulo_people': False,
         'plano_comercial': 'starter',
         'plano_marketing': 'starter',
         'plano_cs': 'starter',
         'plano_workspace': 'starter',
+        'plano_people': 'starter',
         'em_trial': False,
         'setup_completo': True,
     }
@@ -38,10 +40,12 @@ def empresa_context(request):
     ctx['modulo_marketing'] = tenant.modulo_marketing
     ctx['modulo_cs'] = tenant.modulo_cs
     ctx['modulo_workspace'] = tenant.modulo_workspace
+    ctx['modulo_people'] = tenant.modulo_people
     ctx['plano_comercial'] = tenant.plano_comercial
     ctx['plano_marketing'] = tenant.plano_marketing
     ctx['plano_cs'] = tenant.plano_cs
     ctx['plano_workspace'] = tenant.plano_workspace
+    ctx['plano_people'] = tenant.plano_people
     ctx['em_trial'] = tenant.em_trial
 
     config = ConfiguracaoEmpresa.all_tenants.filter(tenant=tenant, ativo=True).first()
@@ -110,6 +114,11 @@ def _detectar_modulo_atual(request):
 
     if path.startswith('/aurora-admin/'):
         return 'admin'
+    # People vem ANTES do check de url_name == 'dashboard' logo abaixo: aquele
+    # branch sequestra qualquer view chamada 'dashboard' e mandaria o submenu do
+    # People pro menu Dashboard.
+    if path.startswith('/people/'):
+        return 'people'
     # Dashboards de modulos acessados via menu Dashboard ficam no submenu Dashboard.
     # url_name='dashboard' em inbox/marketing/etc. mantem o submenu estavel.
     if url_name == 'dashboard' and not path.startswith('/aurora-admin/'):

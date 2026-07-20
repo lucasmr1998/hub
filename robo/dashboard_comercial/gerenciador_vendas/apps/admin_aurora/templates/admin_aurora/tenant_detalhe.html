@@ -136,6 +136,17 @@
                 <option value="pro" {% if tenant.plano_workspace == 'pro' %}selected{% endif %}>Pro</option>
               </select>
             </div>
+            <div class="admin-module-card">
+              <label class="admin-module-label">
+                <input type="checkbox" name="modulo_people" {% if tenant.modulo_people %}checked{% endif %}>
+                People
+              </label>
+              <select name="plano_people" class="field-input">
+                <option value="starter" {% if tenant.plano_people == 'starter' %}selected{% endif %}>Starter</option>
+                <option value="start" {% if tenant.plano_people == 'start' %}selected{% endif %}>Start</option>
+                <option value="pro" {% if tenant.plano_people == 'pro' %}selected{% endif %}>Pro</option>
+              </select>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Salvar</button>
         </form>
