@@ -224,3 +224,49 @@ Mesma postura da view publica do DP: tenant pelo token com escopo mais tenant ex
 
 - **Output**: 24 testes novos, 423 no modulo. Migration 0009 aplicada em dev.
 - **Status**: completed. Proximo: passo 5, o board do pipeline, onde as etapas viram tela e o candidato passa a se mover por elas ate uma saida.
+
+## 2026-07-20 — Recrutamento, passo 5 (tarefa 211)
+
+- **Acao**: board do pipeline. As sete etapas viram tela e o candidato do passo 4 aparece. Commit 0aade33.
+- **Diferenca em relacao ao board do DP**: mover entre etapas e livre (etapa e configuracao, nao maquina; o RH sabe quando pular Teste Pratico), e sair do pipeline e acao com modal, nao arrasto, porque exige motivo e passa por regra (admitido vinculado nao volta).
+- **HistoricoCandidato** nasce aqui, fonte do funil. Guarda de_etapa/para_etapa como texto e nao FK, porque etapa pode ser desativada ou renomeada e o historico precisa continuar legivel.
+- **Etapa desativada nao some o candidato**: ele aparece numa area "fora de etapa" pra ser realocado, com a conta do funil ainda fechando.
+
+**Dois bugs meus que o teste pegou**
+
+- `FOR UPDATE cannot be applied to the nullable side of an outer join`: o `select_for_update` com `select_related` da etapa (FK nula) quebrava no Postgres. Teria ido pra prod e viraria 500 no board com dois RHs mexendo junto. Relock so a linha do candidato.
+- `mover_para_etapa` devolvia objeto novo sem atualizar o passado, o mesmo bug de objeto stale que o `mover_situacao` do DP ja teve. Agora sincroniza os campos de volta no objeto do chamador.
+
+- **Nota de metodo**: varias falhas de teste neste passo foram andaime de teste, nao bug de codigo (fixture sem ConfiguracaoEmpresa, helper de cliente com assinatura errada). Causa: escrevi o fixture sem ler o `_cliente` que ja existia em test_people_configuracao. Ler o padrao existente antes de escrever o proprio teria evitado.
+- **Output**: 23 testes novos, 440 no modulo. Migration 0010 aplicada em dev.
+- **Status**: completed.
+
+## 2026-07-20 — Recrutamento, passos 6 e 7 (tarefa 211). Corte B fechado.
+
+- **Acao**: quadro por unidade, regra de parada e expurgo LGPD. Commit b7cd860.
+
+**Quadro por unidade (passo 6)**
+
+A moldura que transforma "vaga aberta" em "faltam 5 de 8". Os derivados (ativos, em processo) sao consulta na hora, nunca coluna: contagem guardada e o caminho mais curto pra divergir do real. Ativos le do DP (Colaborador da casa), em processo le do R&S (Candidato no pipeline). A mesma pessoa nao conta duas vezes, porque quem foi admitido ja saiu do pipeline.
+
+**Regra de parada (passo 6)**
+
+Regra 4.4 da spec: ao atingir `limite_aprovados`, a triagem para. Sem IA de triagem, aqui e AVISO e nao bloqueio. Admitir alem do teto continua possivel; a decisao e do RH, e o sistema so garante que passar do teto seja consciente. Teste confirma que admitir o candidato alem do limite passa, com aviso.
+
+**Expurgo LGPD (passo 7)**
+
+Comando `expurgar_candidatos` roda pelo `dispatcher_cron`, anonimiza quem tem `retencao_ate` vencida. Anonimiza, nao deleta: a linha e a origem sobrevivem pra analise de canal nao mentir; o que some e a pessoa e o arquivo do curriculo. `all_tenants` porque e obrigacao legal que vale pra todos de uma vez. Idempotente, com `--dry-run`. O corte e `retencao_ate < hoje`: quem vence hoje ainda tem o dia.
+
+**PENDENCIA DE ATIVACAO (prod)**
+
+O comando existe, porem so roda quando houver um `CronJob` cadastrado apontando pra ele. Antes de confiar no expurgo em prod:
+
+1. Criar `CronJob` com comando `expurgar_candidatos` e schedule diario (ex: uma vez por dia de madrugada).
+2. Rodar `expurgar_candidatos --dry-run` uma vez em prod pra ver a contagem antes de anonimizar de verdade.
+
+Sem o passo 1, o codigo esta la mas o dado nunca e expurgado, e a promessa do consentimento nao se cumpre. Mesma classe de pendencia das tarefas 180/181.
+
+**Bug meu**: assumi `Colaborador.cargo` como texto (era assim no plano) e filtrei por nome. Cargo virou FK quando os prints da Visio mostraram CRUD. Filtro por FK agora.
+
+- **Output**: 27 testes novos, 462 no modulo. Migration 0011 aplicada em dev.
+- **Status**: completed. **Corte B (passos 1 a 7) fechado.** Fora do corte, cada um com sua razao no RECRUTAMENTO-PLANO.md: triagem IA, entrevista, ponte pro DP, banco de talentos como busca, analise de pipeline, Indeed, Meta.
