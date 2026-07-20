@@ -295,3 +295,29 @@ def test_token_e_unico_globalmente_e_nao_por_tenant(cenario):
     campo = LinkCandidatura._meta.get_field('token')
 
     assert campo.unique
+
+
+# ── Descricao publica da vaga (campos hibridos) ──────────────────────────────
+
+@pytest.mark.django_db
+def test_texto_padrao_inclui_condicoes_estruturadas(cenario):
+    """Remuneracao, carga e modelo entram no texto de divulgacao."""
+    vaga = cenario['vaga']
+    vaga.remuneracao = 'Bolsa de R$ 700,00'
+    vaga.carga_horaria = '30h semanais'
+    vaga.modelo_trabalho = 'hibrido'
+    vaga.save()
+
+    texto = _link(cenario).texto_padrao()
+
+    assert 'Bolsa de R$ 700,00' in texto
+    assert '30h semanais' in texto
+    assert 'Híbrido' in texto
+
+
+@pytest.mark.django_db
+def test_condicao_vazia_nao_deixa_rotulo_pendurado(cenario):
+    """Sem carga horaria, o texto nao pode ter 'Carga horária: ' vazio."""
+    texto = _link(cenario).texto_padrao()
+    assert 'Carga horária:' not in texto
+    assert 'Remuneração:' not in texto

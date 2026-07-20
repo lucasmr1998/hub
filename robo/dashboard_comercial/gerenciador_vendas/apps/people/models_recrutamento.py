@@ -38,6 +38,14 @@ JUSTIFICATIVA_CHOICES = [
     (JUSTIFICATIVA_SUBSTITUICAO, 'Substituição'),
 ]
 
+# Modelo de trabalho. Choices e nao texto livre porque e o tipo de coisa que o
+# candidato filtra ("tem remoto?") e que o RH compara entre vagas.
+MODELO_TRABALHO_CHOICES = [
+    ('presencial', 'Presencial'),
+    ('hibrido',    'Híbrido'),
+    ('remoto',     'Remoto'),
+]
+
 # Canal de divulgacao. E choices e nao texto livre pelo mesmo motivo que Cargo
 # virou entidade: "Facebook", "facebook" e "face" viram tres canais distintos e
 # corrompem a atribuicao de origem, que e justamente o que o link existe pra
@@ -200,6 +208,27 @@ class Vaga(TenantMixin):
     turno = models.CharField(
         max_length=20, choices=TURNO_CHOICES, blank=True, default='',
         verbose_name="Turno esperado",
+    )
+    # ── Descricao publica (o que o candidato le no anuncio) ──
+    # Separada de `observacoes`, que e interna (contexto pra quem tria). Confundir
+    # as duas ja aconteceu: observacoes ia pro anuncio e vazava nota interna.
+    descricao = models.TextField(
+        blank=True, default='', verbose_name="Descrição da vaga",
+        help_text="Narrativa que o candidato lê: sobre a vaga, o que vai fazer, "
+                  "o que a empresa oferece.",
+    )
+    remuneracao = models.CharField(
+        max_length=80, blank=True, default='', verbose_name="Remuneração",
+        help_text="Ex: Bolsa-auxílio de R$ 700,00. Texto livre porque varia "
+                  "muito (fixo, faixa, mais comissão).",
+    )
+    carga_horaria = models.CharField(
+        max_length=80, blank=True, default='', verbose_name="Carga horária",
+        help_text="Ex: 30h semanais (6h/dia).",
+    )
+    modelo_trabalho = models.CharField(
+        max_length=20, choices=MODELO_TRABALHO_CHOICES, blank=True, default='',
+        verbose_name="Modelo de trabalho",
     )
     justificativa = models.CharField(
         max_length=20, choices=JUSTIFICATIVA_CHOICES,
@@ -881,8 +910,16 @@ class LinkCandidatura(TenantMixin):
         linhas = [self.cta or f'Vaga para {self.vaga.nome_exibido}',
                   f'Local: {self.unidade.nome}']
 
-        if self.vaga.turno:
-            linhas.append(f'Turno: {self.vaga.get_turno_display()}')
+        # Condicoes estruturadas: cada uma so aparece se preenchida, pra o texto
+        # nao ficar com "Turno: " vazio pendurado.
+        for rotulo, valor in [
+            ('Turno', self.vaga.get_turno_display() if self.vaga.turno else ''),
+            ('Modelo', self.vaga.get_modelo_trabalho_display() if self.vaga.modelo_trabalho else ''),
+            ('Carga horária', self.vaga.carga_horaria),
+            ('Remuneração', self.vaga.remuneracao),
+        ]:
+            if valor:
+                linhas.append(f'{rotulo}: {valor}')
 
         requisitos = list(self.vaga.requisitos_do_anuncio())
         if requisitos:

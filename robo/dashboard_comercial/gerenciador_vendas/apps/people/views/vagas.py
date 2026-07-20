@@ -33,8 +33,9 @@ class VagaForm(forms.ModelForm):
     class Meta:
         model = Vaga
         fields = ['unidade', 'cargo', 'titulo', 'tipo_contratacao', 'turno',
-                  'justificativa', 'colaborador_substituido', 'limite_aprovados',
-                  'observacoes']
+                  'modelo_trabalho', 'carga_horaria', 'remuneracao',
+                  'descricao', 'justificativa', 'colaborador_substituido',
+                  'limite_aprovados', 'observacoes']
 
     def __init__(self, *args, tenant=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,7 +58,7 @@ class VagaForm(forms.ModelForm):
         # "Selecione" (ver o formulario publico), entao aqui tambem.
         for nome in ['unidade', 'cargo', 'colaborador_substituido']:
             self.fields[nome].empty_label = 'Selecione'
-        for nome in ['turno', 'justificativa']:
+        for nome in ['turno', 'modelo_trabalho', 'justificativa']:
             self.fields[nome].choices = [
                 ('', 'Selecione'),
                 *[(v, r) for v, r in self.fields[nome].choices if v],

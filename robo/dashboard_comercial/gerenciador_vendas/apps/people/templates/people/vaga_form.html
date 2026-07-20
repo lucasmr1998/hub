@@ -48,6 +48,31 @@
       {% include "components/select.html" with name="turno" label="Turno esperado" options=form.turno.field.choices value=form.turno.value error=form.turno.errors.0 %}
     </div>
 
+    <h2 class="form-section-title">O anúncio</h2>
+    <p class="field-helper" style="margin-top: calc(-1 * var(--sp-2));">
+      É o que o candidato lê. Requisitos e diferenciais ficam mais abaixo, na
+      seção Requisitos.
+    </p>
+
+    <div class="field">
+      <label class="field-label" for="descricao">Descrição da vaga</label>
+      <div class="field-input-wrap">
+        <textarea class="field-input" id="descricao" name="descricao" rows="8"
+                  placeholder="Sobre a vaga, o que a pessoa vai fazer, o que a empresa oferece.">{{ form.descricao.value|default:"" }}</textarea>
+      </div>
+      {% if form.descricao.errors %}
+        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.descricao.errors.0 }}</p>
+      {% else %}
+        <p class="field-helper">A narrativa. Requisitos objetivos não precisam entrar aqui, eles saem da seção Requisitos.</p>
+      {% endif %}
+    </div>
+
+    <div class="form-grid-3">
+      {% include "components/select.html" with name="modelo_trabalho" label="Modelo de trabalho" options=form.modelo_trabalho.field.choices value=form.modelo_trabalho.value error=form.modelo_trabalho.errors.0 %}
+      {% include "components/input.html" with name="carga_horaria" label="Carga horária" value=form.carga_horaria.value error=form.carga_horaria.errors.0 placeholder="Ex: 30h semanais" %}
+      {% include "components/input.html" with name="remuneracao" label="Remuneração" value=form.remuneracao.value error=form.remuneracao.errors.0 placeholder="Ex: Bolsa de R$ 700,00" %}
+    </div>
+
     <h2 class="form-section-title">Por que esta vaga existe</h2>
 
     {% include "components/select.html" with name="justificativa" label="Justificativa" options=form.justificativa.field.choices value=form.justificativa.value required=True error=form.justificativa.errors.0 %}
