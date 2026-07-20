@@ -1,0 +1,92 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People</p>
+        <h1 class="page-title">Vagas</h1>
+        <p class="page-subtitle">
+          A vaga é a fonte da verdade da divulgação: requisitos, cargo e
+          critérios ficam aqui, e o link de candidatura sai dela.
+        </p>
+      </div>
+      {% if pode_gerir %}
+        <a href="{% url 'people:vaga_criar' %}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Nova vaga
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-check-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <form method="get" id="filtro-vagas"
+        style="display: flex; gap: var(--sp-3); align-items: flex-end; margin-bottom: var(--sp-4);">
+    {% include "components/select.html" with name="status" label="Status" options=status_opcoes value=status_selecionado blank_label="Todos" size="sm" %}
+    {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas" size="sm" %}
+    <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
+  </form>
+
+  {% if vagas %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Vaga</th>
+            <th>Unidade</th>
+            <th>Turno</th>
+            <th>Requisitos</th>
+            <th>Status</th>
+            <th>Aberta em</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vaga in vagas %}
+            <tr>
+              <td>
+                {% if pode_gerir %}
+                  <a href="{% url 'people:vaga_editar' vaga.pk %}">{{ vaga.nome_exibido }}</a>
+                {% else %}
+                  {{ vaga.nome_exibido }}
+                {% endif %}
+                <span class="field-helper" style="display: block;">{{ vaga.cargo.nome }}</span>
+              </td>
+              <td>{{ vaga.unidade.nome }}</td>
+              <td>{{ vaga.get_turno_display|default:"—" }}</td>
+              <td>{{ vaga.total_requisitos }}</td>
+              <td>
+                {% if vaga.status == 'publicada' %}
+                  {% include "components/badge.html" with variant="success" label=vaga.get_status_display size="sm" dot=True %}
+                {% elif vaga.status == 'pausada' %}
+                  {% include "components/badge.html" with variant="warning" label=vaga.get_status_display size="sm" %}
+                {% elif vaga.status == 'encerrada' %}
+                  {% include "components/badge.html" with variant="neutral" label=vaga.get_status_display size="sm" %}
+                {% else %}
+                  {% include "components/badge.html" with variant="info" label=vaga.get_status_display size="sm" %}
+                {% endif %}
+              </td>
+              <td>{{ vaga.criado_em|date:"d/m/Y" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {% include "components/empty_state.html" with icon="bi-megaphone" text="Nenhuma vaga por aqui" subtext="Abra uma vaga pra começar a receber candidatos." %}
+  {% endif %}
+
+  <script>
+    document.querySelectorAll('#filtro-vagas select').forEach(function (campo) {
+      campo.addEventListener('change', function () { campo.form.submit(); });
+    });
+  </script>
+{% endblock %}

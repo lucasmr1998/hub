@@ -247,6 +247,13 @@ Uso em template que extende layout_app:
           <i class="bi bi-columns-gap"></i><span>Board</span>
         </a>
       </nav>
+      <div class="app-subnav-section">Recrutamento</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'people:vagas_lista' %}" class="app-subnav-item {% if 'vaga' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-megaphone"></i><span>Vagas</span>
+        </a>
+      </nav>
+
       <div class="app-subnav-section">Cadastro</div>
       <nav class="app-subnav-list">
         <a href="{% url 'people:links_lista' %}" class="app-subnav-item {% if 'link' in request.resolver_match.url_name %}is-active{% endif %}">

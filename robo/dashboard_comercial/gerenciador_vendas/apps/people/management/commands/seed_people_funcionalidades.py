@@ -50,6 +50,13 @@ FUNCIONALIDADES = [
         'descricao': 'Gerar, rotacionar e desativar o link publico de auto cadastro',
         'ordem': 50,
     },
+    {
+        'codigo': 'people.gerir_vagas',
+        'nome': 'Gerir vagas',
+        'descricao': 'Abrir, editar, publicar, pausar e encerrar vaga de '
+                     'recrutamento, e definir os requisitos dela',
+        'ordem': 60,
+    },
 ]
 
 # Quem ganha o que no back-fill. Perfil fora deste mapa nao e tocado: dar
@@ -57,7 +64,10 @@ FUNCIONALIDADES = [
 # revisa o que ja veio ligado.
 PERFIL_DEFAULTS = {
     'Admin': [f['codigo'] for f in FUNCIONALIDADES],
-    'Gestor': ['people.ver', 'people.criar_colaborador', 'people.mover_colaborador'],
+    # Gestor abre vaga: na rede de franquia e o gerente de loja quem sabe que
+    # esta faltando gente. Quem NAO entra e o Supervisor, que so acompanha.
+    'Gestor': ['people.ver', 'people.criar_colaborador',
+               'people.mover_colaborador', 'people.gerir_vagas'],
     'Supervisor Comercial': ['people.ver'],
 }
 

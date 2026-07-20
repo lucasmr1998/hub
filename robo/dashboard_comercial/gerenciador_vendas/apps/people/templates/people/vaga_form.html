@@ -1,0 +1,172 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Vagas</p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+        {% if vaga %}
+          <p class="page-subtitle">
+            {{ vaga.unidade.nome }} ·
+            {% include "components/badge.html" with variant="info" label=vaga.get_status_display size="sm" %}
+          </p>
+        {% endif %}
+      </div>
+      <a href="{% url 'people:vagas_lista' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-check-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="form-stack" style="max-width: 680px;">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
+    {% endif %}
+
+    <div class="form-grid-2">
+      {% include "components/select.html" with name="unidade" label="Unidade" options=form.unidade.field.choices value=form.unidade.value required=True error=form.unidade.errors.0 %}
+      {% include "components/select.html" with name="cargo" label="Cargo" options=form.cargo.field.choices value=form.cargo.value required=True error=form.cargo.errors.0 %}
+    </div>
+
+    {% include "components/input.html" with name="titulo" label="Título da vaga" value=form.titulo.value error=form.titulo.errors.0 placeholder="Ex: Atendente noturno" helper="Em branco usa o nome do cargo." %}
+
+    <div class="form-grid-2">
+      {% include "components/input.html" with name="tipo_contratacao" label="Tipo de contratação" value=form.tipo_contratacao.value error=form.tipo_contratacao.errors.0 placeholder="Ex: CLT" %}
+      {% include "components/select.html" with name="turno" label="Turno esperado" options=form.turno.field.choices value=form.turno.value error=form.turno.errors.0 %}
+    </div>
+
+    <h2 class="form-section-title">Por que esta vaga existe</h2>
+
+    {% include "components/select.html" with name="justificativa" label="Justificativa" options=form.justificativa.field.choices value=form.justificativa.value required=True error=form.justificativa.errors.0 %}
+
+    {% include "components/select.html" with name="colaborador_substituido" label="Colaborador substituído" options=form.colaborador_substituido.field.choices value=form.colaborador_substituido.value error=form.colaborador_substituido.errors.0 helper="Só quando a justificativa for substituição. É o que evita a loja contratar e esquecer de desligar quem sai, virando custo dobrado." %}
+
+    {% include "components/input.html" with name="limite_aprovados" label="Limite de aprovados" type="number" value=form.limite_aprovados.value|default:50 error=form.limite_aprovados.errors.0 helper="Ao atingir, a triagem para. A captação continua." %}
+
+    <div class="field">
+      <label class="field-label" for="observacoes">Observações</label>
+      <div class="field-input-wrap">
+        <textarea class="field-input" id="observacoes" name="observacoes" rows="4"
+                  placeholder="Contexto que ajuda quem for triar.">{{ form.observacoes.value|default:"" }}</textarea>
+      </div>
+      {% if form.observacoes.errors %}
+        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.observacoes.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+      <a href="{% url 'people:vagas_lista' %}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+
+  {% if vaga %}
+    {% comment %}
+      Requisitos vivem dentro da vaga, e nao em tela propria, porque a vaga e a
+      fonte da verdade da divulgacao. Separar foi o defeito de UX mais citado no
+      produto de origem.
+    {% endcomment %}
+    <h2 class="form-section-title" style="margin-top: var(--sp-6);">Requisitos</h2>
+    <p class="field-helper" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      Cada requisito pode ir pro anúncio, servir de critério de triagem, ou os
+      dois. Separar permite filtrar por algo que não convém publicar, como tempo
+      mínimo de experiência.
+    </p>
+
+    <div class="section-card" style="max-width: 680px; margin-bottom: var(--sp-4);">
+      <div class="section-card-body">
+        {% if requisitos %}
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Requisito</th>
+                  <th>Peso</th>
+                  <th>Anúncio</th>
+                  <th>Triagem</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for requisito in requisitos %}
+                  <tr>
+                    <td>{{ requisito.texto }}</td>
+                    <td>
+                      {% if requisito.obrigatorio %}
+                        {% include "components/badge.html" with variant="danger" label="Obrigatório" size="sm" %}
+                      {% else %}
+                        {% include "components/badge.html" with variant="neutral" label="Desejável" size="sm" %}
+                      {% endif %}
+                    </td>
+                    <td>{% if requisito.aparece_no_anuncio %}<i class="bi bi-check2"></i>{% else %}—{% endif %}</td>
+                    <td>{% if requisito.usar_na_triagem %}<i class="bi bi-check2"></i>{% else %}—{% endif %}</td>
+                    <td style="text-align: right;">
+                      <form method="post" action="{% url 'people:vaga_requisito_remover' vaga.pk requisito.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-ghost btn-sm" title="Remover requisito">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {% include "components/empty_state.html" with icon="bi-list-check" text="Nenhum requisito ainda" subtext="Sem requisito, o anúncio sai vazio e não há critério de triagem." size="sm" %}
+        {% endif %}
+
+        <form method="post" action="{% url 'people:vaga_requisito_criar' vaga.pk %}"
+              class="form-stack" style="margin-top: var(--sp-4);">
+          {% csrf_token %}
+          {% include "components/input.html" with name="texto" label="Novo requisito" required=True placeholder="Ex: Disponibilidade aos domingos" %}
+          <div class="form-grid-3">
+            {% include "components/checkbox.html" with name="obrigatorio" label="Obrigatório" checked=True %}
+            {% include "components/checkbox.html" with name="aparece_no_anuncio" label="Aparece no anúncio" checked=True %}
+            {% include "components/checkbox.html" with name="usar_na_triagem" label="Critério de triagem" %}
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary btn-sm">
+              <i class="bi bi-plus-lg"></i> Adicionar requisito
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if transicoes %}
+      <h2 class="form-section-title">Publicação</h2>
+      <div class="section-card" style="max-width: 680px;">
+        <div class="section-card-body">
+          <p class="field-helper" style="margin-bottom: var(--sp-3);">
+            Vaga publicada aceita candidatura. Pausada guarda o que já chegou e
+            para de aceitar. Encerrada não reabre.
+          </p>
+          <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+            {% for transicao in transicoes %}
+              <form method="post" action="{% url 'people:vaga_mudar_status' vaga.pk %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="{{ transicao.valor }}">
+                <button type="submit" class="btn btn-secondary btn-sm">{{ transicao.rotulo }}</button>
+              </form>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endblock %}

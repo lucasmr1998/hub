@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.people.views import (
     analises, board, cargos, colaboradores, configuracao, links, unidades,
+    vagas,
 )
 
 app_name = 'people'
@@ -36,6 +37,16 @@ urlpatterns = [
     path('config/formularios/<int:pk>/', configuracao.template_editar,
          name='config_template_editar'),
     path('config/geral/', configuracao.geral, name='config_geral'),
+
+    # Recrutamento: vagas
+    path('vagas/', vagas.lista, name='vagas_lista'),
+    path('vagas/nova/', vagas.criar, name='vaga_criar'),
+    path('vagas/<int:pk>/', vagas.editar, name='vaga_editar'),
+    path('vagas/<int:pk>/status/', vagas.mudar_status, name='vaga_mudar_status'),
+    path('vagas/<int:pk>/requisitos/', vagas.requisito_criar,
+         name='vaga_requisito_criar'),
+    path('vagas/<int:pk>/requisitos/<int:requisito_pk>/remover/',
+         vagas.requisito_remover, name='vaga_requisito_remover'),
 
     # Cargos
     path('cargos/', cargos.lista, name='cargos_lista'),
