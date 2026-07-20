@@ -1400,14 +1400,24 @@ Tokens base (cores, tipografia, spacing) ficam em layouts/base.html.
     transform: translate(-50%, 0);
   }
 
-  /* === Section card === */
-  .section-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+  /* === Section card ===
+     ATENCAO ao nome dos tokens, que aqui sao o contrario do que parecem:
+     --color-bg (#ffffff) e a superficie de CARD, e --color-surface (#f7f8fa)
+     e o canvas da PAGINA (o layout_app pinta o main com ele).
+
+     Este card usava --color-surface e por isso ficava exatamente da cor do
+     fundo: so a borda de 1px o separava da pagina, e ele lia como bloco
+     cinza em vez de card. Os outros 17 componentes de card do DS (stat-card,
+     table-wrap, kanban-col) sempre usaram --color-bg. Agora este tambem. */
+  .section-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
   .section-card-header { padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
-  .section-card-default .section-card-header { background: var(--color-surface); }
-  .section-card-success .section-card-header { background: linear-gradient(180deg, #ECFDF5 0%, var(--color-surface) 100%); }
-  .section-card-danger  .section-card-header { background: linear-gradient(180deg, #FEF2F2 0%, var(--color-surface) 100%); }
-  .section-card-warning .section-card-header { background: linear-gradient(180deg, #FFFBEB 0%, var(--color-surface) 100%); }
-  .section-card-info    .section-card-header { background: linear-gradient(180deg, #EFF6FF 0%, var(--color-surface) 100%); }
+  /* O gradiente das variantes fecha na cor do CARD, nao na do canvas, senao a
+     metade de baixo do header destoa do corpo logo abaixo dele. */
+  .section-card-default .section-card-header { background: var(--color-bg); }
+  .section-card-success .section-card-header { background: linear-gradient(180deg, #ECFDF5 0%, var(--color-bg) 100%); }
+  .section-card-danger  .section-card-header { background: linear-gradient(180deg, #FEF2F2 0%, var(--color-bg) 100%); }
+  .section-card-warning .section-card-header { background: linear-gradient(180deg, #FFFBEB 0%, var(--color-bg) 100%); }
+  .section-card-info    .section-card-header { background: linear-gradient(180deg, #EFF6FF 0%, var(--color-bg) 100%); }
   .section-card-title { display: flex; align-items: center; gap: var(--sp-2); margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--color-text); }
   .section-card-icon { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
   .section-card-icon-default { background: var(--color-primary-soft, #F8FAFC); color: var(--color-primary); }
