@@ -545,3 +545,34 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod pendente de confirmacao.
 
 ---
+
+## 2026-07-20 — Timeline da op mostra os dados usados na criacao do prospecto (tarefa #206)
+
+- **Pedido do Lucas:** ver na oportunidade o historico de quando o lead foi criado
+  no HubSoft, com o nome e o telefone que foram usados na criacao.
+- **Descoberta que barateou tudo:** o dado JA existia. LogIntegracao guarda
+  `payload_enviado` (nome_razaosocial, telefone, cep, endereco, numero, bairro,
+  servico{id_servico,valor}, id_vendedor, id_vencimento, id_origem_cliente,
+  observacao) e `resposta_recebida`. Zero model, zero migration, zero gravacao
+  nova. Vale RETROATIVO: 1759 chamadas POST /prospecto em prod (31/05 a 20/07),
+  1583 ja vinculadas a lead.
+- **Implementacao:** helper `_dados_criacao_prospecto(log, tenant)` extrai o
+  snapshot; a view junta `prospecto_criacoes` na timeline (tipo
+  'prospecto_hubsoft'); template renderiza no padrao dos outros itens, com visual
+  distinto pra sucesso vs falha. Mostra o nome/telefone DO MOMENTO da criacao, que
+  pode diferir do lead atual (e assim da pra ver que entrou como "CLIENTE"/"Nao" e
+  foi corrigido depois, ver #201).
+- **Multi-tenancy:** o nome do plano so e resolvido com tenant EXPLICITO. Primeira
+  versao usava all_tenants sem filtro quando tenant era None, o que mostraria o
+  plano de outro tenant no historico deste, em silencio. Provado em dev com o mesmo
+  id_externo cadastrado em 2 tenants: cada um ve so o seu; sem tenant, mostra o id.
+- **Robustez:** helper nunca levanta (payload None/string invalida/lista/servico
+  como string/vazio testados). Timeline quebrada seria pior que item faltando.
+- **Validacao:** manage.py check limpo. Helper rodado contra payloads REAIS de prod
+  (sucesso e falha). Render provado pelo HTML da resposta: 8 de 8 checks (titulos,
+  nome, telefone, cep, id do prospecto, mensagem de erro, data-tipo).
+- **Nota de metodo:** o E2E via Playwright deu falso negativo (login falhou e ele
+  leu a pagina de login com status 200). O teste que valeu foi o do HTML renderizado.
+- **Status:** completed (codigo, dev). Deploy pendente de confirmacao.
+
+---

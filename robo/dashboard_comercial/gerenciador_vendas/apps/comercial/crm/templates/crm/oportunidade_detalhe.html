@@ -872,6 +872,34 @@
                   <div class="tl-meta">
                     {% if item.obj.usuario %}por {{ item.obj.usuario }}{% else %}automatico (sync Matrix/Talk){% endif %}
                   </div>
+                {% elif item.tipo == 'prospecto_hubsoft' %}
+                  <div class="tl-dot {% if item.obj.sucesso %}dot-estagio{% else %}dot-perdido{% endif %}"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-cloud-arrow-up" style="color: {% if item.obj.sucesso %}var(--color-primary){% else %}var(--color-danger){% endif %}; font-size: 12px;"></i>
+                      {% if item.obj.sucesso %}Prospecto criado no HubSoft{% else %}Falha ao criar prospecto no HubSoft{% endif %}
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  {# Snapshot do que foi ENVIADO: pode diferir do lead de hoje #}
+                  <p class="tl-body">
+                    Enviado como <strong>{{ item.dados.nome|default:"(sem nome)" }}</strong>
+                    {% if item.dados.telefone %} · {{ item.dados.telefone }}{% endif %}
+                  </p>
+                  {% if item.dados.plano or item.dados.cep %}
+                    <p class="tl-body" style="color: var(--color-text-muted);">
+                      {% if item.dados.plano %}Plano: {{ item.dados.plano }}{% endif %}
+                      {% if item.dados.cep %} · CEP {{ item.dados.cep }}{% endif %}
+                      {% if item.dados.endereco %} · {{ item.dados.endereco|truncatechars:60 }}{% endif %}
+                    </p>
+                  {% endif %}
+                  {% if not item.obj.sucesso and item.obj.mensagem_erro %}
+                    <p class="tl-body" style="color: var(--color-danger);">{{ item.obj.mensagem_erro|truncatechars:200 }}</p>
+                  {% endif %}
+                  <div class="tl-meta">
+                    {% if item.dados.id_prospecto %}prospecto #{{ item.dados.id_prospecto }} · {% endif %}
+                    {% if item.dados.observacao %}{{ item.dados.observacao|truncatechars:60 }}{% else %}via integracao HubSoft{% endif %}
+                  </div>
                 {% endif %}
               </div>
             {% endfor %}

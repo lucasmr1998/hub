@@ -67,6 +67,68 @@ def _mapa_planos_por_id_externo(ids_externos):
     return mapa
 
 
+def _dados_criacao_prospecto(log, tenant=None):
+    """Extrai do LogIntegracao o que foi ENVIADO pra criar o prospecto no HubSoft.
+
+    Devolve o snapshot do momento da criacao (nome/telefone de entao, que podem
+    diferir do lead atual) + os dados de negocio, com o id do plano resolvido
+    pro nome. Nunca levanta: timeline quebrada por payload estranho seria pior
+    que o item faltando.
+    """
+    payload = log.payload_enviado
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except (ValueError, TypeError):
+            payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    resposta = log.resposta_recebida
+    if isinstance(resposta, str):
+        try:
+            resposta = json.loads(resposta)
+        except (ValueError, TypeError):
+            resposta = {}
+    if not isinstance(resposta, dict):
+        resposta = {}
+
+    servico = payload.get('servico') if isinstance(payload.get('servico'), dict) else {}
+    id_servico = servico.get('id_servico')
+    plano_nome = None
+    if id_servico is not None and tenant is not None:
+        # Tenant EXPLICITO e obrigatorio pra resolver o nome. Sem ele a funcao
+        # nao adivinha: varrer all_tenants mostraria o plano de outro tenant no
+        # historico deste, e o erro seria silencioso. Sem tenant, cai no id cru.
+        from apps.comercial.crm.models import ProdutoServico
+        plano_nome = (ProdutoServico.all_tenants
+                      .filter(tenant=tenant, id_externo=str(id_servico))
+                      .order_by('ordem', 'nome')
+                      .values_list('nome', flat=True).first())
+
+    prospecto = resposta.get('prospecto') if isinstance(resposta.get('prospecto'), dict) else {}
+
+    endereco_partes = [
+        payload.get('endereco'), payload.get('numero'), payload.get('bairro'),
+    ]
+    endereco = ', '.join(p for p in endereco_partes if p)
+
+    return {
+        # o que o Lucas pediu: o snapshot de quem era o lead na criacao
+        'nome': payload.get('nome_razaosocial') or '',
+        'telefone': payload.get('telefone') or '',
+        # contexto de negocio
+        'plano': plano_nome or (f'#{id_servico}' if id_servico is not None else ''),
+        'valor': servico.get('valor'),
+        'cep': payload.get('cep') or '',
+        'endereco': endereco,
+        'observacao': payload.get('observacao') or '',
+        # resultado
+        'id_prospecto': prospecto.get('id_prospecto') or resposta.get('id_prospecto'),
+        'msg': resposta.get('msg') or '',
+    }
+
+
 def _oportunidade_para_dict(op, mapa_planos=None):
     """Serializa a op pro card. `mapa_planos` evita 1 query por card no kanban;
     sem ele (card avulso), cai no lookup individual."""
@@ -1174,6 +1236,24 @@ def oportunidade_detalhe(request, pk):
     except Exception:
         pass
 
+    # Criacao do prospecto no HubSoft: o dado ja esta no LogIntegracao (payload
+    # enviado + resposta), so nao aparecia aqui. Mostra o SNAPSHOT do que foi
+    # enviado, que pode diferir do lead atual (ex: nome que entrou como "CLIENTE"
+    # e foi corrigido depois). Nao cria model nem migration.
+    prospecto_criacoes = []
+    try:
+        from apps.integracoes.models import LogIntegracao
+        logs_prospecto = LogIntegracao.objects.filter(
+            lead=lead, metodo='POST', endpoint__icontains='prospecto',
+        ).order_by('-data_criacao')[:5]
+        for log in logs_prospecto:
+            prospecto_criacoes.append({
+                'log': log,
+                'dados': _dados_criacao_prospecto(log, request.tenant),
+            })
+    except Exception:
+        logger.exception('[oportunidade_detalhe] falha ao ler criacao de prospecto')
+
     # Proxima tarefa pendente (ordena por vencimento mais proximo)
     from django.db.models import F
     proxima_tarefa = oportunidade.tarefas.filter(
@@ -1236,6 +1316,13 @@ def oportunidade_detalhe(request, pk):
             'tipo': 'automacao',
             'data': log.data_execucao,
             'obj': log,
+        })
+    for pc in prospecto_criacoes:
+        timeline_items.append({
+            'tipo': 'prospecto_hubsoft',
+            'data': pc['log'].data_criacao,
+            'obj': pc['log'],
+            'dados': pc['dados'],
         })
     # Tarefas concluidas/pendentes tambem entram
     for tarefa in oportunidade.tarefas.all() if hasattr(oportunidade, 'tarefas') else []:
