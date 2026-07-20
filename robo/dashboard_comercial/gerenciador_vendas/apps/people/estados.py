@@ -205,6 +205,29 @@ LIMPA_AO_SAIR = {
     SITUACAO_DESLIGADO: ['data_desligamento', 'motivo_desligamento'],
 }
 
+# Whitelist do que a transicao pode gravar, por destino.
+#
+# `mover_situacao(dados={...})` so aplica campo que esteja aqui. Sem essa
+# barreira o parametro viraria um `save()` disfarcado, capaz de mexer em
+# qualquer coluna do colaborador a pretexto de mudar de fase, e a guarda do
+# model perderia o sentido.
+CAMPOS_ACEITOS = {
+    SITUACAO_CADASTRO:        [],
+    SITUACAO_EM_ADMISSAO:     ['data_admissao', 'cargo', 'regime_contratacao'],
+    SITUACAO_EM_EXPERIENCIA:  ['data_admissao', 'data_fim_experiencia',
+                               'cargo', 'regime_contratacao'],
+    SITUACAO_EFETIVADO:       ['cargo'],
+    SITUACAO_EM_DESLIGAMENTO: ['motivo_desligamento', 'data_desligamento'],
+    SITUACAO_DESLIGADO:       ['data_desligamento', 'motivo_desligamento',
+                               'elegivel_recontratacao'],
+    SITUACAO_FREELANCER:      ['elegivel_recontratacao'],
+}
+
+
+def campos_aceitos(para):
+    """Campos que a transicao pra `para` pode gravar. Ver CAMPOS_ACEITOS."""
+    return list(CAMPOS_ACEITOS.get(para, []))
+
 
 # ── Consultas puras sobre a maquina ──────────────────────────────────────────
 
