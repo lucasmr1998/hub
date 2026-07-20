@@ -1,0 +1,53 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Configuracoes</p>
+        <h1 class="page-title">Fluxo do Departamento Pessoal</h1>
+        <p class="page-subtitle">
+          Centraliza, por etapa da jornada do colaborador, os recursos
+          configuraveis do modulo. As etapas sao fixas: a configuracao acontece
+          dentro de cada uma.
+        </p>
+      </div>
+      <a href="{% url 'people:config_home' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  <div class="form-grid-3">
+    {% for etapa in etapas %}
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-card-title">
+            <i class="bi {{ etapa.icone }}"></i> {{ etapa.nome }}
+          </h2>
+        </div>
+        <div class="section-card-body">
+          <p class="field-helper" style="min-height: 40px;">{{ etapa.descricao }}</p>
+          <p class="field-helper">
+            {{ etapa.total_recursos }} recurso{{ etapa.total_recursos|pluralize }} configuravel{{ etapa.total_recursos|pluralize:",is" }}
+            {% if etapa.recursos_prontos < etapa.total_recursos %}
+              · {{ etapa.recursos_prontos }} pronto{{ etapa.recursos_prontos|pluralize }}
+            {% endif %}
+          </p>
+          <div class="kanban-card-tags" style="margin-bottom: var(--sp-3);">
+            {% if etapa.tem_mensagem %}
+              {% include "components/badge.html" with variant="success" label="Mensagem configurada" size="sm" %}
+            {% endif %}
+          </div>
+          <a href="{% url 'people:config_fluxo_etapa' etapa.situacao %}" class="btn btn-secondary btn-sm">
+            Configurar <i class="bi bi-chevron-right"></i>
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

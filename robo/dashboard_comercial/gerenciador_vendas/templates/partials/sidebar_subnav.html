@@ -178,6 +178,12 @@ Uso em template que extende layout_app:
           <i class="bi bi-trophy"></i><span>Sorteios</span>
         </a>
       </nav>
+      <div class="app-subnav-section">Inteligencia</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
+          <i class="bi bi-bar-chart"></i><span>Analises</span>
+        </a>
+      </nav>
       <div class="app-subnav-section">Sistema</div>
       <nav class="app-subnav-list">
         <a href="/cs/clube/dashboard/relatorios/" class="app-subnav-item {% if un == 'dashboard_relatorios' or un == 'dashboard_relatorios_indicacoes' or un == 'dashboard_relatorios_parceiros' %}is-active{% endif %}">
@@ -253,6 +259,18 @@ Uso em template que extende layout_app:
           <i class="bi bi-briefcase"></i><span>Cargos</span>
         </a>
       </nav>
+      <div class="app-subnav-section">Inteligencia</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
+          <i class="bi bi-bar-chart"></i><span>Analises</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Sistema</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'people:config_home' %}" class="app-subnav-item {% if 'config' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-sliders"></i><span>Configuracoes</span>
+        </a>
+      </nav>
 
     {% comment %}
       O subnav do relatorio LEGADO (/relatorios/leads|clientes|conversoes|
@@ -279,6 +297,12 @@ Uso em template que extende layout_app:
         </a>
         <a href="/configuracoes/usuarios/" class="app-subnav-item {% if 'usuarios' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-people"></i><span>Usuarios</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Inteligencia</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
+          <i class="bi bi-bar-chart"></i><span>Analises</span>
         </a>
       </nav>
       <div class="app-subnav-section">Sistema</div>

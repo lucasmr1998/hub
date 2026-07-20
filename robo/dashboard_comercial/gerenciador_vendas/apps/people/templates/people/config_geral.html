@@ -1,0 +1,60 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Configuracoes</p>
+        <h1 class="page-title">Configuracao geral</h1>
+        <p class="page-subtitle">
+          Vale pra empresa toda. Cada unidade pode sobrescrever o que precisar na
+          propria ficha.
+        </p>
+      </div>
+      <a href="{% url 'people:config_home' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-check-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="form-stack" style="max-width: 760px;">
+    {% csrf_token %}
+
+    <h2 class="form-section-title">Periodo de experiencia</h2>
+    <div class="form-grid-2">
+      {% include "components/input.html" with name="dias_experiencia_padrao" label="Dias no total" type="number" value=form.dias_experiencia_padrao.value required=True error=form.dias_experiencia_padrao.errors.0 helper="Ex: 90" %}
+      {% include "components/input.html" with name="dias_primeiro_periodo_experiencia" label="Dias do primeiro periodo" type="number" value=form.dias_primeiro_periodo_experiencia.value required=True error=form.dias_primeiro_periodo_experiencia.errors.0 helper="O 45 de um 45 mais 45. E neste marco que o gestor decide prorrogar, efetivar ou dispensar." %}
+    </div>
+
+    <h2 class="form-section-title">Auto cadastro</h2>
+    {% include "components/checkbox.html" with name="exige_cpf_no_autocadastro" label="Exigir CPF no auto cadastro" checked=form.exige_cpf_no_autocadastro.value helper="O CPF e o que impede a mesma pessoa de ser cadastrada duas vezes. Sem ele, o cadastro entra mas cai na fila de revisao do RH." %}
+
+    {% include "components/input.html" with name="link_expira_em_dias" label="Validade do link de cadastro (dias)" type="number" value=form.link_expira_em_dias.value error=form.link_expira_em_dias.errors.0 helper="0 significa que o link nao expira sozinho." %}
+
+    <h2 class="form-section-title">Consentimento LGPD</h2>
+    <div class="field">
+      <label class="field-label" for="texto_consentimento_lgpd">Texto do consentimento</label>
+      <div class="field-input-wrap">
+        <textarea class="field-input" id="texto_consentimento_lgpd" name="texto_consentimento_lgpd" rows="4">{{ form.texto_consentimento_lgpd.value|default:"" }}</textarea>
+      </div>
+      <p class="field-helper">Exibido no formulario publico. O colaborador precisa aceitar pra enviar.</p>
+    </div>
+
+    {% include "components/input.html" with name="versao_consentimento_lgpd" label="Versao do texto" value=form.versao_consentimento_lgpd.value required=True error=form.versao_consentimento_lgpd.errors.0 helper="Gravada junto de cada aceite. Mudou o texto, suba a versao: senao um aceite antigo pareceria valer pro texto novo." %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+      <a href="{% url 'people:config_home' %}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

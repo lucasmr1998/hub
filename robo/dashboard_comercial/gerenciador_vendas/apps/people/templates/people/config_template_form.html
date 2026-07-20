@@ -1,0 +1,65 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Formularios</p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+        <p class="page-subtitle">
+          Por campo: se e solicitado, se e obrigatorio e com que rotulo aparece
+          pro colaborador.
+        </p>
+      </div>
+      <a href="{% url 'people:config_templates' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  <form method="post" class="form-stack" style="max-width: 860px;">
+    {% csrf_token %}
+
+    <div class="form-grid-2">
+      {% include "components/input.html" with name="nome" label="Nome do formulario" value=template.nome required=True placeholder="Ex: Cadastro operacional" helper="Aparece na lista e ao escolher o formulario de um link." %}
+      {% include "components/input.html" with name="descricao" label="Descricao" value=template.descricao %}
+    </div>
+
+    <h2 class="form-section-title">Campos do sistema</h2>
+    <p class="field-helper">
+      A lista e fixa: cada campo corresponde a um dado do cadastro. O que se
+      configura aqui e quais deles o colaborador preenche.
+    </p>
+
+    <div class="form-stack">
+      {% for campo in campos %}
+        <div class="section-card">
+          <div class="section-card-body">
+            <strong>{{ campo.label }}</strong>
+            {% if campo.travado %}
+              {% include "components/badge.html" with variant="neutral" label="Sempre solicitado" size="sm" %}
+            {% endif %}
+            <p class="field-helper" style="margin: 4px 0 var(--sp-3);">{{ campo.descricao }}</p>
+
+            <div class="form-grid-3">
+              {% include "components/checkbox.html" with name="solicitar_"|add:campo.nome label="Solicitar" checked=campo.solicitar disabled=campo.travado %}
+              {% include "components/checkbox.html" with name="obrigatorio_"|add:campo.nome label="Obrigatorio" checked=campo.obrigatorio disabled=campo.travado %}
+              {% include "components/input.html" with name="rotulo_"|add:campo.nome label="Rotulo" value=campo.rotulo placeholder=campo.rotulo_padrao %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% include "components/checkbox.html" with name="ativo" label="Formulario ativo" checked=template.ativo|default_if_none:True %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar formulario</button>
+      <a href="{% url 'people:config_templates' %}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

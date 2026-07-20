@@ -1,0 +1,73 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Fluxo · {{ etapa.nome }}</p>
+        <h1 class="page-title">Comunicacao com o colaborador</h1>
+      </div>
+      <a href="{% url 'people:config_fluxo_etapa' etapa.situacao %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  <div class="section-card" style="max-width: 820px; margin-bottom: var(--sp-4);">
+    <div class="section-card-body">
+      <p class="field-helper" style="margin: 0;">
+        <i class="bi bi-info-circle"></i>
+        <strong>Nada e enviado automaticamente.</strong> A mensagem fica
+        disponivel como sugestao pro RH quando o colaborador chega nesta etapa. O
+        envio e sempre manual e o texto pode ser editado antes de enviar, sem
+        alterar este padrao.
+      </p>
+    </div>
+  </div>
+
+  <form method="post" class="form-stack" style="max-width: 820px;">
+    {% csrf_token %}
+
+    <div class="field">
+      <label class="field-label" for="texto">Mensagem padrao <span class="field-required">*</span></label>
+      <div class="field-input-wrap">
+        <textarea class="field-input" id="texto" name="texto" rows="5" required>{{ form.texto.value|default:"" }}</textarea>
+      </div>
+      <p class="field-helper">
+        {# verbatim pra mostrar a variavel literal: sem ele o Django tenta
+           interpretar as chaves e quebra o template. #}
+        Aceita {% verbatim %}<code>{{nome}}</code>, <code>{{primeiro_nome}}</code>,
+        <code>{{unidade}}</code> e <code>{{cargo}}</code>{% endverbatim %}.
+      </p>
+      {% if form.texto.errors %}
+        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.texto.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <h2 class="form-section-title">Aplicado em</h2>
+    {% include "components/select.html" with name="escopo" label="Escopo" options=form.fields.escopo.choices value=form.escopo.value helper="Toda a empresa inclui as unidades que entrarem depois." %}
+
+    <div class="field">
+      <label class="field-label" for="unidades">Unidades especificas</label>
+      <div class="field-input-wrap">
+        <select class="field-input field-select" id="unidades" name="unidades" multiple size="6">
+          {% for pk, nome in unidades_opcoes %}
+            <option value="{{ pk }}">{{ nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <p class="field-helper">So vale quando o escopo e por unidades.</p>
+    </div>
+
+    {% include "components/checkbox.html" with name="ativo" label="Mensagem ativa" checked=form.ativo.value %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar mensagem</button>
+      <a href="{% url 'people:config_fluxo_etapa' etapa.situacao %}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

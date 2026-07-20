@@ -1,0 +1,76 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Configuracoes</p>
+        <h1 class="page-title">Formularios e dados</h1>
+        <p class="page-subtitle">
+          Configure quais informacoes serao solicitadas aos colaboradores. Cada
+          link de cadastro aponta pra um formulario.
+        </p>
+      </div>
+      {% if pode_gerir %}
+        <a href="{% url 'people:config_template_criar' %}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Novo formulario
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="section-card" style="margin-bottom: var(--sp-4);">
+    <div class="section-card-body">
+      <p class="field-helper" style="margin: 0;">
+        <i class="bi bi-shield-lock"></i>
+        Documentos de identificacao e dados bancarios sensiveis nao entram aqui.
+        Eles pertencem a etapa de admissao, com tratamento proprio de seguranca.
+      </p>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-check-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  {% if templates %}
+    <table class="entity-table">
+      <thead>
+        <tr><th>Formulario</th><th>Descricao</th><th>Tipo</th><th>Links</th><th>Situacao</th></tr>
+      </thead>
+      <tbody>
+        {% for template in templates %}
+          <tr>
+            <td>
+              {% if pode_gerir %}
+                <a href="{% url 'people:config_template_editar' template.pk %}">{{ template.nome }}</a>
+              {% else %}{{ template.nome }}{% endif %}
+            </td>
+            <td class="text-muted">{{ template.descricao|default:"—" }}</td>
+            <td>
+              {% if template.padrao %}
+                {% include "components/badge.html" with variant="info" label="Padrao" size="sm" %}
+              {% else %}—{% endif %}
+            </td>
+            <td>{{ template.links.count }}</td>
+            <td>
+              {% if template.ativo %}
+                {% include "components/badge.html" with variant="success" label="Ativo" dot=True size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Inativo" size="sm" %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    {% include "components/empty_state.html" with icon="bi-file-earmark-text" text="Nenhum formulario configurado" subtext="O formulario padrao e criado automaticamente no primeiro cadastro por link." cta_label="Novo formulario" cta_href="/people/config/formularios/novo/" %}
+  {% endif %}
+{% endblock %}

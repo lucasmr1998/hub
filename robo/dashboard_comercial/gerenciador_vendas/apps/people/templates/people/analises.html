@@ -1,0 +1,191 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People</p>
+        <h1 class="page-title">Analises</h1>
+        <p class="page-subtitle">
+          Tudo aqui sai da trilha de transicoes do ciclo de vida. Nenhum numero
+          depende de alguem lembrar de preencher relatorio.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <form method="get" id="filtro-analises" class="form-grid-2" style="max-width: 640px; margin-bottom: var(--sp-5);">
+    {% include "components/select.html" with name="dias" label="Periodo" options=periodos value=dias_selecionado %}
+    {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas as unidades" %}
+    <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
+  </form>
+
+  {# ---------- Numeros do topo ---------- #}
+  <div class="form-grid-3" style="margin-bottom: var(--sp-5);">
+    <div class="section-card">
+      <div class="section-card-body">
+        <p class="kanban-col-title">Cadastros no periodo</p>
+        <p style="font-size: var(--fs-2xl); font-weight: var(--fw-semibold); margin: 4px 0;">
+          {{ resumo.cadastros }}
+        </p>
+        {% if resumo.cadastros_variacao is not None %}
+          <p class="field-helper">
+            {{ resumo.cadastros_variacao }}% vs periodo anterior
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-body">
+        <p class="kanban-col-title">Taxa de efetivacao (coorte)</p>
+        <p style="font-size: var(--fs-2xl); font-weight: var(--fw-semibold); margin: 4px 0;">
+          {{ resumo.taxa_efetivacao }}%
+        </p>
+        <p class="field-helper">
+          Dos {{ resumo.cadastros }} cadastrados no periodo, {{ resumo.efetivados_coorte }}
+          ja foram efetivados. Comparar gente diferente daria numero que sobe
+          quando a operacao piora.
+        </p>
+      </div>
+    </div>
+
+    <div class="section-card {% if resumo.parados %}section-card-danger{% endif %}">
+      <div class="section-card-body">
+        <p class="kanban-col-title">Parados ha +3 dias</p>
+        <p style="font-size: var(--fs-2xl); font-weight: var(--fw-semibold); margin: 4px 0;">
+          {{ resumo.parados }}
+        </p>
+        <p class="field-helper">Colaboradores sem avancar no ciclo.</p>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-body">
+        <p class="kanban-col-title">Desligamentos no periodo</p>
+        <p style="font-size: var(--fs-2xl); font-weight: var(--fw-semibold); margin: 4px 0;">
+          {{ resumo.desligamentos }}
+        </p>
+        {% if resumo.desligamentos_variacao is not None %}
+          <p class="field-helper">{{ resumo.desligamentos_variacao }}% vs periodo anterior</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Lojas por prioridade ---------- #}
+  <h2 class="form-section-title">Lojas por prioridade</h2>
+  <div class="form-grid-3" style="margin-bottom: var(--sp-5);">
+    {% for linha in unidades %}
+      <div class="section-card section-card-{{ linha.variante }}">
+        <div class="section-card-header">
+          <h3 class="section-card-title">{{ linha.unidade.nome }}</h3>
+        </div>
+        <div class="section-card-body">
+          <div class="form-grid-3">
+            <div>
+              <p style="font-size: var(--fs-lg); font-weight: var(--fw-semibold); margin: 0;">{{ linha.cadastros }}</p>
+              <p class="field-helper">cadastros</p>
+            </div>
+            <div>
+              <p style="font-size: var(--fs-lg); font-weight: var(--fw-semibold); margin: 0;">{{ linha.efetivados }}</p>
+              <p class="field-helper">efetivados</p>
+            </div>
+            <div>
+              <p style="font-size: var(--fs-lg); font-weight: var(--fw-semibold); margin: 0;">{{ linha.parados }}</p>
+              <p class="field-helper">parados</p>
+            </div>
+          </div>
+          <p class="field-helper" style="margin-top: var(--sp-3);">{{ linha.status }}</p>
+        </div>
+      </div>
+    {% empty %}
+      <p class="field-helper">Nenhuma unidade ativa.</p>
+    {% endfor %}
+  </div>
+
+  {# ---------- Funil ---------- #}
+  <h2 class="form-section-title">Funil de admissao</h2>
+  <p class="field-helper" style="margin-bottom: var(--sp-3);">
+    Onde a fila esta agora. E foto, nao fluxo: nao diz quantos passaram, diz
+    quantos estao.
+  </p>
+  <div class="section-card" style="margin-bottom: var(--sp-5);">
+    <div class="section-card-body form-stack">
+      {% for etapa in funil %}
+        <div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span class="field-label" style="margin: 0;">{{ etapa.rotulo }}</span>
+            <span class="field-label" style="margin: 0;">{{ etapa.total }}</span>
+          </div>
+          {% include "components/progress_bar.html" with percent=etapa.percentual width=520 %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ---------- Quem esta parado ---------- #}
+  {% if parados %}
+    <h2 class="form-section-title">Quem esta parado</h2>
+    <p class="field-helper" style="margin-bottom: var(--sp-3);">
+      Medido pela ultima transicao, nao pela data de cadastro: quem avancou
+      ontem depois de duas semanas nao conta como parado.
+    </p>
+    <table class="entity-table" style="margin-bottom: var(--sp-5);">
+      <thead>
+        <tr><th>Colaborador</th><th>Loja</th><th>Fase</th><th>Parado ha</th></tr>
+      </thead>
+      <tbody>
+        {% for item in parados %}
+          <tr>
+            <td>
+              <a href="{% url 'people:colaborador_detalhe' item.colaborador.pk %}">
+                {{ item.colaborador.nome_completo }}
+              </a>
+            </td>
+            <td>{{ item.colaborador.unidade.nome }}</td>
+            <td>{{ item.colaborador.situacao_rotulo }}</td>
+            <td>
+              {% if item.dias >= 7 %}
+                {% include "components/badge.html" with variant="danger" label=item.dias size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="warning" label=item.dias size="sm" %}
+              {% endif %}
+              dias
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {# ---------- Evolucao mensal ---------- #}
+  {% if evolucao %}
+    <h2 class="form-section-title">Evolucao mensal</h2>
+    <table class="entity-table">
+      <thead>
+        <tr><th>Mes</th><th>Cadastros</th><th>Desligamentos</th><th>Saldo</th></tr>
+      </thead>
+      <tbody>
+        {% for linha in evolucao %}
+          <tr>
+            <td>{{ linha.mes|date:"m/Y" }}</td>
+            <td>{{ linha.cadastros }}</td>
+            <td>{{ linha.desligamentos }}</td>
+            <td>{{ linha.saldo }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <script>
+    document.querySelectorAll('#filtro-analises select').forEach(function (campo) {
+      campo.addEventListener('change', function () { campo.form.submit(); });
+    });
+  </script>
+{% endblock %}

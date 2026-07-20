@@ -1,6 +1,8 @@
 from django.urls import path
 
-from apps.people.views import board, cargos, colaboradores, links, unidades
+from apps.people.views import (
+    analises, board, cargos, colaboradores, configuracao, links, unidades,
+)
 
 app_name = 'people'
 
@@ -19,6 +21,21 @@ urlpatterns = [
     path('links/<int:pk>/rotacionar/', links.rotacionar, name='link_rotacionar'),
     path('links/<int:pk>/alternar-ativo/', links.alternar_ativo, name='link_alternar_ativo'),
     path('links/<int:pk>/qr.svg', links.qr, name='link_qr'),
+
+    # Analises
+    path('analises/', analises.painel, name='analises'),
+
+    # Configuracoes: fluxo, formularios e defaults do tenant
+    path('config/', configuracao.home, name='config_home'),
+    path('config/fluxo/', configuracao.fluxo, name='config_fluxo'),
+    path('config/fluxo/<str:situacao>/', configuracao.fluxo_etapa, name='config_fluxo_etapa'),
+    path('config/fluxo/<str:situacao>/mensagem/', configuracao.mensagem_etapa,
+         name='config_mensagem_etapa'),
+    path('config/formularios/', configuracao.templates, name='config_templates'),
+    path('config/formularios/novo/', configuracao.template_editar, name='config_template_criar'),
+    path('config/formularios/<int:pk>/', configuracao.template_editar,
+         name='config_template_editar'),
+    path('config/geral/', configuracao.geral, name='config_geral'),
 
     # Cargos
     path('cargos/', cargos.lista, name='cargos_lista'),

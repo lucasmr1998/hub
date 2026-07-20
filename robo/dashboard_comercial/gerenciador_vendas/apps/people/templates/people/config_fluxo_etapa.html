@@ -1,0 +1,64 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Fluxo</p>
+        <h1 class="page-title"><i class="bi {{ etapa.icone }}"></i> {{ etapa.nome }}</h1>
+        <p class="page-subtitle">{{ etapa.descricao }}</p>
+      </div>
+      <a href="{% url 'people:config_fluxo' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar para os recursos
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-check-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <div class="form-stack" style="max-width: 820px;">
+    {% for recurso in recursos %}
+      <div class="section-card">
+        <div class="section-card-body" style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4);">
+          <div>
+            <strong>{{ recurso.rotulo }}</strong>
+            <p class="field-helper" style="margin: 4px 0 0;">{{ recurso.descricao }}</p>
+          </div>
+          <div style="flex-shrink: 0;">
+            {% if recurso.disponivel %}
+              {% if recurso.chave == 'comunicacao' %}
+                <a href="{% url 'people:config_mensagem_etapa' etapa.situacao %}" class="btn btn-secondary btn-sm">
+                  Configurar <i class="bi bi-chevron-right"></i>
+                </a>
+              {% elif recurso.chave == 'formulario_cadastro' %}
+                <a href="{% url 'people:config_templates' %}" class="btn btn-secondary btn-sm">
+                  Configurar <i class="bi bi-chevron-right"></i>
+                </a>
+              {% elif recurso.chave == 'periodo_experiencia' %}
+                <a href="{% url 'people:config_geral' %}" class="btn btn-secondary btn-sm">
+                  Configurar <i class="bi bi-chevron-right"></i>
+                </a>
+              {% endif %}
+            {% else %}
+              {% include "components/badge.html" with variant="neutral" label="Em construcao" size="sm" %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <p class="field-helper" style="margin-top: var(--sp-4); max-width: 820px;">
+    Os recursos marcados como em construcao aparecem aqui de proposito: eles
+    existem no fluxo real do departamento pessoal e ainda nao foram construidos.
+    Esconde-los faria a tela mentir sobre o tamanho do modulo.
+  </p>
+{% endblock %}

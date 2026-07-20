@@ -1,0 +1,79 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People</p>
+        <h1 class="page-title">Configuracoes</h1>
+        <p class="page-subtitle">Regras e recursos usados na gestao de colaboradores.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-grid-2" style="max-width: 900px;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-diagram-2"></i> Fluxo do Departamento Pessoal</h2>
+      </div>
+      <div class="section-card-body">
+        <p class="field-helper">
+          Centraliza, por etapa da jornada do colaborador, os recursos
+          configuraveis do modulo. As etapas sao fixas.
+        </p>
+        <a href="{% url 'people:config_fluxo' %}" class="btn btn-secondary btn-sm">
+          Editar <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-file-earmark-text"></i> Formularios e dados</h2>
+      </div>
+      <div class="section-card-body">
+        <p class="field-helper">
+          Configure os dados solicitados ao colaborador e os links usados para o
+          preenchimento.
+        </p>
+        <a href="{% url 'people:config_templates' %}" class="btn btn-secondary btn-sm">
+          Editar <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-sliders"></i> Configuracao geral</h2>
+      </div>
+      <div class="section-card-body">
+        <p class="field-helper">
+          Periodo de experiencia, exigencia de CPF no auto cadastro, consentimento
+          LGPD e validade dos links.
+        </p>
+        <a href="{% url 'people:config_geral' %}" class="btn btn-secondary btn-sm">
+          Editar <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-briefcase"></i> Cargos</h2>
+      </div>
+      <div class="section-card-body">
+        <p class="field-helper">
+          Cargos, usados no cadastro de colaboradores e, futuramente, na abertura
+          de vagas.
+        </p>
+        <a href="{% url 'people:cargos_lista' %}" class="btn btn-secondary btn-sm">
+          Editar <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
