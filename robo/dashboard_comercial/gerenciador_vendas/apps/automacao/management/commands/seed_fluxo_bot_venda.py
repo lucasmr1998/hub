@@ -252,6 +252,13 @@ _MSG_ERRO_ESTRUTURAL = (
     'para um atendente.'
 )
 
+# ATENCAO ao campo `message`: o bot do Matrix envia esse texto direto no
+# WhatsApp em DOIS ramos (`msg_resultado` no caminho valido e
+# `msg_pre_transbordo` quando `needsReception="true"`). Mensagem vazia trava a
+# conversa: o nó de envio dele não completa, então o fluxo nunca volta a
+# perguntar e o cliente fica sem resposta. Achado no teste com o emulador em
+# 19/07: o CPF gravava aqui e o bot emudecia lá. Nenhum `message` de ramo que
+# o Matrix envia pode ficar em branco.
 CORPO_VALIDAR_OK = _corpo({
     'resposta_correta': True,
     'resposta_sem_erro_api': True,
@@ -259,7 +266,7 @@ CORPO_VALIDAR_OK = _corpo({
     'needsReception': 'false',
     'isAClient': False,
     'cancelado': False,
-    'message': '',
+    'message': '{{nodes.validar.mensagem_sucesso}}',
 })
 
 CORPO_VALIDAR_ERRO = _corpo({
@@ -269,7 +276,7 @@ CORPO_VALIDAR_ERRO = _corpo({
     'needsReception': 'true',
     'isAClient': False,
     'cancelado': False,
-    'message': '',
+    'message': _MSG_ERRO_ESTRUTURAL,
 })
 
 CORPO_VALIDAR_OK_IA = _corpo({
@@ -289,7 +296,9 @@ CORPO_VALIDAR_TRANSBORDO = _corpo({
     'needsReception': 'true',
     'isAClient': False,
     'cancelado': False,
-    'message': '',
+    # `needsReception=true` leva o Matrix pro `msg_pre_transbordo`, que envia
+    # este campo (nao o `retorno_erro_api`), entao repete a mesma despedida.
+    'message': '{{nodes.json.mensagem_bot}}',
 })
 
 CORPO_VALIDAR_REPERGUNTA = _corpo({

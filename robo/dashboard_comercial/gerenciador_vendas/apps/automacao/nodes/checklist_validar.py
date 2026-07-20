@@ -20,6 +20,10 @@ from ..models import Checklist, ItemChecklist
 from ..services.checklist import registrar_resposta
 from apps.comercial.atendimento_ia.services.validacao import validar
 
+# Usada quando o item nao tem `mensagem_sucesso` proprio. Curta de proposito:
+# aparece entre a resposta do cliente e a proxima pergunta.
+MENSAGEM_SUCESSO_PADRAO = 'Anotado!'
+
 
 @registrar
 class ChecklistValidarNode(BaseNode):
@@ -97,5 +101,11 @@ class ChecklistValidarNode(BaseNode):
             # a um nó `ia_agente` de segunda opiniao (a resposta sozinha, sem a
             # pergunta, nao da pro LLM julgar nada).
             'pergunta': item.pergunta,
+            # Confirmacao pro cliente quando a resposta e aceita. NUNCA vazia:
+            # o bot do Matrix envia esse campo direto no WhatsApp e uma
+            # mensagem em branco trava a conversa (o nó de envio nao completa,
+            # entao o fluxo dele nunca volta a perguntar). Cai no texto padrao
+            # quando o item nao configurou `mensagem_sucesso`.
+            'mensagem_sucesso': (item.mensagem_sucesso or '').strip() or MENSAGEM_SUCESSO_PADRAO,
         }
         return NodeResult(output=output, branch='valida' if valida else 'invalida')
