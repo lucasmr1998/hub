@@ -1,0 +1,97 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Colaboradores</p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+        <p class="page-subtitle">Entra em <strong>{{ rotulo_situacao }}</strong>.</p>
+      </div>
+      <a href="{% url 'people:board' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  {% if conflitos %}
+    {# O dedup achou alguem parecido. Quem decide se e a mesma pessoa e o RH,
+       nao o servico: por isso a tela pergunta em vez de criar ou recusar. #}
+    <div class="section-card section-card-warning" style="margin-bottom: var(--sp-4);">
+      <div class="section-card-header">
+        <h2 class="section-card-title">
+          <i class="bi bi-people"></i> Ja existe alguem parecido
+        </h2>
+      </div>
+      <div class="section-card-body">
+        <p class="field-helper" style="margin-bottom: var(--sp-3);">
+          Cadastrar de novo criaria uma segunda ficha da mesma pessoa, e todo
+          relatorio passaria a contar duas. Confirme se e alguem desta lista.
+        </p>
+        {% for candidato in conflitos %}
+          <div class="field-check" style="margin-bottom: var(--sp-2);">
+            <span class="field-check-text">
+              <span class="field-check-label">
+                {{ candidato.colaborador.nome_completo }}
+                {% include "components/badge.html" with variant="neutral" label=candidato.colaborador.situacao_rotulo size="sm" %}
+              </span>
+              <span class="field-helper">
+                {{ candidato.colaborador.unidade.nome }}
+                {% if candidato.colaborador.cargo %}· {{ candidato.colaborador.cargo }}{% endif %}
+                · encontrado por {{ candidato.motivo }}
+              </span>
+            </span>
+            <button type="submit" form="form-colaborador" name="resolver_como"
+                    value="{{ candidato.colaborador.pk }}" class="btn btn-primary btn-sm">
+              E essa pessoa
+            </button>
+          </div>
+        {% endfor %}
+        <p class="field-helper">
+          Se nenhuma for, revise os dados abaixo. Telefone repetido de familiar
+          ou da loja e o motivo mais comum de falso alarme.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  <form method="post" id="form-colaborador" class="form-stack" style="max-width: 780px;">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
+    {% endif %}
+
+    <h2 class="form-section-title">Identificacao</h2>
+    <div class="form-grid-2">
+      {% include "components/input.html" with name="nome_completo" label="Nome completo" value=form.nome_completo.value required=True error=form.nome_completo.errors.0 %}
+      {% include "components/input.html" with name="cpf" label="CPF" value=form.cpf.value error=form.cpf.errors.0 placeholder="000.000.000-00" helper="E o CPF que impede a mesma pessoa de ser cadastrada duas vezes." %}
+    </div>
+    <div class="form-grid-3">
+      {% include "components/input.html" with name="telefone" label="Telefone" value=form.telefone.value error=form.telefone.errors.0 placeholder="(00) 00000-0000" %}
+      {% include "components/input.html" with name="email" label="Email" type="email" value=form.email.value error=form.email.errors.0 %}
+      {% include "components/input.html" with name="data_nascimento" label="Data de nascimento" type="date" value=form.data_nascimento.value error=form.data_nascimento.errors.0 %}
+    </div>
+
+    <h2 class="form-section-title">Vinculo</h2>
+    <div class="form-grid-2">
+      {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=form.unidade.value required=True error=form.unidade.errors.0 blank_label="Selecione a unidade" %}
+      {% include "components/input.html" with name="cargo" label="Cargo" value=form.cargo.value error=form.cargo.errors.0 %}
+    </div>
+    <div class="form-grid-2">
+      {% include "components/select.html" with name="regime_contratacao" label="Regime de contratacao" options=regimes_opcoes value=form.regime_contratacao.value error=form.regime_contratacao.errors.0 %}
+      {% include "components/input.html" with name="data_admissao" label="Data de admissao" type="date" value=form.data_admissao.value required=form.fields.data_admissao.required error=form.data_admissao.errors.0 helper="Obrigatoria pra entrar em admissao ou experiencia." %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i> Cadastrar
+      </button>
+      <a href="{% url 'people:board' %}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

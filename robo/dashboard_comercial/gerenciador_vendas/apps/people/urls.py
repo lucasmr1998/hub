@@ -1,11 +1,15 @@
 from django.urls import path
 
-from apps.people.views import inicio, unidades
+from apps.people.views import board, colaboradores, unidades
 
 app_name = 'people'
 
 urlpatterns = [
-    path('', inicio.home, name='home'),
+    path('', board.board, name='board'),
+    path('api/colaborador/<int:pk>/mover/', board.api_mover, name='api_mover'),
+
+    # Colaboradores
+    path('colaboradores/novo/', colaboradores.criar, name='colaborador_criar'),
 
     # Unidades (lojas e filiais)
     path('unidades/', unidades.lista, name='unidades_lista'),

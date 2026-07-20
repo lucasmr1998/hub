@@ -237,7 +237,7 @@ Uso em template que extende layout_app:
 
     {% elif modulo_atual == 'people' %}
       <nav class="app-subnav-list">
-        <a href="{% url 'people:home' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}">
+        <a href="{% url 'people:board' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'board' %}is-active{% endif %}">
           <i class="bi bi-columns-gap"></i><span>Board</span>
         </a>
       </nav>

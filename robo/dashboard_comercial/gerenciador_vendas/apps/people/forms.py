@@ -9,7 +9,9 @@ que fica aqui e o que e mesmo do formulario, tipo normalizar mascara de CEP.
 from django import forms
 
 from apps.people.models import Unidade
-from apps.people.utils import normalizar_cep, normalizar_e164, normalizar_estado
+from apps.people.utils import (
+    normalizar_cep, normalizar_cpf, normalizar_e164, normalizar_estado,
+)
 
 
 UFS = [
@@ -91,3 +93,54 @@ class UnidadeForm(forms.ModelForm):
         if valor == 'nao':
             return False
         return None
+
+
+class ColaboradorForm(forms.Form):
+    """
+    Cadastro de colaborador pelo RH.
+
+    E `Form` e nao `ModelForm` de proposito: ModelForm oferece `.save()`, que
+    criaria o registro direto e pularia o dedup. Aqui o form so junta e limpa os
+    dados; quem cria e `registrar_colaborador`, que pesquisa antes.
+    """
+
+    nome_completo = forms.CharField(max_length=200, label='Nome completo')
+    cpf = forms.CharField(max_length=14, required=False, label='CPF')
+    telefone = forms.CharField(max_length=20, required=False, label='Telefone')
+    email = forms.EmailField(required=False, label='Email')
+    data_nascimento = forms.DateField(required=False, label='Data de nascimento')
+    unidade = forms.ModelChoiceField(queryset=Unidade.objects.none(), label='Unidade')
+    cargo = forms.CharField(max_length=120, required=False, label='Cargo')
+    regime_contratacao = forms.ChoiceField(required=False, label='Regime de contratacao')
+    data_admissao = forms.DateField(required=False, label='Data de admissao')
+
+    def __init__(self, *args, tenant=None, situacao_inicial=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.people import estados
+        from apps.people.models import REGIME_CONTRATACAO_CHOICES
+
+        self.tenant = tenant
+        self.situacao_inicial = situacao_inicial
+        self.fields['unidade'].queryset = Unidade.objects.filter(ativo=True)
+        self.fields['regime_contratacao'].choices = [('', 'Nao definido')] + list(
+            REGIME_CONTRATACAO_CHOICES)
+
+        # A exigencia vem da maquina de estados, nao de uma regra escrita aqui.
+        # Entrar direto em admissao ou experiencia precisa de data de admissao.
+        exigidos = estados.campos_exigidos(
+            estados.SITUACAO_CADASTRO, situacao_inicial or estados.SITUACAO_CADASTRO)
+        for campo in exigidos:
+            if campo in self.fields:
+                self.fields[campo].required = True
+
+    def clean_cpf(self):
+        return normalizar_cpf(self.cleaned_data.get('cpf'))
+
+    def clean_telefone(self):
+        return normalizar_e164(self.cleaned_data.get('telefone'))
+
+    def dados_do_servico(self):
+        """Payload pro registrar_colaborador, sem chave vazia."""
+        dados = dict(self.cleaned_data)
+        dados.pop('unidade', None)
+        return {chave: valor for chave, valor in dados.items() if valor not in (None, '')}

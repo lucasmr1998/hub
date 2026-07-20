@@ -1,0 +1,131 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  {% csrf_token %}
+
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People</p>
+        <h1 class="page-title">Ciclo de vida</h1>
+        <p class="page-subtitle">Arraste o card pra mudar a fase. O sistema recusa transicao que a maquina de estados nao permite.</p>
+      </div>
+      {% if pode_criar %}
+        <button type="button" class="btn btn-primary" onclick="abrirModal('modal-ponto-entrada')">
+          <i class="bi bi-person-plus"></i> Novo colaborador
+        </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="get" id="filtro-board" style="margin-bottom: var(--sp-4); max-width: 320px;">
+    {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas as unidades" %}
+    {# Sem JS o botao aparece e o filtro continua funcionando. #}
+    <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
+  </form>
+
+  <div class="kanban-board"
+       style="grid-template-columns: repeat({{ colunas|length }}, minmax(240px, 1fr));"
+       data-pode-mover="{% if pode_mover %}1{% else %}0{% endif %}"
+       data-url-mover="{% url 'people:api_mover' 0 %}">
+    {% for coluna in colunas %}
+      <div class="kanban-col" data-situacao="{{ coluna.situacao }}">
+        <div class="kanban-col-header">
+          <h2 class="kanban-col-title">{{ coluna.rotulo }}</h2>
+          <span class="kanban-col-count">{{ coluna.total }}</span>
+        </div>
+        <div class="kanban-col-body">
+          {% for colaborador in coluna.cards %}
+            <div class="kanban-card"
+                 data-colaborador-id="{{ colaborador.pk }}"
+                 data-destinos="{{ colaborador.destinos_possiveis|join:"," }}">
+              <p class="kanban-card-title">{{ colaborador.nome_completo }}</p>
+              <p class="kanban-card-sub">
+                {{ colaborador.cargo|default:"Cargo nao definido" }} · {{ colaborador.unidade.nome }}
+              </p>
+              <div class="kanban-card-tags">
+                {% if colaborador.pendente_revisao %}
+                  {% include "components/badge.html" with variant="warning" label="Revisar" size="sm" %}
+                {% endif %}
+                {% if colaborador.prorrogacoes_experiencia %}
+                  {% include "components/badge.html" with variant="info" label="Prorrogado" size="sm" %}
+                {% endif %}
+                {% if colaborador.data_fim_experiencia %}
+                  {% include "components/badge.html" with variant="neutral" label=colaborador.data_fim_experiencia size="sm" %}
+                {% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <p class="kanban-empty">Vazio</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# Modal do D1: os tres pontos de entrada. A pergunta e a mesma da tela de
+     origem, e cada resposta entra numa fase diferente do ciclo. #}
+  <div id="modal-ponto-entrada" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h2 class="modal-title">Esse colaborador ja comecou a trabalhar?</h2>
+        <button type="button" class="modal-close" onclick="fecharModal('modal-ponto-entrada')" aria-label="Fechar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="field-helper" style="margin-bottom: var(--sp-3);">
+          A resposta define em que fase do ciclo a pessoa entra.
+        </p>
+        <div class="form-stack">
+          <a href="{% url 'people:colaborador_criar' %}?entrada=ja_trabalhando" class="field-check">
+            <span class="field-check-text">
+              <span class="field-check-label">Sim, ja esta trabalhando</span>
+              <span class="field-helper">Entra em Em experiencia. Vamos precisar da data de admissao.</span>
+            </span>
+          </a>
+          <a href="{% url 'people:colaborador_criar' %}?entrada=em_admissao" class="field-check">
+            <span class="field-check-text">
+              <span class="field-check-label">Nao, ainda em admissao</span>
+              <span class="field-helper">Entra em Em admissao. Vamos precisar da data de admissao.</span>
+            </span>
+          </a>
+          <a href="{% url 'people:colaborador_criar' %}?entrada=so_cadastro" class="field-check">
+            <span class="field-check-text">
+              <span class="field-check-label">So cadastrar por enquanto</span>
+              <span class="field-helper">Entra em Cadastro. Os dados de vinculo ficam pra depois.</span>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Modal que pede o que a transicao exige, quando o board recusa por falta de dado #}
+  <div id="modal-campos-transicao" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title" data-titulo>Faltam dados pra concluir</h2>
+        <button type="button" class="modal-close" onclick="fecharModal('modal-campos-transicao')" aria-label="Fechar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-stack" data-campos></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-campos-transicao')">Cancelar</button>
+        <button type="button" class="btn btn-primary" data-confirmar>Mover</button>
+      </div>
+    </div>
+  </div>
+
+  {# O layout nao tem bloco extra_js. A convencao do repo (ver o kanban de
+     projetos do workspace) e carregar o script no fim do proprio content. #}
+  <script src="{% static 'people/js/board.js' %}"></script>
+{% endblock %}

@@ -454,6 +454,17 @@ class Colaborador(TenantMixin):
     def situacao_rotulo(self):
         return estados.rotulo(self.situacao)
 
+    @property
+    def destinos_possiveis(self):
+        """
+        Pra onde esta pessoa pode ir a partir de onde ela esta.
+
+        O board usa isto pra bloquear o drop antes de soltar, em vez de aceitar
+        o arrasto e devolver erro depois. A regra continua sendo uma so, a da
+        maquina de estados: aqui e leitura, nao copia.
+        """
+        return estados.destinos_possiveis(self.situacao)
+
 
 class HistoricoSituacao(TenantMixin):
     """
