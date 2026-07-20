@@ -54,6 +54,7 @@ urlpatterns = [
     path('vagas/nova/', vagas.criar, name='vaga_criar'),
     path('vagas/<int:pk>/', vagas.editar, name='vaga_editar'),
     path('vagas/<int:pk>/status/', vagas.mudar_status, name='vaga_mudar_status'),
+    path('vagas/<int:pk>/campos/', vagas.campos_salvar, name='vaga_campos_salvar'),
     path('vagas/<int:pk>/requisitos/', vagas.requisito_criar,
          name='vaga_requisito_criar'),
     path('vagas/<int:pk>/requisitos/<int:requisito_pk>/remover/',

@@ -43,10 +43,16 @@ def _link_ou_404(token):
 
 
 def _contexto(link, valores=None, erros=None):
+    # Os campos saem da vaga (config_campos). Sem vaga (banco de talentos) usa o
+    # padrao do catalogo, que ja e o conjunto sensato.
+    from apps.people.models import Vaga
+
+    fonte = link.vaga or Vaga(config_campos={})
     return {
         'link': link,
         'unidade': link.unidade,
         'vaga': link.vaga,
+        'secoes': fonte.secoes_do_formulario(valores, erros),
         'valores': valores or {},
         'erros': erros or {},
     }
@@ -87,7 +93,7 @@ def enviar(request, token):
             return render(request, 'people/candidatura_ok.html',
                           {'unidade': link.unidade, 'vaga': link.vaga})
 
-        dados, erros = _ler_e_validar(request)
+        dados, erros = _ler_e_validar(request, link)
 
         if not request.POST.get('consentimento_lgpd'):
             erros['consentimento_lgpd'] = 'É preciso aceitar para enviar.'
@@ -119,37 +125,58 @@ def enviar(request, token):
                   {'unidade': link.unidade, 'vaga': link.vaga})
 
 
-def _ler_e_validar(request):
+def _ler_e_validar(request, link):
     """
-    Le o POST e valida o minimo.
+    Le o POST e valida conforme a config de campos da vaga.
 
-    Deliberadamente pouco exigente: cada campo obrigatorio a mais e gente
-    desistindo no meio, e a dor numero um do cliente e "nao chega candidato".
-    So nome e WhatsApp travam, porque sem eles nao ha como dar retorno nem
-    deduplicar.
+    Deliberadamente pouco exigente por default: cada campo obrigatorio a mais e
+    gente desistindo no meio, e a dor numero um do cliente e "nao chega
+    candidato". Mas o RH decide o que exigir por vaga, e o que ele marcou como
+    obrigatorio e validado aqui.
+
+    nome e WhatsApp valem sempre, independente da config: sao travados no
+    catalogo porque sem eles nao ha retorno nem dedup.
     """
-    dados = {
-        'nome_completo': (request.POST.get('nome_completo') or '').strip(),
-        'whatsapp': (request.POST.get('whatsapp') or '').strip(),
-        'email': (request.POST.get('email') or '').strip(),
-        'data_nascimento': (request.POST.get('data_nascimento') or '').strip() or None,
-        'cidade': (request.POST.get('cidade') or '').strip(),
-        'estado': (request.POST.get('estado') or '').strip(),
-        'bairro': (request.POST.get('bairro') or '').strip(),
-        'experiencia_previa': (request.POST.get('experiencia_previa') or '').strip(),
-        'disponibilidade_horario': (request.POST.get('disponibilidade_horario') or '').strip(),
-        'curriculo': request.FILES.get('curriculo'),
-    }
+    from apps.people import campos_candidatura as catalogo
+
+    config = link.vaga.config_campos if link.vaga_id else {}
+    solicitados = {c['nome'] for c in catalogo.campos_solicitados(config)}
+    obrigatorios = set(catalogo.campos_obrigatorios(config))
+
+    dados = {}
+    for nome in catalogo.NOMES_DE_CAMPO:
+        if nome not in solicitados:
+            continue
+        if nome == 'curriculo':
+            dados[nome] = request.FILES.get('curriculo')
+        elif nome == 'data_nascimento':
+            dados[nome] = (request.POST.get(nome) or '').strip() or None
+        else:
+            dados[nome] = (request.POST.get(nome) or '').strip()
 
     erros = {}
-    if not dados['nome_completo']:
+
+    # Travados: sempre exigidos, com validacao propria.
+    nome_completo = dados.get('nome_completo', '')
+    if not nome_completo:
         erros['nome_completo'] = 'Informe seu nome completo.'
 
-    somente_digitos = ''.join(c for c in dados['whatsapp'] if c.isdigit())
-    if len(somente_digitos) < 10:
+    whatsapp = dados.get('whatsapp', '')
+    if len(''.join(c for c in whatsapp if c.isdigit())) < 10:
         erros['whatsapp'] = 'Informe um WhatsApp com DDD.'
 
-    arquivo = dados['curriculo']
+    # Demais obrigatorios da config: so precisa estar preenchido.
+    rotulos = {c['nome']: c['rotulo']
+               for c in catalogo.campos_solicitados(config)}
+    for nome in obrigatorios:
+        if nome in ('nome_completo', 'whatsapp'):
+            continue
+        vazio = not dados.get(nome)
+        if vazio:
+            erros[nome] = f'{rotulos.get(nome, "Este campo")} é obrigatório.'
+
+    # Curriculo, quando enviado, valida tipo e tamanho independente de exigencia.
+    arquivo = dados.get('curriculo')
     if arquivo:
         if arquivo.size > 5 * 1024 * 1024:
             erros['curriculo'] = 'O arquivo precisa ter até 5 MB.'

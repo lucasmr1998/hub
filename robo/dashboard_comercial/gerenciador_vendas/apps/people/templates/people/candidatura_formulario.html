@@ -103,39 +103,34 @@
                  tabindex="-1" autocomplete="off">
         </div>
 
-        <div class="pub-secao">
-          <h2 class="pub-secao-titulo"><i class="bi bi-person"></i> Seus dados</h2>
-          {% include "components/input.html" with name="nome_completo" label="Nome completo" value=valores.nome_completo required=True error=erros.nome_completo %}
-          {% include "components/input.html" with name="whatsapp" label="WhatsApp" type="tel" value=valores.whatsapp required=True error=erros.whatsapp helper="Com DDD. É por aqui que a gente responde." %}
-          {% include "components/input.html" with name="email" label="Email" type="email" value=valores.email error=erros.email %}
-          {% include "components/input.html" with name="data_nascimento" label="Data de nascimento" type="date" value=valores.data_nascimento error=erros.data_nascimento %}
-        </div>
-
-        <div class="pub-secao">
-          <h2 class="pub-secao-titulo"><i class="bi bi-geo-alt"></i> Onde você mora</h2>
-          {% include "components/input.html" with name="cidade" label="Cidade" value=valores.cidade error=erros.cidade %}
-          {% include "components/input.html" with name="bairro" label="Bairro" value=valores.bairro error=erros.bairro %}
-          {% include "components/input.html" with name="estado" label="Estado (UF)" value=valores.estado error=erros.estado %}
-        </div>
-
-        <div class="pub-secao">
-          <h2 class="pub-secao-titulo"><i class="bi bi-briefcase"></i> Sua experiência</h2>
-          {% include "components/input.html" with name="experiencia_previa" label="Experiência prévia" value=valores.experiencia_previa error=erros.experiencia_previa placeholder="Ex: 1 ano como atendente" %}
-          {% include "components/input.html" with name="disponibilidade_horario" label="Disponibilidade de horário" value=valores.disponibilidade_horario error=erros.disponibilidade_horario placeholder="Ex: noites e fins de semana" %}
-
-          <div class="field{% if erros.curriculo %} has-error{% endif %}">
-            <label class="field-label" for="curriculo">Currículo</label>
-            <div class="field-input-wrap">
-              <input type="file" class="field-input" id="curriculo" name="curriculo"
-                     accept=".pdf,.doc,.docx">
-            </div>
-            {% if erros.curriculo %}
-              <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ erros.curriculo }}</p>
-            {% else %}
-              <p class="field-helper">PDF ou Word, até 5 MB. Opcional.</p>
-            {% endif %}
+        {% comment %}
+          Campos vem da config da vaga (secoes_do_formulario), nao chumbados.
+          Uma vaga de estagio pede GitHub, uma de motoboy pede CNH, e nenhuma
+          pede todos. Secao sem campo solicitado nao aparece.
+        {% endcomment %}
+        {% for secao in secoes %}
+          <div class="pub-secao">
+            <h2 class="pub-secao-titulo"><i class="bi {{ secao.icone }}"></i> {{ secao.titulo }}</h2>
+            {% for campo in secao.itens %}
+              {% if campo.tipo == 'file' %}
+                <div class="field{% if campo.erro %} has-error{% endif %}">
+                  <label class="field-label" for="{{ campo.nome }}">{{ campo.rotulo }}{% if campo.obrigatorio %} <span class="field-required">*</span>{% endif %}</label>
+                  <div class="field-input-wrap">
+                    <input type="file" class="field-input" id="{{ campo.nome }}" name="{{ campo.nome }}"
+                           accept=".pdf,.doc,.docx"{% if campo.obrigatorio %} required{% endif %}>
+                  </div>
+                  {% if campo.erro %}
+                    <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ campo.erro }}</p>
+                  {% elif campo.ajuda %}
+                    <p class="field-helper">{{ campo.ajuda }}</p>
+                  {% endif %}
+                </div>
+              {% else %}
+                {% include "components/input.html" with name=campo.nome label=campo.rotulo type=campo.tipo value=campo.valor required=campo.obrigatorio error=campo.erro helper=campo.ajuda placeholder=campo.placeholder %}
+              {% endif %}
+            {% endfor %}
           </div>
-        </div>
+        {% endfor %}
 
         <div class="pub-secao">
           {% include "components/checkbox.html" with name="consentimento_lgpd" label="Autorizo o uso dos meus dados neste processo seletivo" checked=valores.consentimento_lgpd %}

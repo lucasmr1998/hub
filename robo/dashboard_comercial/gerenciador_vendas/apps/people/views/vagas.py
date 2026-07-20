@@ -170,6 +170,13 @@ def editar(request, pk):
         messages.success(request, 'Vaga salva.')
         return redirect('people:vaga_editar', pk=vaga.pk)
 
+    from apps.people import campos_candidatura as catalogo
+    config = catalogo.normalizar_config(vaga.config_campos)
+    campos_config = [
+        {**campo, **config[campo['nome']]}
+        for campo in catalogo.CAMPOS_SISTEMA
+    ]
+
     return render(request, 'people/vaga_form.html', {
         'pagetitle': vaga.nome_exibido,
         'form': form,
@@ -178,6 +185,7 @@ def editar(request, pk):
         'form_requisito': RequisitoForm(),
         'links': vaga.links.all(),
         'canais': CANAL_CHOICES,
+        'campos_config': campos_config,
         # Ordem canonica da maquina, e nao alfabetica. Alfabetica punha
         # "Encerrada", que e irreversivel, antes de "Publicada", que e a acao
         # que o usuario quer 9 vezes em 10.
@@ -208,6 +216,38 @@ def mudar_status(request, pk):
                    f'Vaga "{vaga.nome_exibido}" agora esta {rotulo}.',
                    request=request)
     messages.success(request, f'Vaga {rotulo.lower()}.')
+    return redirect('people:vaga_editar', pk=vaga.pk)
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def campos_salvar(request, pk):
+    """
+    Grava quais campos a candidatura desta vaga pede.
+
+    Campo travado (nome, WhatsApp) nao aparece no POST porque nao da pra
+    desligar; o normalizar_config forca solicitar=obrigatorio=True neles de
+    qualquer jeito, entao nao ha como quebrar por form incompleto.
+    """
+    from apps.people import campos_candidatura as catalogo
+
+    vaga = get_object_or_404(Vaga.objects, pk=pk)
+
+    config = {}
+    for campo in catalogo.CAMPOS_SISTEMA:
+        nome = campo['nome']
+        config[nome] = {
+            'solicitar': request.POST.get(f'solicitar_{nome}') == 'on',
+            'obrigatorio': request.POST.get(f'obrigatorio_{nome}') == 'on',
+        }
+
+    vaga.config_campos = catalogo.normalizar_config(config)
+    vaga.save(update_fields=['config_campos', 'atualizado_em'])
+
+    registrar_acao('people', 'editar', 'vaga', vaga.pk,
+                   f'Campos da candidatura de "{vaga.nome_exibido}" ajustados.',
+                   request=request)
+    messages.success(request, 'Campos da candidatura salvos.')
     return redirect('people:vaga_editar', pk=vaga.pk)
 
 

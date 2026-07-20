@@ -242,6 +242,11 @@ class Vaga(TenantMixin):
     )
     observacoes = models.TextField(blank=True, default='',
                                    verbose_name="Observações")
+    config_campos = models.JSONField(
+        default=dict, blank=True, verbose_name="Campos do formulário",
+        help_text="Quais campos a candidatura pede e quais sao obrigatorios. "
+                  "Vazio usa o padrao. Ver apps/people/campos_candidatura.py.",
+    )
     limite_aprovados = models.PositiveSmallIntegerField(
         default=50, validators=[MinValueValidator(1)],
         verbose_name="Limite de aprovados",
@@ -316,6 +321,26 @@ class Vaga(TenantMixin):
         docstring de RequisitoVaga.
         """
         return self.requisitos.filter(usar_na_triagem=True)
+
+    def secoes_do_formulario(self, valores=None, erros=None):
+        """
+        As secoes de campos que a candidatura desta vaga mostra.
+
+        Resolve `config_campos` pelo catalogo e ja injeta valor e erro por campo,
+        pra o template so exibir. Fica no model, e nao na view, porque a pagina
+        publica e a de configuracao vao consumir a mesma resolucao.
+        """
+        from apps.people import campos_candidatura as catalogo
+
+        valores = valores or {}
+        erros = erros or {}
+        campos = catalogo.campos_solicitados(self.config_campos)
+        for campo in campos:
+            campo['valor'] = valores.get(campo['nome'], '')
+            campo['erro'] = erros.get(campo['nome'], '')
+            campo['ajuda'] = campo.get('ajuda', '')
+            campo['placeholder'] = campo.get('placeholder', '')
+        return catalogo.agrupar_em_secoes(campos)
 
     @property
     def total_admitidos(self):
