@@ -259,8 +259,14 @@ _MSG_ERRO_ESTRUTURAL = (
 # perguntar e o cliente fica sem resposta. Achado no teste com o emulador em
 # 19/07: o CPF gravava aqui e o bot emudecia lá. Nenhum `message` de ramo que
 # o Matrix envia pode ficar em branco.
+# NOTA de tipo (achado no teste com o emulador em 19/07): `resposta_correta` vai
+# como TEXTO 'true'/'false', nao como booleano JSON. O bot do Matrix nao compara
+# booleano cru: ele caia sempre no ramo do erro mesmo recebendo `true`. Os outros
+# dois campos de sim/nao do contrato (`needsReception`, `deve_transbordar`) ja
+# eram texto pelo mesmo motivo; este passou batido. A condicao do lado do Matrix
+# compara com "false" ENTRE ASPAS.
 CORPO_VALIDAR_OK = _corpo({
-    'resposta_correta': True,
+    'resposta_correta': 'true',
     'resposta_sem_erro_api': True,
     'retorno_erro_api': '',
     'needsReception': 'false',
@@ -270,7 +276,7 @@ CORPO_VALIDAR_OK = _corpo({
 })
 
 CORPO_VALIDAR_ERRO = _corpo({
-    'resposta_correta': False,
+    'resposta_correta': 'false',
     'resposta_sem_erro_api': False,
     'retorno_erro_api': _MSG_ERRO_ESTRUTURAL,
     'needsReception': 'true',
@@ -280,7 +286,7 @@ CORPO_VALIDAR_ERRO = _corpo({
 })
 
 CORPO_VALIDAR_OK_IA = _corpo({
-    'resposta_correta': True,
+    'resposta_correta': 'true',
     'resposta_sem_erro_api': True,
     'retorno_erro_api': '',
     'needsReception': 'false',
@@ -290,7 +296,7 @@ CORPO_VALIDAR_OK_IA = _corpo({
 })
 
 CORPO_VALIDAR_TRANSBORDO = _corpo({
-    'resposta_correta': False,
+    'resposta_correta': 'false',
     'resposta_sem_erro_api': True,
     'retorno_erro_api': '{{nodes.json.mensagem_bot}}',
     'needsReception': 'true',
@@ -302,7 +308,7 @@ CORPO_VALIDAR_TRANSBORDO = _corpo({
 })
 
 CORPO_VALIDAR_REPERGUNTA = _corpo({
-    'resposta_correta': False,
+    'resposta_correta': 'false',
     'resposta_sem_erro_api': True,
     'retorno_erro_api': '{{nodes.json.mensagem_bot}}',
     'needsReception': 'false',
