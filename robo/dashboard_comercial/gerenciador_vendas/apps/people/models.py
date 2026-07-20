@@ -911,3 +911,15 @@ class SubmissaoLinkCadastro(TenantMixin):
 
     def __str__(self):
         return f'{self.get_resultado_display()} em {self.criado_em:%d/%m/%Y %H:%M}'
+
+
+# ── Recrutamento e Selecao ───────────────────────────────────────────────────
+#
+# Vivem em models_recrutamento.py porque sao um subdominio inteiro e este
+# arquivo ja passou de 900 linhas. O import fica no FIM de proposito: o modulo
+# de recrutamento referencia 'people.Unidade' por string, porem importa este
+# modulo indiretamente, e no topo isso seria import circular.
+#
+# O re-export existe pra que `from apps.people.models import EtapaPipeline`
+# continue funcionando, no padrao de apps/sistema/models.py.
+from apps.people.models_recrutamento import EtapaPipeline  # noqa: E402,F401
