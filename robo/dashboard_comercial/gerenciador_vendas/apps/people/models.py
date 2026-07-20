@@ -742,11 +742,20 @@ class HistoricoSituacao(TenantMixin):
     )
     criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
 
+    @property
+    def de_rotulo(self):
+        """Rotulo de tela da situacao de origem, ou 'entrada' no primeiro registro."""
+        return estados.rotulo(self.de) if self.de else 'entrada'
+
+    @property
+    def para_rotulo(self):
+        return estados.rotulo(self.para)
+
     class Meta:
         app_label = 'people'
         db_table = 'people_historico_situacao'
-        verbose_name = 'Historico de situacao'
-        verbose_name_plural = 'Historico de situacoes'
+        verbose_name = 'Histórico de situação'
+        verbose_name_plural = 'Histórico de situações'
         ordering = ['-criado_em']
         indexes = [
             models.Index(fields=['tenant', 'colaborador', '-criado_em'],

@@ -205,7 +205,7 @@
   <div id="aba-historico" class="tabs-panel">
     <p class="field-helper" style="margin: var(--sp-4) 0;">
       Toda mudança de fase entra aqui, com quem fez, por onde é o que mudou.
-      E desta trilha que sai o tempo medio de cada etapa do ciclo.
+      É desta trilha que sai o tempo médio de cada etapa do ciclo.
     </p>
     <div class="table-wrap">
       <table class="table">
@@ -223,8 +223,8 @@
         {% for entrada in historico %}
           <tr>
             <td>{{ entrada.criado_em|date:"d/m/Y H:i" }}</td>
-            <td>{% if entrada.de %}{{ entrada.de }}{% else %}<em>entrada</em>{% endif %}</td>
-            <td><strong>{{ entrada.para }}</strong></td>
+            <td>{% if entrada.de %}{{ entrada.de_rotulo }}{% else %}<em>entrada</em>{% endif %}</td>
+            <td><strong>{{ entrada.para_rotulo }}</strong></td>
             <td>
               {{ entrada.motivo|default:"—" }}
               {% if entrada.dados.calculados %}
