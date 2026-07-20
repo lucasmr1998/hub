@@ -229,6 +229,59 @@ EVENTOS = {
             _c('var.telefone', 'Telefone'),
         ],
     },
+    # ---- People (RH) ----
+    # Chave com namespace por ponto, diferente do resto do catalogo: People e
+    # modulo comercializavel e vai acumular dezenas de eventos, que sem prefixo
+    # se misturariam com os do comercial no editor.
+    #
+    # `apps.people.telemetria` emite 12 eventos. So os 4 abaixo entram no
+    # catalogo: sao os que um cliente automatizaria hoje (avisar gestor, abrir
+    # tarefa de admissao, agendar avaliacao, revogar acesso). Emitir evento que
+    # ninguem escuta e inofensivo, poluir o editor com 12 itens mortos nao e.
+    # Os outros entram quando as fases correspondentes forem construidas.
+    'people.colaborador.criado': {
+        'label': 'Colaborador cadastrado', 'grupo': 'People',
+        'descricao': 'Uma pessoa entrou no cadastro, pelo RH ou pelo link publico.',
+        'subcampos': [
+            _c('var.colaborador_nome', 'Nome'),
+            _c('var.telefone', 'Telefone'),
+            _c('var.unidade_nome', 'Unidade'),
+            _c('var.cargo', 'Cargo'),
+            _c('var.ponto_entrada', 'Ponto de entrada'),
+            _c('var.origem_cadastro', 'Origem do cadastro'),
+            _c('var.pendente_revisao', 'Pendente de revisao'),
+        ],
+    },
+    'people.colaborador.admissao_iniciada': {
+        'label': 'Admissao iniciada', 'grupo': 'People',
+        'descricao': 'O colaborador entrou no processo admissional.',
+        'subcampos': [
+            _c('var.colaborador_nome', 'Nome'),
+            _c('var.telefone', 'Telefone'),
+            _c('var.unidade_nome', 'Unidade'),
+            _c('var.cargo', 'Cargo'),
+        ],
+    },
+    'people.colaborador.experiencia_iniciada': {
+        'label': 'Periodo de experiencia iniciado', 'grupo': 'People',
+        'descricao': 'O colaborador comecou o periodo de experiencia.',
+        'subcampos': [
+            _c('var.colaborador_nome', 'Nome'),
+            _c('var.telefone', 'Telefone'),
+            _c('var.unidade_nome', 'Unidade'),
+            _c('var.cargo', 'Cargo'),
+        ],
+    },
+    'people.colaborador.desligado': {
+        'label': 'Colaborador desligado', 'grupo': 'People',
+        'descricao': 'O desligamento foi concluido.',
+        'subcampos': [
+            _c('var.colaborador_nome', 'Nome'),
+            _c('var.telefone', 'Telefone'),
+            _c('var.unidade_nome', 'Unidade'),
+            _c('var.situacao_de', 'Situacao anterior'),
+        ],
+    },
 }
 
 

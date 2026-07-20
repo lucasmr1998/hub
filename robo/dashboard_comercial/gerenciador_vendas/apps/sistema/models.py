@@ -667,6 +667,7 @@ class LogSistema(models.Model):
         ('integracao', 'Integracoes'),
         ('sistema', 'Sistema'),
         ('workspace', 'Workspace'),
+        ('people', 'People (RH)'),
     ]
 
     tenant = models.ForeignKey(

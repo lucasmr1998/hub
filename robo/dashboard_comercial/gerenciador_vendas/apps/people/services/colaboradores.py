@@ -20,7 +20,7 @@ from datetime import timedelta
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.people import estados
+from apps.people import estados, telemetria
 from apps.people.excecoes import CampoObrigatorioFaltando, TransicaoInvalida
 from apps.people.models import Colaborador, HistoricoSituacao
 from apps.people.services.configuracao import config_efetiva
@@ -197,6 +197,10 @@ def registrar_colaborador(tenant, unidade, dados, *, origem,
     # (familia, telefone da loja) e homonimo com mesma data de nascimento
     # existe. Quem decide e gente.
     if candidatos:
+        telemetria.emitir_duplicata_bloqueada(
+            tenant, motivo='possivel_duplicata', candidatos=candidatos,
+            request=request, extras={'origem_cadastro': origem},
+        )
         return ResultadoCadastro(
             colaborador=None, acao='conflito', conflitos=candidatos,
             motivo_conflito='possivel_duplicata',
@@ -239,6 +243,11 @@ def _criar(tenant, unidade, limpo, cpf_ok, situacao_inicial, origem, usuario, re
         origem=_origem_transicao(origem),
         dados={'ponto_entrada': ponto_entrada, 'origem_cadastro': origem},
     )
+    telemetria.emitir(
+        telemetria.EVENTO_CRIADO, colaborador, request=request, usuario=usuario,
+        extras={'pendente_revisao': colaborador.pendente_revisao,
+                'cpf_valido': colaborador.cpf_valido},
+    )
     return ResultadoCadastro(colaborador=colaborador, acao='criado')
 
 
@@ -254,25 +263,37 @@ def _reaproveitar(alvo, limpo, unidade, situacao_inicial, origem, usuario,
     e_publico = origem == 'link_publico'
 
     if alvo.situacao == estados.SITUACAO_DESLIGADO:
-        if not alvo.elegivel_recontratacao:
-            return ResultadoCadastro(
-                colaborador=None, acao='conflito',
-                conflitos=[Candidato(alvo, 'forte', 'cpf')],
-                motivo_conflito='nao_elegivel_recontratacao',
-            )
-        if not permitir_reativacao:
-            return ResultadoCadastro(
-                colaborador=None, acao='conflito',
-                conflitos=[Candidato(alvo, 'forte', 'cpf')],
-                motivo_conflito='reativacao_nao_permitida',
-            )
+        for motivo_recusa, condicao in (
+            ('nao_elegivel_recontratacao', not alvo.elegivel_recontratacao),
+            ('reativacao_nao_permitida', not permitir_reativacao),
+        ):
+            if condicao:
+                candidatos = [Candidato(alvo, 'forte', 'cpf')]
+                telemetria.emitir_duplicata_bloqueada(
+                    alvo.tenant, motivo=motivo_recusa, candidatos=candidatos,
+                    request=request, extras={'origem_cadastro': origem},
+                )
+                return ResultadoCadastro(
+                    colaborador=None, acao='conflito', conflitos=candidatos,
+                    motivo_conflito=motivo_recusa,
+                )
 
         _completar_lacunas(alvo, limpo, e_publico)
+        unidade_anterior = alvo.unidade_id
         alvo.unidade = unidade
         alvo.save()
+        # A transicao nao emite sozinha: readmissao e UM acontecimento, e dois
+        # eventos pro mesmo ato poluiriam tanto o log quanto o editor de fluxos.
         atualizado = mover_situacao(
             alvo, situacao_inicial, motivo='Readmissao',
             usuario=usuario, request=request, origem=_origem_transicao(origem),
+            emitir_telemetria=False,
+        )
+        telemetria.emitir(
+            telemetria.EVENTO_READMITIDO, atualizado, request=request, usuario=usuario,
+            extras={'situacao_de': estados.SITUACAO_DESLIGADO,
+                    'situacao_para': situacao_inicial,
+                    'mudou_de_unidade': unidade_anterior != unidade.pk},
         )
         return ResultadoCadastro(colaborador=atualizado, acao='reativado')
 
@@ -281,6 +302,10 @@ def _reaproveitar(alvo, limpo, unidade, situacao_inicial, origem, usuario,
     # pode acontecer como efeito colateral de alguem reenviar um formulario.
     _completar_lacunas(alvo, limpo, e_publico)
     alvo.save()
+    telemetria.emitir(
+        telemetria.EVENTO_REAPROVEITADO, alvo, request=request, usuario=usuario,
+        extras={'origem_cadastro': origem},
+    )
     return ResultadoCadastro(colaborador=alvo, acao='reaproveitado')
 
 
@@ -320,7 +345,7 @@ def _origem_transicao(origem_cadastro):
 
 @transaction.atomic
 def mover_situacao(colaborador, para, *, motivo='', usuario=None, request=None,
-                   origem='painel', dados=None):
+                   origem='painel', dados=None, emitir_telemetria=True):
     """
     A unica forma de mudar de fase.
 
@@ -329,6 +354,10 @@ def mover_situacao(colaborador, para, *, motivo='', usuario=None, request=None,
 
     Trava a linha com select_for_update porque dois gestores arrastando o mesmo
     card no kanban e cenario real, nao hipotese.
+
+    `emitir_telemetria=False` serve pra quando a transicao e parte de um
+    acontecimento maior que ja tem evento proprio (readmissao). O historico e
+    gravado de qualquer jeito: ele e a fonte primaria e nao se desliga.
     """
     dados = dados or {}
 
@@ -390,6 +419,15 @@ def mover_situacao(colaborador, para, *, motivo='', usuario=None, request=None,
     for campo in travado._meta.concrete_fields:
         setattr(colaborador, campo.attname, getattr(travado, campo.attname))
     colaborador._situacao_carregada = travado.situacao
+
+    if emitir_telemetria:
+        telemetria.emitir(
+            telemetria.evento_da_transicao(de, para), travado,
+            mensagem=motivo or None, request=request, usuario=usuario,
+            extras={'situacao_de': de, 'situacao_para': para,
+                    'origem_transicao': origem, **snapshot},
+        )
+
     return travado
 
 
