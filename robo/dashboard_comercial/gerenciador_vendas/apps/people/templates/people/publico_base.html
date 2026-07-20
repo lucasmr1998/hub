@@ -1,0 +1,50 @@
+{% extends "layouts/base.html" %}
+
+{% comment %}
+Base das paginas publicas do People.
+
+Nao estende layout_app: nao ha sidebar, topbar nem usuario. Quem abre isto e o
+colaborador, no celular, provavelmente na porta da loja e no 4G. Por isso:
+coluna unica, alvo de toque grande, e nada de JS necessario pra enviar.
+{% endcomment %}
+
+{# O base.html nao traz os componentes do DS por padrao. Sem isto, field-input,
+   btn e badge ficariam sem estilo nenhum. #}
+{% block ds_styles %}{% include "partials/_components_styles.html" %}{% endblock %}
+
+{% block extra_head %}
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    .pub-wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: var(--sp-5) var(--sp-4) var(--sp-6);
+    }
+    .pub-header { margin-bottom: var(--sp-5); }
+    .pub-titulo {
+      margin: 0 0 var(--sp-2);
+      font-size: var(--fs-xl);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text);
+    }
+    .pub-sub { margin: 0; color: var(--color-text-muted); font-size: var(--fs-sm); }
+    .pub-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--sp-5) var(--sp-4);
+    }
+    /* Alvo de toque confortavel no celular. */
+    .pub-wrap .field-input { min-height: 46px; font-size: 16px; }
+    .pub-wrap .btn { width: 100%; min-height: 48px; font-size: var(--fs-base); }
+    .pub-ok { text-align: center; padding: var(--sp-6) var(--sp-4); }
+    .pub-ok-icone { font-size: 48px; color: var(--color-success); }
+  </style>
+{% endblock %}
+
+{% block body %}
+  <div class="pub-wrap">
+    {% block conteudo %}{% endblock %}
+  </div>
+{% endblock %}

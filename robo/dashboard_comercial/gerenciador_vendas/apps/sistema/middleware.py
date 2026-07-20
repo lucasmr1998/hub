@@ -27,6 +27,9 @@ _EXEMPT_PATTERNS = [
     re.compile(r"^ia/validar$"),
     re.compile(r"^ia/recontato$"),
     re.compile(r"^cadastro/?$"),
+    # Auto cadastro do People: o colaborador de loja nao tem login, recebe o
+    # link por WhatsApp e preenche no celular. Autenticado pelo token na URL.
+    re.compile(r"^people/publico/"),
     re.compile(r"^login/?$"),
     re.compile(r"^logout/?$"),
     re.compile(r"^$"),
@@ -146,6 +149,9 @@ _MODULO_MAP = [
 _PERM_SKIP_PATHS = (
     '/login/', '/logout/', '/admin/', '/aurora-admin/', '/static/', '/media/',
     '/api/', '/setup/', '/cadastro/',
+    # Auto cadastro do People: sem usuario, entao nao ha permissao a checar.
+    # Sem isto o _MODULO_MAP casaria '/people/' por substring e devolveria 403.
+    '/people/publico/',
 )
 
 

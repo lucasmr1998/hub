@@ -249,6 +249,9 @@ Uso em template que extende layout_app:
         <a href="{% url 'people:unidades_lista' %}" class="app-subnav-item {% if 'unidade' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-shop"></i><span>Unidades</span>
         </a>
+        <a href="{% url 'people:cargos_lista' %}" class="app-subnav-item {% if 'cargo' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-briefcase"></i><span>Cargos</span>
+        </a>
       </nav>
 
     {% comment %}

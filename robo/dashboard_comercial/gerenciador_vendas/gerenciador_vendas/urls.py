@@ -157,6 +157,9 @@ urlpatterns = [
     path('workspace/', include('apps.workspace.urls')),
 
     # === People (gestão de pessoas: colaborador, unidades, ciclo de vida) ===
+    # A rota pública vem ANTES: o include de 'people/' captura tudo sob o
+    # prefixo, e o auto cadastro precisa ficar fora do gate de permissão.
+    path('people/publico/', include('apps.people.urls_publico')),
     path('people/', include('apps.people.urls')),
 
     # === Media files (uploads) ===

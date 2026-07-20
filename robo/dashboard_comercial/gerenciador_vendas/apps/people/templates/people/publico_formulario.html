@@ -1,0 +1,55 @@
+{% extends "people/publico_base.html" %}
+
+{% block title %}Cadastro, {{ unidade.nome }}{% endblock %}
+
+{% block conteudo %}
+  <div class="pub-header">
+    <h1 class="pub-titulo">Cadastro de colaborador</h1>
+    <p class="pub-sub">{{ unidade.nome }}</p>
+  </div>
+
+  <div class="pub-card">
+    {% if erros.geral %}
+      <p class="field-error" style="margin-bottom: var(--sp-4);">
+        <i class="bi bi-exclamation-circle"></i> {{ erros.geral }}
+      </p>
+    {% endif %}
+
+    <form method="post" action="{% url 'people_publico:enviar' link.token %}" class="form-stack">
+      {% csrf_token %}
+
+      {% comment %}
+        Honeypot: humano nao ve, robo preenche. Escondido por CSS e nao por
+        type=hidden, porque preenchedor automatico costuma ignorar hidden.
+      {% endcomment %}
+      <div style="position:absolute; left:-9999px;" aria-hidden="true">
+        <label for="sobrenome_confirmacao">Nao preencha este campo</label>
+        <input type="text" id="sobrenome_confirmacao" name="sobrenome_confirmacao"
+               tabindex="-1" autocomplete="off">
+      </div>
+
+      {% for campo in campos %}
+        {% if campo.opcoes %}
+          {% include "components/select.html" with name=campo.nome label=campo.rotulo options=campo.opcoes value=campo.valor required=campo.obrigatorio error=campo.erro blank_label="Selecione" %}
+        {% else %}
+          {% include "components/input.html" with name=campo.nome label=campo.rotulo type=campo.tipo value=campo.valor required=campo.obrigatorio error=campo.erro %}
+        {% endif %}
+      {% endfor %}
+
+      <div style="margin-top: var(--sp-3);">
+        {% include "components/checkbox.html" with name="consentimento_lgpd" label="Autorizo o tratamento dos meus dados pessoais" helper=config.texto_consentimento_lgpd %}
+        {% if erros.consentimento_lgpd %}
+          <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ erros.consentimento_lgpd }}</p>
+        {% endif %}
+      </div>
+
+      <div class="form-actions" style="margin-top: var(--sp-4);">
+        <button type="submit" class="btn btn-primary">Enviar cadastro</button>
+      </div>
+    </form>
+  </div>
+
+  <p class="pub-sub" style="margin-top: var(--sp-4); text-align: center;">
+    Seus dados vao direto pro RH da unidade. Em caso de duvida, procure o gerente da loja.
+  </p>
+{% endblock %}

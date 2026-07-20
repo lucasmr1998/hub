@@ -1,0 +1,49 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Cargos</p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+      </div>
+      <a href="{% url 'people:cargos_lista' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  <form method="post" class="form-stack" style="max-width: 680px;">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
+    {% endif %}
+
+    {% include "components/input.html" with name="nome" label="Nome do cargo" value=form.nome.value required=True error=form.nome.errors.0 placeholder="Ex: Atendente" %}
+
+    <div class="field">
+      <label class="field-label" for="descricao">Descricao do cargo</label>
+      <div class="field-input-wrap">
+        <textarea class="field-input" id="descricao" name="descricao" rows="5"
+                  placeholder="Responsabilidades. Aparece na abertura de vaga.">{{ form.descricao.value|default:"" }}</textarea>
+      </div>
+      {% if form.descricao.errors %}
+        <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.descricao.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    {% include "components/input.html" with name="ordem" label="Ordem" type="number" value=form.ordem.value|default:0 error=form.ordem.errors.0 helper="Controla a posicao na lista de escolha." %}
+
+    {% include "components/checkbox.html" with name="ativo" label="Cargo ativo" checked=form.ativo.value helper="Cargo inativo some das listas de escolha. Quem ja esta nele continua, e o historico e preservado. Cargo nao se apaga." %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+      <a href="{% url 'people:cargos_lista' %}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

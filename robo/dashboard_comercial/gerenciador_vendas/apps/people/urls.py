@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.people.views import board, colaboradores, links, unidades
+from apps.people.views import board, cargos, colaboradores, links, unidades
 
 app_name = 'people'
 
@@ -19,6 +19,13 @@ urlpatterns = [
     path('links/<int:pk>/rotacionar/', links.rotacionar, name='link_rotacionar'),
     path('links/<int:pk>/alternar-ativo/', links.alternar_ativo, name='link_alternar_ativo'),
     path('links/<int:pk>/qr.svg', links.qr, name='link_qr'),
+
+    # Cargos
+    path('cargos/', cargos.lista, name='cargos_lista'),
+    path('cargos/novo/', cargos.criar, name='cargo_criar'),
+    path('cargos/<int:pk>/', cargos.editar, name='cargo_editar'),
+    path('cargos/<int:pk>/alternar-ativo/', cargos.alternar_ativo,
+         name='cargo_alternar_ativo'),
 
     # Unidades (lojas e filiais)
     path('unidades/', unidades.lista, name='unidades_lista'),
