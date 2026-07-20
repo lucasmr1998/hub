@@ -576,3 +576,23 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy pendente de confirmacao.
 
 ---
+
+## 2026-07-20 — Busca no select de plano do "Completar dados"
+
+- **Pedido do Lucas:** "precisa ter um campo de busca aqui" (select de plano do modal
+  de completar dados). Sao 48 planos ativos e a lista rolava as cegas.
+- **Feito:** campo de texto acima do select + contador ("2 de 6"). Filtra por nome,
+  case insensitive.
+- **Decisao que importa:** a busca filtra `_ccPlanosValidos` (a lista JA recortada
+  pelo CEP consultado), nunca `_ccTodosPlanos`. Buscar no catalogo inteiro traria de
+  volta plano que a regiao nao vende, desfazendo em silencio a protecao do filtro
+  por CEP.
+- **Protecao:** o plano JA ESCOLHIDO permanece na lista mesmo quando nao casa com a
+  busca. Sem isso, digitar um termo qualquer apagaria a escolha do vendedor sem ele
+  perceber (o select ficaria vazio e o campo obrigatorio voltaria a pendente).
+- **Validado no browser** com 6 planos injetados: busca por 600/MIG/CONNECTIONS/salto
+  filtra certo, contador acompanha, e a escolha sobrevive a uma busca que nao casa.
+- **Limitacao conhecida:** busca por nome, nao por preco formatado ("99,9" da 0).
+- **Status:** completed (codigo, dev). Deploy pendente.
+
+---

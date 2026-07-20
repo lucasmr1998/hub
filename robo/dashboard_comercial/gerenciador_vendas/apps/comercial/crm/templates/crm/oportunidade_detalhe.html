@@ -2717,14 +2717,26 @@ async function abrirCadastroCompleto() {
 }
 
 let _ccTodosPlanos = [];  // catalogo completo; o filtro por CEP substitui as opcoes
+// Lista VALIDA no momento (ja recortada por CEP, se houve consulta). A busca
+// por texto filtra a partir daqui, nunca do catalogo inteiro: senao o campo de
+// busca traria de volta plano que nao e vendido naquela regiao.
+let _ccPlanosValidos = [];
+let _ccPlaceholderPlano = '— escolha o plano —';
+
+function _ccOptionPlano(p) {
+  const preco = p.valor ? ` — R$ ${Number(p.valor).toFixed(2).replace('.', ',')}` : '';
+  return `<option value="${p.id_hubsoft}">${p.nome}${preco}</option>`;
+}
 
 function _ccRenderPlanos(planos, placeholder) {
   const selPlano = _ccElem('cc-plano');
   if (!selPlano) return;
   const atual = selPlano.value;
-  selPlano.innerHTML = `<option value="">${placeholder}</option>` +
-    planos.map(p => `<option value="${p.id_hubsoft}">${p.nome}${p.valor ? ` — R$ ${Number(p.valor).toFixed(2).replace('.',',')}` : ''}</option>`).join('');
-  if (atual && planos.some(p => String(p.id_hubsoft) === String(atual))) {
+  _ccPlanosValidos = planos || [];
+  if (placeholder) _ccPlaceholderPlano = placeholder;
+  selPlano.innerHTML = `<option value="">${_ccPlaceholderPlano}</option>` +
+    _ccPlanosValidos.map(_ccOptionPlano).join('');
+  if (atual && _ccPlanosValidos.some(p => String(p.id_hubsoft) === String(atual))) {
     selPlano.value = atual;
   } else if (atual) {
     selPlano.value = '';
@@ -2733,6 +2745,37 @@ function _ccRenderPlanos(planos, placeholder) {
           'warning');
     _ccAtualizarStatus();
   }
+  // Lista nova = busca antiga nao vale mais
+  const busca = _ccElem('cc-plano-busca');
+  if (busca) busca.value = '';
+  _ccAtualizarContadorPlanos(_ccPlanosValidos.length, _ccPlanosValidos.length);
+}
+
+function _ccAtualizarContadorPlanos(mostrando, total) {
+  const el = _ccElem('cc-plano-contador');
+  if (!el) return;
+  el.textContent = (mostrando === total) ? `${total} planos` : `${mostrando} de ${total}`;
+}
+
+function _ccBuscarPlano() {
+  const sel = _ccElem('cc-plano');
+  const campo = _ccElem('cc-plano-busca');
+  if (!sel || !campo) return;
+  const termo = (campo.value || '').trim().toLowerCase();
+  const selecionado = sel.value;
+  const filtrados = termo
+    ? _ccPlanosValidos.filter(p => `${p.nome} ${p.valor || ''}`.toLowerCase().includes(termo))
+    : _ccPlanosValidos;
+  // O plano JA ESCOLHIDO fica na lista mesmo que nao case com a busca: sumir
+  // com ele apagaria a escolha do usuario sem ele perceber.
+  const lista = filtrados.slice();
+  if (selecionado && !lista.some(p => String(p.id_hubsoft) === String(selecionado))) {
+    const esse = _ccPlanosValidos.find(p => String(p.id_hubsoft) === String(selecionado));
+    if (esse) lista.unshift(esse);
+  }
+  sel.innerHTML = `<option value="">${_ccPlaceholderPlano}</option>` + lista.map(_ccOptionPlano).join('');
+  sel.value = selecionado || '';
+  _ccAtualizarContadorPlanos(filtrados.length, _ccPlanosValidos.length);
 }
 
 async function _ccFiltrarPlanosPorCep() {
@@ -2943,7 +2986,17 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="cc-section">
         <h4>Comercial</h4>
         <div class="cc-grid">
-          <label class="cc-field"><span>Plano *</span>
+          <label class="cc-field"><span>Plano *
+              <small id="cc-plano-contador" style="font-weight:400;color:var(--color-text-muted);"></small>
+            </span>
+            {% comment %}
+              Campo de busca: sao 48 planos ativos e a lista rolava as cegas.
+              Filtra so o que ja e valido pro CEP consultado, nunca o catalogo
+              inteiro (senao traria de volta plano que a regiao nao vende).
+            {% endcomment %}
+            <input id="cc-plano-busca" type="text" placeholder="Buscar plano (ex: 600, MIG, Salto)..."
+                   oninput="_ccBuscarPlano()" autocomplete="off"
+                   style="margin-bottom:4px;font-size:var(--fs-sm);">
             <select id="cc-plano" onchange="_ccAtualizarStatus()">
               <option value="">— escolha o plano —</option>
             </select>
