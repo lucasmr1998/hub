@@ -21,7 +21,6 @@ etapa propria de seguranca, nao no formulario aberto de cadastro.
 CAMPOS_SISTEMA = [
     {
         'nome': 'nome_completo',
-        'label': 'Nome completo',
         'descricao': 'Nome completo do colaborador. Aparece em todo o cadastro e nos documentos.',
         'tipo': 'text',
         'rotulo_padrao': 'Nome completo',
@@ -29,14 +28,12 @@ CAMPOS_SISTEMA = [
     },
     {
         'nome': 'primeiro_nome',
-        'label': 'Nome preferido',
         'descricao': 'Como o colaborador prefere ser chamado no dia a dia.',
         'tipo': 'text',
         'rotulo_padrao': 'Primeiro nome',
     },
     {
         'nome': 'cpf',
-        'label': 'Documento fiscal pessoal',
         'descricao': 'Documento que identifica o colaborador (CPF no Brasil). '
                      'E o que impede a mesma pessoa de ser cadastrada duas vezes.',
         'tipo': 'text',
@@ -44,105 +41,127 @@ CAMPOS_SISTEMA = [
     },
     {
         'nome': 'rg',
-        'label': 'Documento de identidade',
         'descricao': 'RG ou equivalente.',
         'tipo': 'text',
         'rotulo_padrao': 'RG',
     },
     {
         'nome': 'data_nascimento',
-        'label': 'Data de nascimento',
-        'descricao': 'Usada no dedup quando nao ha documento, e no aniversario.',
+        'descricao': 'Usada no dedup quando não há documento, e no aniversário.',
         'tipo': 'date',
-        'rotulo_padrao': 'Data de Nascimento',
+        'rotulo_padrao': 'Data de nascimento',
     },
     {
         'nome': 'telefone',
-        'label': 'Celular',
         'descricao': 'Canal principal com o colaborador.',
         'tipo': 'tel',
         'rotulo_padrao': 'Celular',
     },
     {
         'nome': 'email',
-        'label': 'Email',
         'descricao': 'Email pessoal do colaborador.',
         'tipo': 'email',
         'rotulo_padrao': 'Email',
     },
     {
         'nome': 'pis',
-        'label': 'PIS',
-        'descricao': 'Numero do PIS/PASEP.',
+        'descricao': 'Número do PIS/PASEP.',
         'tipo': 'text',
         'rotulo_padrao': 'PIS',
     },
     {
         'nome': 'tipo_chave_pix',
-        'label': 'Tipo de chave Pix',
         'descricao': 'Como o colaborador recebe pagamentos avulsos.',
         'tipo': 'select',
-        'rotulo_padrao': 'Tipo de Chave Pix',
+        'rotulo_padrao': 'Tipo de chave Pix',
         'opcoes': 'TIPO_CHAVE_PIX_CHOICES',
     },
     {
         'nome': 'chave_pix',
-        'label': 'Chave Pix',
         'descricao': 'A chave em si.',
         'tipo': 'text',
         'rotulo_padrao': 'Chave Pix',
     },
     {
         'nome': 'cep',
-        'label': 'CEP',
-        'descricao': 'Codigo postal do endereco residencial.',
+        'descricao': 'Código postal do endereço residencial.',
         'tipo': 'text',
         'rotulo_padrao': 'CEP',
     },
     {
         'nome': 'rua',
-        'label': 'Rua',
-        'descricao': 'Logradouro do endereco residencial.',
+        'descricao': 'Logradouro do endereço residencial.',
         'tipo': 'text',
         'rotulo_padrao': 'Rua / Logradouro',
     },
     {
         'nome': 'numero',
-        'label': 'Numero',
-        'descricao': 'Numero do endereco.',
+        'descricao': 'Número do endereço.',
         'tipo': 'text',
-        'rotulo_padrao': 'Numero',
+        'rotulo_padrao': 'Número',
     },
     {
         'nome': 'complemento',
-        'label': 'Complemento',
-        'descricao': 'Apartamento, bloco, referencia.',
+        'descricao': 'Apartamento, bloco, referência.',
         'tipo': 'text',
         'rotulo_padrao': 'Complemento',
     },
     {
         'nome': 'bairro',
-        'label': 'Bairro',
-        'descricao': 'Bairro do endereco.',
+        'descricao': 'Bairro do endereço.',
         'tipo': 'text',
         'rotulo_padrao': 'Bairro',
     },
     {
         'nome': 'cidade',
-        'label': 'Cidade',
-        'descricao': 'Cidade do endereco.',
+        'descricao': 'Cidade do endereço.',
         'tipo': 'text',
         'rotulo_padrao': 'Cidade',
     },
     {
         'nome': 'estado',
-        'label': 'Estado',
-        'descricao': 'UF do endereco.',
+        'descricao': 'UF do endereço.',
         'tipo': 'select',
         'rotulo_padrao': 'Estado',
         'opcoes': 'UFS',
     },
 ]
+
+# Agrupamento pro formulario publico. Dezessete campos numa coluna so viram um
+# paredao no celular, e paredao no celular vira abandono. Sao as mesmas secoes
+# que o RH ja usa na ficha.
+SECOES = [
+    {
+        'chave': 'identificacao',
+        'titulo': 'Seus dados',
+        'icone': 'bi-person',
+        'campos': ['nome_completo', 'primeiro_nome', 'cpf', 'rg', 'data_nascimento', 'pis'],
+    },
+    {
+        'chave': 'contato',
+        'titulo': 'Contato',
+        'icone': 'bi-telephone',
+        'campos': ['telefone', 'email'],
+    },
+    {
+        'chave': 'endereco',
+        'titulo': 'Endereço',
+        'icone': 'bi-geo-alt',
+        'campos': ['cep', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'estado'],
+    },
+    {
+        'chave': 'pagamento',
+        'titulo': 'Pagamento',
+        'icone': 'bi-cash',
+        'campos': ['tipo_chave_pix', 'chave_pix'],
+    },
+]
+
+SECAO_DE_CAMPO = {
+    nome: secao['chave']
+    for secao in SECOES
+    for nome in secao['campos']
+}
 
 CAMPOS_POR_NOME = {campo['nome']: campo for campo in CAMPOS_SISTEMA}
 NOMES_DE_CAMPO = [campo['nome'] for campo in CAMPOS_SISTEMA]
@@ -218,4 +237,23 @@ def campos_solicitados(config):
         {**campo, **config[campo['nome']]}
         for campo in CAMPOS_SISTEMA
         if config[campo['nome']]['solicitar']
+    ]
+
+
+def agrupar_em_secoes(campos):
+    """
+    Distribui os campos solicitados nas secoes, na ordem do catalogo.
+
+    Secao sem nenhum campo solicitado nao aparece: um template curto nao deve
+    mostrar titulo de "Pagamento" com nada embaixo.
+    """
+    por_secao = {}
+    for campo in campos:
+        chave = SECAO_DE_CAMPO.get(campo['nome'], 'identificacao')
+        por_secao.setdefault(chave, []).append(campo)
+
+    return [
+        {**secao, 'itens': por_secao[secao['chave']]}
+        for secao in SECOES
+        if por_secao.get(secao['chave'])
     ]

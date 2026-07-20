@@ -35,15 +35,20 @@ UNIDADES = [
 ]
 
 # (nome, base do cpf, cargo, fase alvo, dias desde a admissao)
+#
+# As bases NAO podem ter digito repetido: CPF com os onze digitos iguais e
+# invalido por definicao, e o seed inteiro cairia na fila de revisao. Foi o que
+# aconteceu na primeira versao, e o sintoma visivel era o badge "Revisar" em
+# 100% dos cards do board.
 PESSOAS = [
-    ('Ana Beatriz Moreira',  111111111, 'Atendente',       estados.SITUACAO_CADASTRO,        None),
-    ('Bruno Carvalho Lima',  222222222, 'Atendente',       estados.SITUACAO_EM_ADMISSAO,     3),
-    ('Carla Dias Nogueira',  333333333, 'Auxiliar',        estados.SITUACAO_EM_EXPERIENCIA,  20),
-    ('Diego Ferreira Rocha', 444444444, 'Auxiliar',        estados.SITUACAO_EM_EXPERIENCIA,  50),
-    ('Elisa Gomes Tavares',  555555555, 'Subgerente',      estados.SITUACAO_EFETIVADO,       200),
-    ('Fabio Henrique Alves', 666666666, 'Gerente',         estados.SITUACAO_EFETIVADO,       400),
-    ('Gabriela Inacio Melo', 777777777, 'Atendente',       estados.SITUACAO_EM_DESLIGAMENTO, 150),
-    ('Heitor Jorge Pacheco', 888888888, 'Atendente',       estados.SITUACAO_DESLIGADO,       300),
+    ('Ana Beatriz Moreira',  529982247, 'Atendente',       estados.SITUACAO_CADASTRO,        None),
+    ('Bruno Carvalho Lima',  153509460, 'Atendente',       estados.SITUACAO_EM_ADMISSAO,     3),
+    ('Carla Dias Nogueira',  248613579, 'Auxiliar',        estados.SITUACAO_EM_EXPERIENCIA,  20),
+    ('Diego Ferreira Rocha', 371924685, 'Auxiliar',        estados.SITUACAO_EM_EXPERIENCIA,  50),
+    ('Elisa Gomes Tavares',  486207913, 'Subgerente',      estados.SITUACAO_EFETIVADO,       200),
+    ('Fabio Henrique Alves', 592738164, 'Gerente',         estados.SITUACAO_EFETIVADO,       400),
+    ('Gabriela Inacio Melo', 617485203, 'Atendente',       estados.SITUACAO_EM_DESLIGAMENTO, 150),
+    ('Heitor Jorge Pacheco', 734196852, 'Atendente',       estados.SITUACAO_DESLIGADO,       300),
 ]
 
 
@@ -181,13 +186,22 @@ class Command(BaseCommand):
                               'motivo_desligamento': 'pedido'})
 
     def _demonstrar_dedup(self, tenant, unidade):
-        """Tenta duplicar de proposito. O que aparece aqui e o dedup trabalhando."""
+        """
+        Tenta duplicar de proposito. O que aparece aqui e o dedup trabalhando.
+
+        As referencias saem de PESSOAS, nunca de valor repetido a mao: quando as
+        bases de CPF mudaram, a versao hardcoded parou de casar com ninguem e
+        passou a CRIAR tres pessoas em vez de provar o dedup, silenciosamente.
+        """
+        primeira = PESSOAS[0]
+        desligado = next(p for p in PESSOAS if p[3] == estados.SITUACAO_DESLIGADO)
+
         self.stdout.write('')
         self.stdout.write('Dedup em acao (tentativas propositais):')
 
         mesma = registrar_colaborador(
             tenant, unidade,
-            {'nome_completo': 'Ana B. Moreira', 'cpf': cpf_ficticio(111111111),
+            {'nome_completo': 'Ana B. Moreira', 'cpf': cpf_ficticio(primeira[1]),
              'email': 'ana.nova@exemplo.invalido'},
             origem='link_publico',
         )
@@ -197,7 +211,8 @@ class Command(BaseCommand):
 
         telefone = registrar_colaborador(
             tenant, unidade,
-            {'nome_completo': 'Pessoa Diferente', 'telefone': '86911111111'},
+            {'nome_completo': 'Pessoa Diferente',
+             'telefone': f'869{primeira[1] % 100000000:08d}'},
             origem='link_publico',
         )
         self.stdout.write(
@@ -206,7 +221,7 @@ class Command(BaseCommand):
 
         readmitido = registrar_colaborador(
             tenant, unidade,
-            {'nome_completo': 'Heitor Jorge Pacheco', 'cpf': cpf_ficticio(888888888)},
+            {'nome_completo': desligado[0], 'cpf': cpf_ficticio(desligado[1])},
             origem='rh',
         )
         self.stdout.write(

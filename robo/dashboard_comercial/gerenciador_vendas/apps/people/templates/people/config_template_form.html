@@ -8,10 +8,10 @@
   <div class="page-header">
     <div class="page-header-top">
       <div>
-        <p class="page-eyebrow">People · Formularios</p>
+        <p class="page-eyebrow">People · Formulários</p>
         <h1 class="page-title">{{ pagetitle }}</h1>
         <p class="page-subtitle">
-          Por campo: se e solicitado, se e obrigatorio e com que rotulo aparece
+          Por campo: se é solicitado, se e obrigatório e com que rótulo aparece
           pro colaborador.
         </p>
       </div>
@@ -25,8 +25,8 @@
     {% csrf_token %}
 
     <div class="form-grid-2">
-      {% include "components/input.html" with name="nome" label="Nome do formulario" value=template.nome required=True placeholder="Ex: Cadastro operacional" helper="Aparece na lista e ao escolher o formulario de um link." %}
-      {% include "components/input.html" with name="descricao" label="Descricao" value=template.descricao %}
+      {% include "components/input.html" with name="nome" label="Nome do formulário" value=template.nome required=True placeholder="Ex: Cadastro operacional" helper="Aparece na lista e ao escolher o formulário de um link." %}
+      {% include "components/input.html" with name="descricao" label="Descrição" value=template.descricao %}
     </div>
 
     <h2 class="form-section-title">Campos do sistema</h2>
@@ -47,18 +47,18 @@
 
             <div class="form-grid-3">
               {% include "components/checkbox.html" with name="solicitar_"|add:campo.nome label="Solicitar" checked=campo.solicitar disabled=campo.travado %}
-              {% include "components/checkbox.html" with name="obrigatorio_"|add:campo.nome label="Obrigatorio" checked=campo.obrigatorio disabled=campo.travado %}
-              {% include "components/input.html" with name="rotulo_"|add:campo.nome label="Rotulo" value=campo.rotulo placeholder=campo.rotulo_padrao %}
+              {% include "components/checkbox.html" with name="obrigatorio_"|add:campo.nome label="Obrigatório" checked=campo.obrigatorio disabled=campo.travado %}
+              {% include "components/input.html" with name="rotulo_"|add:campo.nome label="Rótulo" value=campo.rotulo placeholder=campo.rotulo_padrao %}
             </div>
           </div>
         </div>
       {% endfor %}
     </div>
 
-    {% include "components/checkbox.html" with name="ativo" label="Formulario ativo" checked=template.ativo|default_if_none:True %}
+    {% include "components/checkbox.html" with name="ativo" label="Formulário ativo" checked=template.ativo|default_if_none:True %}
 
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar formulario</button>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar formulário</button>
       <a href="{% url 'people:config_templates' %}" class="btn btn-ghost">Cancelar</a>
     </div>
   </form>

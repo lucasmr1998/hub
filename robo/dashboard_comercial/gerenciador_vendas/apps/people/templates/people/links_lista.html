@@ -11,8 +11,8 @@
         <p class="page-eyebrow">People</p>
         <h1 class="page-title">Cadastro via link</h1>
         <p class="page-subtitle">
-          Envie um destes links para o colaborador preencher o proprio cadastro
-          pelo celular. Uma loja pode ter varios: um por campanha, por turno ou
+          Envie um destes links para o colaborador preencher o próprio cadastro
+          pelo celular. Uma loja pode ter vários: um por campanha, por turno ou
           por recrutador.
         </p>
       </div>
@@ -36,12 +36,13 @@
   </form>
 
   {% if links %}
-    <table class="entity-table">
+    <div class="table-wrap">
+      <table class="table">
       <thead>
         <tr>
           <th>Loja</th>
           <th>Nome</th>
-          <th>Formulario</th>
+          <th>Formulário</th>
           <th>Criado</th>
           <th>Status</th>
           <th>Cadastros</th>
@@ -58,7 +59,7 @@
               <input class="field-input" id="url-{{ item.link.pk }}" value="{{ item.url }}"
                      readonly onclick="this.select()" style="max-width: 340px; margin-top: 4px;">
             </td>
-            <td>{{ item.link.template.nome|default:"Padrao" }}</td>
+            <td>{{ item.link.template.nome|default:"Padrão" }}</td>
             <td>{{ item.link.criado_em|date:"d/m/y" }}</td>
             <td>
               {% if item.link.esta_valido %}
@@ -82,7 +83,7 @@
                 </a>
                 <form method="post" action="{% url 'people:link_rotacionar' item.link.pk %}"
                       style="display:inline;"
-                      onsubmit="return confirm('O link atual para de funcionar agora. Quem tiver o QR antigo nao vai mais conseguir se cadastrar. Continuar?');">
+                      onsubmit="return confirm('O link atual para de funcionar agora. Quem tiver o QR antigo não vai mais conseguir se cadastrar. Continuar?');">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-ghost btn-sm" title="Substituir por um novo">
                     <i class="bi bi-arrow-repeat"></i>
@@ -101,20 +102,22 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
+    </div>
   {% else %}
-    {% include "components/empty_state.html" with icon="bi-link-45deg" text="Nenhum link de cadastro" subtext="Crie um link por loja e envie pro colaborador preencher o proprio cadastro." %}
+    {% include "components/empty_state.html" with icon="bi-link-45deg" text="Nenhum link de cadastro" subtext="Crie um link por loja e envie pro colaborador preencher o próprio cadastro." %}
   {% endif %}
 
   {% if ultimas %}
-    <h2 class="form-section-title">Ultimos envios</h2>
+    <h2 class="form-section-title">Últimos envios</h2>
     <p class="field-helper">
-      Serve pra responder "por que o cadastro do fulano nao apareceu". Recusa em
-      volume costuma ser formulario confuso ou link vazado.
+      Serve pra responder "por que o cadastro do fulano não apareceu". Recusa em
+      volume costuma ser formulário confuso ou link vazado.
     </p>
-    <table class="entity-table">
+    <div class="table-wrap">
+      <table class="table">
       <thead>
-        <tr><th>Quando</th><th>Loja</th><th>Resultado</th><th>Pessoa</th><th>Observacao</th></tr>
+        <tr><th>Quando</th><th>Loja</th><th>Resultado</th><th>Pessoa</th><th>Observação</th></tr>
       </thead>
       <tbody>
         {% for envio in ultimas %}
@@ -139,7 +142,8 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
+    </div>
   {% endif %}
 
   {% if pode_gerir %}
@@ -156,8 +160,8 @@
           <div class="modal-body">
             <div class="form-stack">
               {% include "components/select.html" with name="unidade" label="Loja" options=unidades_opcoes required=True blank_label="Selecione a loja" %}
-              {% include "components/input.html" with name="nome" label="Nome do link" placeholder="Ex: Mutirao de julho" helper="So pra voce distinguir os links da mesma loja." %}
-              {% include "components/select.html" with name="template" label="Formulario" options=templates_opcoes blank_label="Formulario padrao" helper="Define quais campos o colaborador preenche." %}
+              {% include "components/input.html" with name="nome" label="Nome do link" placeholder="Ex: Mutirão de julho" helper="Só pra você distinguir os links da mesma loja." %}
+              {% include "components/select.html" with name="template" label="Formulário" options=templates_opcoes blank_label="Formulário padrão" helper="Define quais campos o colaborador preenche." %}
             </div>
           </div>
           <div class="modal-footer">
@@ -175,8 +179,8 @@
       filtroLinks.addEventListener('change', function () { filtroLinks.form.submit(); });
     }
 
-    // Copiar link. Fallback pra select quando a Clipboard API nao esta
-    // disponivel (http sem localhost, navegador antigo).
+    // Copiar link. Fallback pra select quando a Clipboard API não está
+    // disponível (http sem localhost, navegador antigo).
     document.querySelectorAll('[data-copiar]').forEach(function (botao) {
       botao.addEventListener('click', function () {
         const campo = document.getElementById(botao.dataset.copiar);

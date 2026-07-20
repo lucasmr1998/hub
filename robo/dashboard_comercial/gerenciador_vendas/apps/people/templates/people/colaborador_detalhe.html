@@ -26,14 +26,14 @@
     <div class="section-card section-card-warning" style="margin-bottom: var(--sp-4);">
       <div class="section-card-body" style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);">
         <div>
-          <strong>Cadastro pendente de revisao.</strong>
+          <strong>Cadastro pendente de revisão.</strong>
           <p class="field-helper" style="margin: 2px 0 0;">
             {% if not colaborador.cpf %}
-              Falta o CPF, que e o que impede a mesma pessoa de ser cadastrada duas vezes.
+              Falta o CPF, que é o que impede a mesma pessoa de ser cadastrada duas vezes.
             {% elif not colaborador.cpf_valido %}
-              O CPF informado nao passa na conferencia do digito verificador.
+              O CPF informado não passa na conferência do dígito verificador.
             {% else %}
-              Houve suspeita de duplicata que ninguem resolveu.
+              Houve suspeita de duplicata que ninguém resolveu.
             {% endif %}
           </p>
         </div>
@@ -56,17 +56,17 @@
     <div class="form-grid-2" style="margin-top: var(--sp-4);">
       <div class="section-card">
         <div class="section-card-header">
-          <h2 class="section-card-title"><i class="bi bi-person-badge"></i> Vinculo</h2>
+          <h2 class="section-card-title"><i class="bi bi-person-badge"></i> Vínculo</h2>
         </div>
         <div class="section-card-body">
-          <dl class="form-stack">
-            <div><dt class="field-label">Situacao</dt><dd>{{ colaborador.situacao_rotulo }}</dd></div>
+          <dl class="dados-lista">
+            <div><dt class="field-label">Situação</dt><dd>{{ colaborador.situacao_rotulo }}</dd></div>
             <div><dt class="field-label">Unidade</dt><dd>{{ colaborador.unidade.nome }}</dd></div>
-            <div><dt class="field-label">Cargo</dt><dd>{{ colaborador.cargo|default:"Nao definido" }}</dd></div>
-            <div><dt class="field-label">Regime</dt><dd>{{ colaborador.get_regime_contratacao_display|default:"Nao definido" }}</dd></div>
-            <div><dt class="field-label">Admissao</dt><dd>{{ colaborador.data_admissao|default:"—" }}</dd></div>
+            <div><dt class="field-label">Cargo</dt><dd>{{ colaborador.cargo|default:"Não definido" }}</dd></div>
+            <div><dt class="field-label">Regime</dt><dd>{{ colaborador.get_regime_contratacao_display|default:"Não definido" }}</dd></div>
+            <div><dt class="field-label">Admissão</dt><dd>{{ colaborador.data_admissao|default:"—" }}</dd></div>
             <div>
-              <dt class="field-label">Fim da experiencia</dt>
+              <dt class="field-label">Fim da experiência</dt>
               <dd>
                 {{ colaborador.data_fim_experiencia|default:"—" }}
                 {% if colaborador.prorrogacoes_experiencia %}
@@ -84,23 +84,22 @@
 
       <div class="section-card">
         <div class="section-card-header">
-          <h2 class="section-card-title"><i class="bi bi-signpost-split"></i> Proximas fases</h2>
+          <h2 class="section-card-title"><i class="bi bi-signpost-split"></i> Próximas fases</h2>
         </div>
         <div class="section-card-body">
           <p class="field-helper" style="margin-bottom: var(--sp-3);">
-            A partir de <strong>{{ colaborador.situacao_rotulo }}</strong>, a maquina
-            de estados permite ir para:
+            Pode ir para:
           </p>
           <div class="kanban-card-tags">
             {% for destino in destinos %}
               {% include "components/badge.html" with variant="neutral" label=destino.rotulo %}
             {% empty %}
-              <p class="field-helper">Nenhuma. Esta e uma fase final.</p>
+              <p class="field-helper">Nenhuma. Está é uma fase final.</p>
             {% endfor %}
           </div>
           <p class="field-helper" style="margin-top: var(--sp-3);">
-            A mudanca acontece no board, arrastando o card. E la que a transicao
-            e validada e o historico e gravado.
+            A mudança acontece no board, arrastando o card. É lá que a transição
+            é validada e o histórico é gravado.
           </p>
         </div>
       </div>
@@ -111,7 +110,7 @@
         <h2 class="section-card-title"><i class="bi bi-shield-check"></i> Origem e conformidade</h2>
       </div>
       <div class="section-card-body">
-        <dl class="form-grid-3">
+        <dl class="dados-lista dados-lista-grid">
           <div><dt class="field-label">Como entrou</dt><dd>{{ colaborador.get_ponto_entrada_display }}</dd></div>
           <div><dt class="field-label">Origem do cadastro</dt><dd>{{ colaborador.get_origem_cadastro_display }}</dd></div>
           <div><dt class="field-label">Cadastrado em</dt><dd>{{ colaborador.criado_em|date:"d/m/Y H:i" }}</dd></div>
@@ -120,16 +119,16 @@
             <dd>
               {% if colaborador.consentimento_lgpd %}
                 {% include "components/badge.html" with variant="success" label="Aceito" dot=True %}
-                <span class="field-helper">{{ colaborador.consentimento_lgpd_em|date:"d/m/Y H:i" }} · versao {{ colaborador.consentimento_lgpd_versao }}</span>
+                <span class="field-helper">{{ colaborador.consentimento_lgpd_em|date:"d/m/Y H:i" }} · versão {{ colaborador.consentimento_lgpd_versao }}</span>
               {% else %}
-                {% include "components/badge.html" with variant="neutral" label="Nao aplicavel" %}
-                <span class="field-helper">Cadastro feito pelo RH, nao pelo proprio colaborador.</span>
+                {% include "components/badge.html" with variant="neutral" label="Não aplicável" %}
+                <span class="field-helper">Cadastro feito pelo RH, não pelo próprio colaborador.</span>
               {% endif %}
             </dd>
           </div>
           <div>
-            <dt class="field-label">Elegivel a recontratacao</dt>
-            <dd>{% if colaborador.elegivel_recontratacao %}Sim{% else %}Nao{% endif %}</dd>
+            <dt class="field-label">Elegível a recontratação</dt>
+            <dd>{% if colaborador.elegivel_recontratacao %}Sim{% else %}Não{% endif %}</dd>
           </div>
         </dl>
       </div>
@@ -145,7 +144,7 @@
         <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
       {% endif %}
 
-      <h2 class="form-section-title">Identificacao</h2>
+      <h2 class="form-section-title">Identificação</h2>
       <div class="form-grid-2">
         {% include "components/input.html" with name="nome_completo" label="Nome completo" value=form.nome_completo.value required=True error=form.nome_completo.errors.0 %}
         {% include "components/input.html" with name="primeiro_nome" label="Primeiro nome" value=form.primeiro_nome.value error=form.primeiro_nome.errors.0 %}
@@ -161,11 +160,11 @@
         {% include "components/input.html" with name="email" label="Email" type="email" value=form.email.value error=form.email.errors.0 %}
       </div>
 
-      <h2 class="form-section-title">Endereco</h2>
+      <h2 class="form-section-title">Endereço</h2>
       <div class="form-grid-3">
         {% include "components/input.html" with name="cep" label="CEP" value=form.cep.value error=form.cep.errors.0 %}
         {% include "components/input.html" with name="rua" label="Rua" value=form.rua.value error=form.rua.errors.0 %}
-        {% include "components/input.html" with name="numero" label="Numero" value=form.numero.value error=form.numero.errors.0 %}
+        {% include "components/input.html" with name="numero" label="Número" value=form.numero.value error=form.numero.errors.0 %}
       </div>
       <div class="form-grid-3">
         {% include "components/input.html" with name="complemento" label="Complemento" value=form.complemento.value error=form.complemento.errors.0 %}
@@ -176,39 +175,40 @@
 
       <h2 class="form-section-title">Pagamento</h2>
       <div class="form-grid-2">
-        {% include "components/select.html" with name="tipo_chave_pix" label="Tipo de chave Pix" options=pix_opcoes value=form.tipo_chave_pix.value blank_label="Nao informado" error=form.tipo_chave_pix.errors.0 %}
+        {% include "components/select.html" with name="tipo_chave_pix" label="Tipo de chave Pix" options=pix_opcoes value=form.tipo_chave_pix.value blank_label="Não informado" error=form.tipo_chave_pix.errors.0 %}
         {% include "components/input.html" with name="chave_pix" label="Chave Pix" value=form.chave_pix.value error=form.chave_pix.errors.0 %}
       </div>
 
-      <h2 class="form-section-title">Vinculo</h2>
+      <h2 class="form-section-title">Vínculo</h2>
       <p class="field-helper">
-        As datas e a fase mudam pelo board, nao aqui, pra que cada mudanca gere historico.
+        As datas e a fase mudam pelo board, não aqui, pra que cada mudança gere histórico.
       </p>
       <div class="form-grid-2">
         {% include "components/input.html" with name="cargo" label="Cargo" value=form.cargo.value error=form.cargo.errors.0 %}
-        {% include "components/select.html" with name="regime_contratacao" label="Regime de contratacao" options=regimes_opcoes value=form.regime_contratacao.value error=form.regime_contratacao.errors.0 %}
+        {% include "components/select.html" with name="regime_contratacao" label="Regime de contratação" options=regimes_opcoes value=form.regime_contratacao.value error=form.regime_contratacao.errors.0 %}
       </div>
-      {% include "components/checkbox.html" with name="elegivel_recontratacao" label="Elegivel a recontratacao" checked=form.elegivel_recontratacao.value helper="Desmarcado, o dedup recusa reativar esta pessoa se ela tentar se cadastrar de novo." %}
+      {% include "components/checkbox.html" with name="elegivel_recontratacao" label="Elegível a recontratação" checked=form.elegivel_recontratacao.value helper="Desmarcado, o dedup recusa reativar esta pessoa se ela tentar se cadastrar de novo." %}
 
-      {% include "components/input.html" with name="observacoes" label="Observacoes" value=form.observacoes.value error=form.observacoes.errors.0 %}
+      {% include "components/input.html" with name="observacoes" label="Observações" value=form.observacoes.value error=form.observacoes.errors.0 %}
 
       {% if pode_editar %}
         <div class="form-actions">
           <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
         </div>
       {% else %}
-        <p class="field-helper">Voce tem acesso de leitura nesta ficha.</p>
+        <p class="field-helper">Você tem acesso de leitura nesta ficha.</p>
       {% endif %}
     </form>
   </div>
 
-  {# ---------- Historico ---------- #}
+  {# ---------- Histórico ---------- #}
   <div id="aba-historico" class="tabs-panel">
     <p class="field-helper" style="margin: var(--sp-4) 0;">
-      Toda mudanca de fase entra aqui, com quem fez, por onde e o que mudou.
+      Toda mudança de fase entra aqui, com quem fez, por onde é o que mudou.
       E desta trilha que sai o tempo medio de cada etapa do ciclo.
     </p>
-    <table class="entity-table">
+    <div class="table-wrap">
+      <table class="table">
       <thead>
         <tr>
           <th>Quando</th>
@@ -239,6 +239,7 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
+    </div>
   </div>
 {% endblock %}

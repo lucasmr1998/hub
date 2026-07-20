@@ -3,13 +3,15 @@
 {% comment %}
 Base das paginas publicas do People.
 
-Nao estende layout_app: nao ha sidebar, topbar nem usuario. Quem abre isto e o
+Não estende layout_app: não ha sidebar, topbar nem usuário. Quem abre isto é o
 colaborador, no celular, provavelmente na porta da loja e no 4G. Por isso:
-coluna unica, alvo de toque grande, e nada de JS necessario pra enviar.
+coluna única, alvo de toque grande, e nada de JS necessario pra enviar.
 {% endcomment %}
 
-{# O base.html nao traz os componentes do DS por padrao. Sem isto, field-input,
-   btn e badge ficariam sem estilo nenhum. #}
+{% comment %}
+  O base.html não traz os componentes do DS por padrão. Sem isto, field-input,
+  btn e badge ficariam sem estilo nenhum.
+{% endcomment %}
 {% block ds_styles %}{% include "partials/_components_styles.html" %}{% endblock %}
 
 {% block extra_head %}
@@ -35,7 +37,19 @@ coluna unica, alvo de toque grande, e nada de JS necessario pra enviar.
       border-radius: var(--radius);
       padding: var(--sp-5) var(--sp-4);
     }
-    /* Alvo de toque confortavel no celular. */
+    .pub-secao { margin-bottom: var(--sp-4); }
+    .pub-secao-titulo {
+      margin: 0 0 var(--sp-4);
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+    }
+    .pub-secao-titulo i { color: var(--color-primary); }
+    /* Alvo de toque confortavel no celular. 16px no input evita o zoom
+       automatico do Safari, que desalinha a pagina inteira. */
     .pub-wrap .field-input { min-height: 46px; font-size: 16px; }
     .pub-wrap .btn { width: 100%; min-height: 48px; font-size: var(--fs-base); }
     .pub-ok { text-align: center; padding: var(--sp-6) var(--sp-4); }

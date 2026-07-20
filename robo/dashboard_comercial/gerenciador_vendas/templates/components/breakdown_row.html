@@ -1,6 +1,14 @@
+{% load l10n %}
 {% comment %}
 Breakdown row — linha tabular pra dashboards de distribuicao
 (ex: por motivo de perda, por canal, por status).
+
+Sobre o `unlocalize` no width: o projeto roda em pt-br com USE_L10N, entao o
+Django renderiza 50.0 como "50,0". Dentro de style="width: ...%" isso e CSS
+invalido, o navegador descarta a regra e TODA barra aparece cheia. Falha calada:
+nao quebra a pagina, so mostra o numero errado. Como percentual quase sempre vem
+de um round(), o componente so acertava por acaso quando o valor dava inteiro.
+O `%` a direita continua localizado de proposito: ali virgula e o certo.
 
 Estrutura: label + meta (linha auxiliar) + barra de progresso colorida + pct destacado a direita.
 
@@ -16,8 +24,8 @@ Params:
   <div class="breakdown-row-info">
     <span class="breakdown-row-label">{{ label }}</span>
     {% if meta %}<span class="breakdown-row-meta">{{ meta }}</span>{% endif %}
-    <div class="breakdown-row-bar-wrap" style="max-width: {{ bar_max_width|default:'280' }}px;">
-      <div class="breakdown-row-bar breakdown-row-bar-{{ variant|default:'primary' }}" style="width: {{ percent|default:0 }}%;"></div>
+    <div class="breakdown-row-bar-wrap" style="max-width: {{ bar_max_width|default:'280'|unlocalize }}px;">
+      <div class="breakdown-row-bar breakdown-row-bar-{{ variant|default:'primary' }}" style="width: {{ percent|default:0|unlocalize }}%;"></div>
     </div>
   </div>
   <div class="breakdown-row-stats">

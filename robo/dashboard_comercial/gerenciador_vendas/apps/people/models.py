@@ -300,7 +300,7 @@ class TemplateFormulario(TenantMixin):
 
 ESCOPO_CHOICES = [
     ('tenant',   'Toda a empresa'),
-    ('unidades', 'Unidades especificas'),
+    ('unidades', 'Unidades específicas'),
 ]
 
 
@@ -372,31 +372,31 @@ TIPO_CHAVE_PIX_CHOICES = [
     ('cpf',       'CPF'),
     ('celular',   'Celular'),
     ('email',     'Email'),
-    ('aleatoria', 'Chave aleatoria'),
+    ('aleatoria', 'Chave aleatória'),
 ]
 
 REGIME_CONTRATACAO_CHOICES = [
     ('clt',        'CLT'),
     ('pj',         'PJ'),
-    ('estagio',    'Estagio'),
+    ('estagio',    'Estágio'),
     ('aprendiz',   'Jovem aprendiz'),
-    ('temporario', 'Temporario'),
+    ('temporario', 'Temporário'),
     ('freelancer', 'Freelancer'),
 ]
 
 ORIGEM_CADASTRO_CHOICES = [
     ('rh',           'RH'),
-    ('link_publico', 'Link publico'),
-    ('importacao',   'Importacao'),
+    ('link_publico', 'Link público'),
+    ('importacao',   'Importação'),
     ('api',          'API'),
 ]
 
 ORIGEM_TRANSICAO_CHOICES = [
     ('painel',       'Painel'),
-    ('link_publico', 'Link publico'),
-    ('automacao',    'Automacao'),
+    ('link_publico', 'Link público'),
+    ('automacao',    'Automação'),
     ('cron',         'Cron'),
-    ('importacao',   'Importacao'),
+    ('importacao',   'Importação'),
 ]
 
 
@@ -653,6 +653,48 @@ class Colaborador(TenantMixin):
     @property
     def situacao_rotulo(self):
         return estados.rotulo(self.situacao)
+
+    @property
+    def rotulo_prazo(self):
+        """
+        A data que importa NESTA fase, ja com contexto.
+
+        Data solta no card nao informa: o gestor ve "30 de Julho" e nao sabe se
+        e admissao, fim de experiencia ou desligamento. So aparece quando a fase
+        torna a data relevante.
+        """
+        from django.utils import timezone
+
+        if self.situacao == estados.SITUACAO_EM_EXPERIENCIA and self.data_fim_experiencia:
+            dias = (self.data_fim_experiencia - timezone.localdate()).days
+            if dias < 0:
+                return f'Experiência venceu há {abs(dias)}d'
+            if dias == 0:
+                return 'Experiência vence hoje'
+            return f'Experiência em {dias}d'
+
+        if self.situacao in estados.SITUACOES_TEMPORARIAS and self.fim_previsto_afastamento:
+            dias = (self.fim_previsto_afastamento - timezone.localdate()).days
+            return f'Retorno em {dias}d' if dias >= 0 else f'Retorno atrasado {abs(dias)}d'
+
+        if self.situacao == estados.SITUACAO_DESLIGADO and self.data_desligamento:
+            return f'Saiu em {self.data_desligamento:%d/%m/%Y}'
+
+        return ''
+
+    @property
+    def variante_prazo(self):
+        """Vermelho quando o prazo passou, amarelo quando esta perto."""
+        from django.utils import timezone
+
+        if self.situacao != estados.SITUACAO_EM_EXPERIENCIA or not self.data_fim_experiencia:
+            return 'neutral'
+        dias = (self.data_fim_experiencia - timezone.localdate()).days
+        if dias < 0:
+            return 'danger'
+        if dias <= 7:
+            return 'warning'
+        return 'neutral'
 
     @property
     def destinos_possiveis(self):

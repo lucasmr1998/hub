@@ -24,23 +24,23 @@
       <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors|join:" " }}</p>
     {% endif %}
 
-    <h2 class="form-section-title">Identificacao</h2>
+    <h2 class="form-section-title">Identificação</h2>
     <div class="form-grid-2">
       {% include "components/input.html" with name="nome" label="Nome" value=form.nome.value required=True error=form.nome.errors.0 placeholder="Ex: Unidade Centro" %}
-      {% include "components/input.html" with name="codigo" label="Codigo" value=form.codigo.value required=True error=form.codigo.errors.0 helper="Identificador curto e estavel. Ex: loja-centro" %}
+      {% include "components/input.html" with name="codigo" label="Código" value=form.codigo.value required=True error=form.codigo.errors.0 helper="Identificador curto e estável. Ex: loja-centro" %}
     </div>
     <div class="form-grid-2">
       {% include "components/input.html" with name="cnpj" label="CNPJ" value=form.cnpj.value error=form.cnpj.errors.0 placeholder="00.000.000/0000-00" %}
       {% include "components/input.html" with name="telefone" label="Telefone" value=form.telefone.value error=form.telefone.errors.0 placeholder="(00) 00000-0000" %}
     </div>
 
-    <h2 class="form-section-title">Endereco</h2>
+    <h2 class="form-section-title">Endereço</h2>
     <div class="form-grid-2">
       {% include "components/input.html" with name="cep" label="CEP" value=form.cep.value error=form.cep.errors.0 placeholder="00000-000" %}
       {% include "components/input.html" with name="rua" label="Rua" value=form.rua.value error=form.rua.errors.0 %}
     </div>
     <div class="form-grid-3">
-      {% include "components/input.html" with name="numero" label="Numero" value=form.numero.value error=form.numero.errors.0 %}
+      {% include "components/input.html" with name="numero" label="Número" value=form.numero.value error=form.numero.errors.0 %}
       {% include "components/input.html" with name="complemento" label="Complemento" value=form.complemento.value error=form.complemento.errors.0 %}
       {% include "components/input.html" with name="bairro" label="Bairro" value=form.bairro.value error=form.bairro.errors.0 %}
     </div>
@@ -49,16 +49,16 @@
       {% include "components/select.html" with name="estado" label="Estado" options=ufs value=form.estado.value blank_label="Selecione o estado" error=form.estado.errors.0 %}
     </div>
 
-    <h2 class="form-section-title">Periodo de experiencia</h2>
-    <p class="field-helper">Deixe em branco pra herdar a configuracao do tenant.</p>
+    <h2 class="form-section-title">Período de experiência</h2>
+    <p class="field-helper">Deixe em branco pra herdar a configuração do tenant.</p>
     <div class="form-grid-2">
-      {% include "components/input.html" with name="dias_experiencia_padrao" label="Dias de experiencia (total)" type="number" value=form.dias_experiencia_padrao.value error=form.dias_experiencia_padrao.errors.0 placeholder="90" %}
-      {% include "components/input.html" with name="dias_primeiro_periodo_experiencia" label="Dias do primeiro periodo" type="number" value=form.dias_primeiro_periodo_experiencia.value error=form.dias_primeiro_periodo_experiencia.errors.0 placeholder="45" helper="O 45 de um 45 mais 45" %}
+      {% include "components/input.html" with name="dias_experiencia_padrao" label="Dias de experiência (total)" type="number" value=form.dias_experiencia_padrao.value error=form.dias_experiencia_padrao.errors.0 placeholder="90" %}
+      {% include "components/input.html" with name="dias_primeiro_periodo_experiencia" label="Dias do primeiro período" type="number" value=form.dias_primeiro_periodo_experiencia.value error=form.dias_primeiro_periodo_experiencia.errors.0 placeholder="45" helper="O 45 de um 45 mais 45" %}
     </div>
-    {% include "components/select.html" with name="exige_cpf_no_autocadastro" label="Exigir CPF no auto cadastro" options=heranca_choices value=form.exige_cpf_no_autocadastro.value helper="CPF e o que impede a mesma pessoa de ser cadastrada duas vezes." %}
+    {% include "components/select.html" with name="exige_cpf_no_autocadastro" label="Exigir CPF no auto cadastro" options=heranca_choices value=form.exige_cpf_no_autocadastro.value helper="CPF é o que impede a mesma pessoa de ser cadastrada duas vezes." %}
 
-    <h2 class="form-section-title">Situacao</h2>
-    {% include "components/checkbox.html" with name="ativo" label="Unidade ativa" checked=form.ativo.value helper="Unidade inativa some das listas de escolha e preserva todo o historico. Unidade nao se apaga." %}
+    <h2 class="form-section-title">Situação</h2>
+    {% include "components/checkbox.html" with name="ativo" label="Unidade ativa" checked=form.ativo.value helper="Unidade inativa some das listas de escolha e preserva todo o histórico. Unidade não se apaga." %}
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">

@@ -13,22 +13,34 @@
       <div>
         <p class="page-eyebrow">People</p>
         <h1 class="page-title">Ciclo de vida</h1>
-        <p class="page-subtitle">Arraste o card pra mudar a fase. O sistema recusa transicao que a maquina de estados nao permite.</p>
+        <p class="page-subtitle">Arraste o card pra mudar a fase. O sistema recusa transição que a máquina de estados não permite.</p>
       </div>
-      {% if pode_criar %}
-        <button type="button" class="btn btn-primary" onclick="abrirModal('modal-ponto-entrada')">
-          <i class="bi bi-person-plus"></i> Novo colaborador
-        </button>
-      {% endif %}
+      <div style="display: flex; gap: var(--sp-3); align-items: flex-end;">
+        {% comment %}
+          Filtro no header, junto da ação: no corpo ele empurrava o board pra
+          baixo e roubava altura de uma tela que já é larga.
+        {% endcomment %}
+        <form method="get" id="filtro-board">
+          {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas as unidades" size="sm" %}
+          <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
+        </form>
+        {% if pode_criar %}
+          <button type="button" class="btn btn-primary" onclick="abrirModal('modal-ponto-entrada')">
+            <i class="bi bi-person-plus"></i> Novo colaborador
+          </button>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <form method="get" id="filtro-board" style="margin-bottom: var(--sp-4); max-width: 320px;">
-    {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas as unidades" %}
-    {# Sem JS o botao aparece e o filtro continua funcionando. #}
-    <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
-  </form>
 
+
+  {% comment %}
+    240px casa com o min-width que o DS ja da em .kanban-col. Um valor menor
+    aqui nao encolhe nada, o item vence a track, e o resultado e uma conta de
+    largura errada com a ultima coluna cortada. Em tela estreita o proprio
+    .kanban-board rola na horizontal, que e o comportamento do pipeline do CRM.
+  {% endcomment %}
   <div class="kanban-board"
        style="grid-template-columns: repeat({{ colunas|length }}, minmax(240px, 1fr));"
        data-pode-mover="{% if pode_mover %}1{% else %}0{% endif %}"
@@ -42,14 +54,14 @@
         <div class="kanban-col-body">
           {% for colaborador in coluna.cards %}
             {% comment %} <a> em vez de <div>: o card e arrastavel E clicavel. O drag
-               nativo cancela o clique, entao as duas coisas convivem. {% endcomment %}
+               nativo cancela o clique, então as duas coisas convivem. {% endcomment %}
             <a class="kanban-card"
                href="{% url 'people:colaborador_detalhe' colaborador.pk %}"
                data-colaborador-id="{{ colaborador.pk }}"
                data-destinos="{{ colaborador.destinos_possiveis|join:"," }}">
               <p class="kanban-card-title">{{ colaborador.nome_completo }}</p>
               <p class="kanban-card-sub">
-                {{ colaborador.cargo|default:"Cargo nao definido" }} · {{ colaborador.unidade.nome }}
+                {{ colaborador.cargo|default:"Cargo não definido" }} · {{ colaborador.unidade.nome }}
               </p>
               <div class="kanban-card-tags">
                 {% if colaborador.pendente_revisao %}
@@ -58,8 +70,8 @@
                 {% if colaborador.prorrogacoes_experiencia %}
                   {% include "components/badge.html" with variant="info" label="Prorrogado" size="sm" %}
                 {% endif %}
-                {% if colaborador.data_fim_experiencia %}
-                  {% include "components/badge.html" with variant="neutral" label=colaborador.data_fim_experiencia size="sm" %}
+                {% if colaborador.rotulo_prazo %}
+                  {% include "components/badge.html" with variant=colaborador.variante_prazo label=colaborador.rotulo_prazo size="sm" %}
                 {% endif %}
               </div>
             </a>
@@ -71,12 +83,12 @@
     {% endfor %}
   </div>
 
-  {% comment %} Modal do D1: os tres pontos de entrada. A pergunta e a mesma da tela de
+  {% comment %} Modal do D1: os tres pontos de entrada. A pergunta é a mesma da tela de
      origem, e cada resposta entra numa fase diferente do ciclo. {% endcomment %}
   <div id="modal-ponto-entrada" class="modal-overlay" role="dialog" aria-modal="true" hidden>
     <div class="modal modal-md">
       <div class="modal-header">
-        <h2 class="modal-title">Esse colaborador ja comecou a trabalhar?</h2>
+        <h2 class="modal-title">Esse colaborador já começou a trabalhar?</h2>
         <button type="button" class="modal-close" onclick="fecharModal('modal-ponto-entrada')" aria-label="Fechar">
           <i class="bi bi-x-lg"></i>
         </button>
@@ -88,20 +100,20 @@
         <div class="form-stack">
           <a href="{% url 'people:colaborador_criar' %}?entrada=ja_trabalhando" class="field-check">
             <span class="field-check-text">
-              <span class="field-check-label">Sim, ja esta trabalhando</span>
-              <span class="field-helper">Entra em Em experiencia. Vamos precisar da data de admissao.</span>
+              <span class="field-check-label">Sim, já está trabalhando</span>
+              <span class="field-helper">Entra em Em experiência. Vamos precisar da data de admissão.</span>
             </span>
           </a>
           <a href="{% url 'people:colaborador_criar' %}?entrada=em_admissao" class="field-check">
             <span class="field-check-text">
-              <span class="field-check-label">Nao, ainda em admissao</span>
-              <span class="field-helper">Entra em Em admissao. Vamos precisar da data de admissao.</span>
+              <span class="field-check-label">Não, ainda em admissão</span>
+              <span class="field-helper">Entra em Em admissão. Vamos precisar da data de admissão.</span>
             </span>
           </a>
           <a href="{% url 'people:colaborador_criar' %}?entrada=so_cadastro" class="field-check">
             <span class="field-check-text">
-              <span class="field-check-label">So cadastrar por enquanto</span>
-              <span class="field-helper">Entra em Cadastro. Os dados de vinculo ficam pra depois.</span>
+              <span class="field-check-label">Só cadastrar por enquanto</span>
+              <span class="field-helper">Entra em Cadastro. Os dados de vínculo ficam pra depois.</span>
             </span>
           </a>
         </div>
@@ -109,7 +121,7 @@
     </div>
   </div>
 
-  {# Modal que pede o que a transicao exige, quando o board recusa por falta de dado #}
+  {# Modal que pede o que a transição exige, quando o board recusa por falta de dado #}
   <div id="modal-campos-transicao" class="modal-overlay" role="dialog" aria-modal="true" hidden>
     <div class="modal modal-sm">
       <div class="modal-header">
@@ -128,7 +140,7 @@
     </div>
   </div>
 
-  {% comment %} O layout nao tem bloco extra_js. A convencao do repo (ver o kanban de
-     projetos do workspace) e carregar o script no fim do proprio content. {% endcomment %}
+  {% comment %} O layout não tem bloco extra_js. A convencao do repo (ver o kanban de
+     projetos do workspace) e carregar o script no fim do próprio content. {% endcomment %}
   <script src="{% static 'people/js/board.js' %}"></script>
 {% endblock %}

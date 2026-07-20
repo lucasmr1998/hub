@@ -8,16 +8,16 @@
   <div class="page-header">
     <div class="page-header-top">
       <div>
-        <p class="page-eyebrow">People · Configuracoes</p>
-        <h1 class="page-title">Formularios e dados</h1>
+        <p class="page-eyebrow">People · Configurações</p>
+        <h1 class="page-title">Formulários e dados</h1>
         <p class="page-subtitle">
-          Configure quais informacoes serao solicitadas aos colaboradores. Cada
-          link de cadastro aponta pra um formulario.
+          Configure quais informações serão solicitadas aos colaboradores. Cada
+          link de cadastro aponta pra um formulário.
         </p>
       </div>
       {% if pode_gerir %}
         <a href="{% url 'people:config_template_criar' %}" class="btn btn-primary">
-          <i class="bi bi-plus-lg"></i> Novo formulario
+          <i class="bi bi-plus-lg"></i> Novo formulário
         </a>
       {% endif %}
     </div>
@@ -27,8 +27,8 @@
     <div class="section-card-body">
       <p class="field-helper" style="margin: 0;">
         <i class="bi bi-shield-lock"></i>
-        Documentos de identificacao e dados bancarios sensiveis nao entram aqui.
-        Eles pertencem a etapa de admissao, com tratamento proprio de seguranca.
+        Documentos de identificação e dados bancários sensíveis não entram aqui.
+        Eles pertencem a etapa de admissão, com tratamento próprio de segurança.
       </p>
     </div>
   </div>
@@ -40,9 +40,10 @@
   {% endif %}
 
   {% if templates %}
-    <table class="entity-table">
+    <div class="table-wrap">
+      <table class="table">
       <thead>
-        <tr><th>Formulario</th><th>Descricao</th><th>Tipo</th><th>Links</th><th>Situacao</th></tr>
+        <tr><th>Formulário</th><th>Descrição</th><th>Tipo</th><th>Links</th><th>Situação</th></tr>
       </thead>
       <tbody>
         {% for template in templates %}
@@ -52,10 +53,10 @@
                 <a href="{% url 'people:config_template_editar' template.pk %}">{{ template.nome }}</a>
               {% else %}{{ template.nome }}{% endif %}
             </td>
-            <td class="text-muted">{{ template.descricao|default:"—" }}</td>
+            <td class="field-helper">{{ template.descricao|default:"—" }}</td>
             <td>
               {% if template.padrao %}
-                {% include "components/badge.html" with variant="info" label="Padrao" size="sm" %}
+                {% include "components/badge.html" with variant="info" label="Padrão" size="sm" %}
               {% else %}—{% endif %}
             </td>
             <td>{{ template.links.count }}</td>
@@ -69,8 +70,9 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
+    </div>
   {% else %}
-    {% include "components/empty_state.html" with icon="bi-file-earmark-text" text="Nenhum formulario configurado" subtext="O formulario padrao e criado automaticamente no primeiro cadastro por link." cta_label="Novo formulario" cta_href="/people/config/formularios/novo/" %}
+    {% include "components/empty_state.html" with icon="bi-file-earmark-text" text="Nenhum formulário configurado" subtext="O formulário padrão e criado automaticamente no primeiro cadastro por link." cta_label="Novo formulário" cta_href="/people/config/formularios/novo/" %}
   {% endif %}
 {% endblock %}

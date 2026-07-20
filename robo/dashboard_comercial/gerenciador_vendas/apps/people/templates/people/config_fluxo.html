@@ -8,11 +8,11 @@
   <div class="page-header">
     <div class="page-header-top">
       <div>
-        <p class="page-eyebrow">People · Configuracoes</p>
+        <p class="page-eyebrow">People · Configurações</p>
         <h1 class="page-title">Fluxo do Departamento Pessoal</h1>
         <p class="page-subtitle">
           Centraliza, por etapa da jornada do colaborador, os recursos
-          configuraveis do modulo. As etapas sao fixas: a configuracao acontece
+          configuráveis do módulo. As etapas são fixas: a configuração acontece
           dentro de cada uma.
         </p>
       </div>
@@ -33,7 +33,7 @@
         <div class="section-card-body">
           <p class="field-helper" style="min-height: 40px;">{{ etapa.descricao }}</p>
           <p class="field-helper">
-            {{ etapa.total_recursos }} recurso{{ etapa.total_recursos|pluralize }} configuravel{{ etapa.total_recursos|pluralize:",is" }}
+            {{ etapa.total_recursos }} recurso{{ etapa.total_recursos|pluralize }} configurável{{ etapa.total_recursos|pluralize:",is" }}
             {% if etapa.recursos_prontos < etapa.total_recursos %}
               · {{ etapa.recursos_prontos }} pronto{{ etapa.recursos_prontos|pluralize }}
             {% endif %}

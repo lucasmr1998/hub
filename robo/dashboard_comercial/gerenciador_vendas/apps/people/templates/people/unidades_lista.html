@@ -27,14 +27,15 @@
   {% endif %}
 
   {% if unidades %}
-    <table class="entity-table">
+    <div class="table-wrap">
+      <table class="table">
       <thead>
         <tr>
           <th>Nome</th>
-          <th>Codigo</th>
+          <th>Código</th>
           <th>Cidade</th>
           <th>Colaboradores</th>
-          <th>Situacao</th>
+          <th>Situação</th>
           {% if pode_gerir %}<th></th>{% endif %}
         </tr>
       </thead>
@@ -65,7 +66,7 @@
                 <form method="post" action="{% url 'people:unidade_alternar_ativo' unidade.pk %}" style="display: inline;">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-ghost btn-sm"
-                          title="{% if unidade.ativo %}Desativar. A unidade some das listas de escolha e preserva o historico.{% else %}Reativar{% endif %}">
+                          title="{% if unidade.ativo %}Desativar. A unidade some das listas de escolha e preserva o histórico.{% else %}Reativar{% endif %}">
                     <i class="bi {% if unidade.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
                     {% if unidade.ativo %}Desativar{% else %}Reativar{% endif %}
                   </button>
@@ -75,7 +76,8 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
+    </div>
   {% else %}
     {% include "components/empty_state.html" with icon="bi-shop" text="Nenhuma unidade cadastrada" subtext="Cadastre as lojas antes de cadastrar colaboradores." cta_label="Nova unidade" cta_href="/people/unidades/nova/" %}
   {% endif %}

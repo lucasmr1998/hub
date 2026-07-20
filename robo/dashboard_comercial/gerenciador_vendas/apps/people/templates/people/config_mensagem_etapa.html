@@ -9,7 +9,7 @@
     <div class="page-header-top">
       <div>
         <p class="page-eyebrow">People · Fluxo · {{ etapa.nome }}</p>
-        <h1 class="page-title">Comunicacao com o colaborador</h1>
+        <h1 class="page-title">Comunicação com o colaborador</h1>
       </div>
       <a href="{% url 'people:config_fluxo_etapa' etapa.situacao %}" class="btn btn-ghost">
         <i class="bi bi-arrow-left"></i> Voltar
@@ -22,9 +22,9 @@
       <p class="field-helper" style="margin: 0;">
         <i class="bi bi-info-circle"></i>
         <strong>Nada e enviado automaticamente.</strong> A mensagem fica
-        disponivel como sugestao pro RH quando o colaborador chega nesta etapa. O
-        envio e sempre manual e o texto pode ser editado antes de enviar, sem
-        alterar este padrao.
+        disponível como sugestão pro RH quando o colaborador chega nesta etapa. O
+        envio é sempre manual e o texto pode ser editado antes de enviar, sem
+        alterar este padrão.
       </p>
     </div>
   </div>
@@ -33,13 +33,15 @@
     {% csrf_token %}
 
     <div class="field">
-      <label class="field-label" for="texto">Mensagem padrao <span class="field-required">*</span></label>
+      <label class="field-label" for="texto">Mensagem padrão <span class="field-required">*</span></label>
       <div class="field-input-wrap">
         <textarea class="field-input" id="texto" name="texto" rows="5" required>{{ form.texto.value|default:"" }}</textarea>
       </div>
       <p class="field-helper">
-        {# verbatim pra mostrar a variavel literal: sem ele o Django tenta
-           interpretar as chaves e quebra o template. #}
+        {% comment %}
+          verbatim pra mostrar a variável literal: sem ele o Django tenta
+          interpretar as chaves e quebra o template.
+        {% endcomment %}
         Aceita {% verbatim %}<code>{{nome}}</code>, <code>{{primeiro_nome}}</code>,
         <code>{{unidade}}</code> e <code>{{cargo}}</code>{% endverbatim %}.
       </p>
@@ -52,7 +54,7 @@
     {% include "components/select.html" with name="escopo" label="Escopo" options=form.fields.escopo.choices value=form.escopo.value helper="Toda a empresa inclui as unidades que entrarem depois." %}
 
     <div class="field">
-      <label class="field-label" for="unidades">Unidades especificas</label>
+      <label class="field-label" for="unidades">Unidades específicas</label>
       <div class="field-input-wrap">
         <select class="field-input field-select" id="unidades" name="unidades" multiple size="6">
           {% for pk, nome in unidades_opcoes %}
@@ -60,7 +62,7 @@
           {% endfor %}
         </select>
       </div>
-      <p class="field-helper">So vale quando o escopo e por unidades.</p>
+      <p class="field-helper">Só vale quando o escopo e por unidades.</p>
     </div>
 
     {% include "components/checkbox.html" with name="ativo" label="Mensagem ativa" checked=form.ativo.value %}

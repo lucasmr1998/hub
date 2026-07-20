@@ -62,9 +62,11 @@ def test_fluxo_mostra_as_sete_etapas(cenario):
 
     assert resposta.status_code == 200
     nomes = [e['nome'] for e in resposta.context['etapas']]
+    # Acentuados: sao rotulo de tela, nao identificador. O identificador e o
+    # 'situacao' de cada etapa, que continua sem acento.
     assert nomes == [
-        'Cadastro Inicial', 'Admissao', 'Periodo de Experiencia',
-        'Ativos', 'Ferias', 'Afastamentos', 'Desligamento',
+        'Cadastro Inicial', 'Admissão', 'Período de Experiência',
+        'Ativos', 'Férias', 'Afastamentos', 'Desligamento',
     ]
 
 
@@ -89,7 +91,7 @@ def test_recurso_ainda_nao_construido_aparece_marcado(cenario):
     por_chave = {r['chave']: r for r in resposta.context['recursos']}
     assert por_chave['comunicacao']['disponivel'] is True
     assert por_chave['checklist']['disponivel'] is False
-    assert b'Em construcao' in resposta.content
+    assert 'Em construção' in resposta.content.decode()
 
 
 @pytest.mark.django_db

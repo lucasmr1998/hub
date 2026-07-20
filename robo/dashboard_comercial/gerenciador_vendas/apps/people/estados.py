@@ -36,10 +36,10 @@ SITUACAO_FREELANCER = 'freelancer'
 
 SITUACOES = [
     (SITUACAO_CADASTRO,        'Cadastro'),
-    (SITUACAO_EM_ADMISSAO,     'Em admissao'),
-    (SITUACAO_EM_EXPERIENCIA,  'Em experiencia'),
+    (SITUACAO_EM_ADMISSAO,     'Em admissão'),
+    (SITUACAO_EM_EXPERIENCIA,  'Em experiência'),
     (SITUACAO_EFETIVADO,       'Efetivado'),
-    (SITUACAO_FERIAS,          'Ferias'),
+    (SITUACAO_FERIAS,          'Férias'),
     (SITUACAO_AFASTAMENTO,     'Afastamento'),
     (SITUACAO_EM_DESLIGAMENTO, 'Em desligamento'),
     (SITUACAO_DESLIGADO,       'Desligado'),
@@ -109,16 +109,16 @@ ETAPAS_FLUXO = [
     },
     {
         'situacao': SITUACAO_EM_ADMISSAO,
-        'nome': 'Admissao',
-        'descricao': 'Documentacao, exame admissional e checklist do processo de admissao.',
+        'nome': 'Admissão',
+        'descricao': 'Documentação, exame admissional e checklist do processo de admissão.',
         'icone': 'bi-briefcase',
         'recursos': ['comunicacao', 'checklist', 'pedido_documentacao',
                      'exame_admissional', 'contabilidade'],
     },
     {
         'situacao': SITUACAO_EM_EXPERIENCIA,
-        'nome': 'Periodo de Experiencia',
-        'descricao': 'Duracao do periodo, checklist de acompanhamento.',
+        'nome': 'Período de Experiência',
+        'descricao': 'Duração do período, checklist de acompanhamento.',
         'icone': 'bi-stopwatch',
         'recursos': ['comunicacao', 'periodo_experiencia', 'checklist'],
     },
@@ -131,8 +131,8 @@ ETAPAS_FLUXO = [
     },
     {
         'situacao': SITUACAO_FERIAS,
-        'nome': 'Ferias',
-        'descricao': 'Checklist de acompanhamento durante as ferias.',
+        'nome': 'Férias',
+        'descricao': 'Checklist de acompanhamento durante as férias.',
         'icone': 'bi-umbrella',
         'recursos': ['comunicacao', 'checklist'],
     },
@@ -146,7 +146,7 @@ ETAPAS_FLUXO = [
     {
         'situacao': SITUACAO_EM_DESLIGAMENTO,
         'nome': 'Desligamento',
-        'descricao': 'Exame demissional, entrevista, documentacao e comunicacao do desligamento.',
+        'descricao': 'Exame demissional, entrevista, documentação e comunicação do desligamento.',
         'icone': 'bi-box-arrow-right',
         'recursos': ['comunicacao', 'checklist', 'exame_demissional',
                      'entrevista_saida', 'documentacao_rescisao'],
@@ -159,16 +159,16 @@ ETAPAS_FLUXO = [
 RECURSOS_DISPONIVEIS = {'comunicacao', 'formulario_cadastro', 'periodo_experiencia'}
 
 ROTULOS_RECURSO = {
-    'comunicacao': 'Comunicacao com Colaborador',
-    'formulario_cadastro': 'Formulario de Cadastro',
-    'periodo_experiencia': 'Configuracao do Periodo de Experiencia',
+    'comunicacao': 'Comunicação com Colaborador',
+    'formulario_cadastro': 'Formulário de Cadastro',
+    'periodo_experiencia': 'Configuração do Período de Experiência',
     'checklist': 'Checklist do Processo',
-    'pedido_documentacao': 'Pedido de Documentacao',
+    'pedido_documentacao': 'Pedido de Documentação',
     'exame_admissional': 'Exame Admissional',
     'contabilidade': 'Envio para a Contabilidade',
     'exame_demissional': 'Exame Demissional',
     'entrevista_saida': 'Entrevista de Desligamento',
-    'documentacao_rescisao': 'Documentacao da Rescisao',
+    'documentacao_rescisao': 'Documentação da Rescisão',
 }
 
 DESCRICOES_RECURSO = {
@@ -220,9 +220,9 @@ PONTOS_ENTRADA = {
 }
 
 PONTOS_ENTRADA_CHOICES = [
-    (ENTRADA_SO_CADASTRO,    'So cadastrar por enquanto'),
-    (ENTRADA_EM_ADMISSAO,    'Ainda em admissao'),
-    (ENTRADA_JA_TRABALHANDO, 'Ja esta trabalhando'),
+    (ENTRADA_SO_CADASTRO,    'Só cadastrar por enquanto'),
+    (ENTRADA_EM_ADMISSAO,    'Ainda em admissão'),
+    (ENTRADA_JA_TRABALHANDO, 'Já está trabalhando'),
     (ENTRADA_LINK_PUBLICO,   'Auto cadastro por link'),
 ]
 

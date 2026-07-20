@@ -27,7 +27,7 @@
     {% include "components/input.html" with name="nome" label="Nome do cargo" value=form.nome.value required=True error=form.nome.errors.0 placeholder="Ex: Atendente" %}
 
     <div class="field">
-      <label class="field-label" for="descricao">Descricao do cargo</label>
+      <label class="field-label" for="descricao">Descrição do cargo</label>
       <div class="field-input-wrap">
         <textarea class="field-input" id="descricao" name="descricao" rows="5"
                   placeholder="Responsabilidades. Aparece na abertura de vaga.">{{ form.descricao.value|default:"" }}</textarea>
@@ -37,9 +37,9 @@
       {% endif %}
     </div>
 
-    {% include "components/input.html" with name="ordem" label="Ordem" type="number" value=form.ordem.value|default:0 error=form.ordem.errors.0 helper="Controla a posicao na lista de escolha." %}
+    {% include "components/input.html" with name="ordem" label="Ordem" type="number" value=form.ordem.value|default:0 error=form.ordem.errors.0 helper="Controla a posição na lista de escolha." %}
 
-    {% include "components/checkbox.html" with name="ativo" label="Cargo ativo" checked=form.ativo.value helper="Cargo inativo some das listas de escolha. Quem ja esta nele continua, e o historico e preservado. Cargo nao se apaga." %}
+    {% include "components/checkbox.html" with name="ativo" label="Cargo ativo" checked=form.ativo.value helper="Cargo inativo some das listas de escolha. Quem já esta nele continua, e o histórico e preservado. Cargo não se apaga." %}
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>

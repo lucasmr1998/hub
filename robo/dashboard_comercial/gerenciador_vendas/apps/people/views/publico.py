@@ -21,7 +21,7 @@ from django.views.decorators.http import require_http_methods
 from django_ratelimit.decorators import ratelimit
 
 from apps.people import estados
-from apps.people.campos_formulario import CAMPOS_POR_NOME
+from apps.people.campos_formulario import CAMPOS_POR_NOME, agrupar_em_secoes
 from apps.people.forms import UFS
 from apps.people.models import TIPO_CHAVE_PIX_CHOICES, TemplateFormulario
 from apps.people.services import (
@@ -85,17 +85,22 @@ def _campos_do_link(link, valores=None, erros=None):
     return template, campos
 
 
+def _secoes_do_link(link, valores=None, erros=None):
+    _, campos = _campos_do_link(link, valores, erros)
+    return campos, agrupar_em_secoes(campos)
+
+
 @require_http_methods(['GET'])
 @ratelimit(key='ip', rate='30/m', block=True)
 def formulario(request, token):
     link = _link_ou_404(token)
 
     with escopo_tenant(link.tenant):
-        _, campos = _campos_do_link(link)
+        _, secoes = _secoes_do_link(link)
         config = config_efetiva(link.unidade)
 
     return render(request, 'people/publico_formulario.html', {
-        'link': link, 'unidade': link.unidade, 'campos': campos,
+        'link': link, 'unidade': link.unidade, 'secoes': secoes,
         'config': config, 'erros': {},
     })
 
@@ -132,9 +137,9 @@ def enviar(request, token):
             erros['consentimento_lgpd'] = 'E preciso aceitar para enviar o cadastro.'
 
         if erros:
-            _, campos = _campos_do_link(link, request.POST, erros)
+            _, secoes = _secoes_do_link(link, request.POST, erros)
             return render(request, 'people/publico_formulario.html', {
-                'link': link, 'unidade': link.unidade, 'campos': campos,
+                'link': link, 'unidade': link.unidade, 'secoes': secoes,
                 'config': config, 'erros': erros,
             }, status=400)
 
@@ -149,9 +154,9 @@ def enviar(request, token):
                 link, resultado='rejeitado', erro=resultado.motivo_conflito,
                 dados=dados, ip=_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', ''))
-            _, campos = _campos_do_link(link, request.POST)
+            _, secoes = _secoes_do_link(link, request.POST)
             return render(request, 'people/publico_formulario.html', {
-                'link': link, 'unidade': link.unidade, 'campos': campos,
+                'link': link, 'unidade': link.unidade, 'secoes': secoes,
                 'config': config, 'erros': {'geral': MENSAGEM_CONFLITO},
             }, status=409)
 

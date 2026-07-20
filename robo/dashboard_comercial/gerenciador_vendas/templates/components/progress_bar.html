@@ -1,3 +1,4 @@
+{% load l10n %}
 {% comment %}
 Progress bar — barra fina de progresso, pra usar dentro de celula de tabela,
 card ou linha de lista. Versao enxuta do breakdown_row (que carrega label, meta
@@ -11,10 +12,17 @@ Params:
 
 Uso:
   {% include "components/progress_bar.html" with percent=42 label="3/7" %}
+
+Sobre o `unlocalize`: o projeto roda em pt-br com USE_L10N, entao o Django
+renderiza 50.0 como "50,0". Dentro de style="width: ...%" isso vira CSS
+invalido, o navegador descarta a regra e TODA barra aparece cheia. O bug e
+silencioso: nao quebra a pagina, so mostra numero errado. Percentual quase
+sempre e float, entao sem unlocalize o componente so funciona por acaso quando o
+valor e inteiro.
 {% endcomment %}
-<div class="progress-bar-wrap" style="max-width: {{ width|default:'160' }}px;">
+<div class="progress-bar-wrap" style="max-width: {{ width|default:'160'|unlocalize }}px;">
   {% if label %}<span class="progress-bar-label">{{ label }}</span>{% endif %}
-  <div class="progress-bar-track" role="progressbar" aria-valuenow="{{ percent|default:0 }}" aria-valuemin="0" aria-valuemax="100">
-    <div class="progress-bar-fill progress-bar-fill-{{ variant|default:'primary' }}" style="width: {{ percent|default:0 }}%;"></div>
+  <div class="progress-bar-track" role="progressbar" aria-valuenow="{{ percent|default:0|unlocalize }}" aria-valuemin="0" aria-valuemax="100">
+    <div class="progress-bar-fill progress-bar-fill-{{ variant|default:'primary' }}" style="width: {{ percent|default:0|unlocalize }}%;"></div>
   </div>
 </div>

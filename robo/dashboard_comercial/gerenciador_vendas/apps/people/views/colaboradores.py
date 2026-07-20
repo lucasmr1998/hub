@@ -128,7 +128,7 @@ def detalhe(request, pk):
         'abas': [
             {'id': 'aba-resumo', 'label': 'Resumo', 'icon': 'bi-info-circle', 'active': True},
             {'id': 'aba-dados', 'label': 'Dados pessoais', 'icon': 'bi-person-vcard'},
-            {'id': 'aba-historico', 'label': 'Historico', 'icon': 'bi-clock-history',
+            {'id': 'aba-historico', 'label': 'Histórico', 'icon': 'bi-clock-history',
              'badge': historico.count()},
         ],
         'ufs': UFS,

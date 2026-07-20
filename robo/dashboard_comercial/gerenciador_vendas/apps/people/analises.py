@@ -69,16 +69,48 @@ def resumo(tenant, dias=30, unidade=None):
         desligamentos = desligamentos.filter(colaborador__unidade=unidade)
         desligamentos_antes = desligamentos_antes.filter(colaborador__unidade=unidade)
 
+    taxa = round(100 * efetivados_coorte / cadastros, 1) if cadastros else 0.0
+    travados = len(parados(tenant, unidade=unidade))
+    total_desligamentos = desligamentos.count()
+    variacao_cadastros = _variacao(cadastros, cadastros_antes)
+    variacao_desligamentos = _variacao(total_desligamentos, desligamentos_antes.count())
+
     return {
         'cadastros': cadastros,
-        'cadastros_variacao': _variacao(cadastros, cadastros_antes),
-        'taxa_efetivacao': round(100 * efetivados_coorte / cadastros, 1) if cadastros else 0.0,
+        'cadastros_delta': _delta_texto(variacao_cadastros),
+        'cadastros_trend': _tendencia(variacao_cadastros),
+        'taxa_efetivacao': taxa,
+        'taxa_efetivacao_texto': f'{taxa}%'.replace('.', ','),
+        'taxa_efetivacao_nota': (
+            f'{efetivados_coorte} de {cadastros} já efetivados' if cadastros
+            else 'Nenhum cadastro no período'),
         'efetivados_coorte': efetivados_coorte,
-        'parados': len(parados(tenant, unidade=unidade)),
-        'desligamentos': desligamentos.count(),
-        'desligamentos_variacao': _variacao(desligamentos.count(), desligamentos_antes.count()),
+        'parados': travados,
+        'parados_variante': 'danger' if travados else 'success',
+        'desligamentos': total_desligamentos,
+        'desligamentos_delta': _delta_texto(variacao_desligamentos),
+        # Menos desligamento e coisa boa, entao a seta inverte: sem isso o card
+        # pintaria de vermelho uma queda de rotatividade.
+        'desligamentos_trend': _tendencia(variacao_desligamentos, invertido=True),
         'dias': dias,
     }
+
+
+def _delta_texto(variacao):
+    """Variacao ja formatada pro stat_card. None vira vazio."""
+    if variacao is None:
+        return ''
+    sinal = '+' if variacao > 0 else ''
+    return f'{sinal}{variacao}%'.replace('.', ',')
+
+
+def _tendencia(variacao, invertido=False):
+    if variacao is None or variacao == 0:
+        return 'flat'
+    subiu = variacao > 0
+    if invertido:
+        subiu = not subiu
+    return 'up' if subiu else 'down'
 
 
 def _variacao(atual, anterior):
@@ -113,10 +145,12 @@ def parados(tenant, unidade=None, dias=DIAS_PARA_PARADO):
                   .first())
         referencia = ultima or colaborador.criado_em
         if referencia < limite:
+            dias_parado = (timezone.now() - referencia).days
             travados.append({
                 'colaborador': colaborador,
                 'desde': referencia,
-                'dias': (timezone.now() - referencia).days,
+                'dias': dias_parado,
+                'rotulo_dias': f'{dias_parado} dia{"s" if dias_parado != 1 else ""}',
             })
 
     travados.sort(key=lambda t: t['dias'], reverse=True)
@@ -149,11 +183,11 @@ def por_unidade(tenant, dias=30):
         travados = travados_por_unidade.get(unidade.pk, 0)
 
         if travados >= 3:
-            status, variante = f'{travados} parados, acao necessaria', 'danger'
+            status, variante = 'Ação necessária', 'danger'
         elif travados:
-            status, variante = f'{travados} parado{"s" if travados > 1 else ""}, monitorar', 'warning'
+            status, variante = 'Monitorar', 'warning'
         else:
-            status, variante = 'Admissao saudavel, sem pendencias', 'success'
+            status, variante = 'Sem pendências', 'success'
 
         linhas.append({
             'unidade': unidade,
@@ -188,14 +222,21 @@ def funil(tenant, dias=30, unidade=None):
         estados.SITUACAO_EM_EXPERIENCIA,
         estados.SITUACAO_EFETIVADO,
     ]
-    maximo = max([contagem.get(e, 0) for e in etapas] + [1])
+    # Percentual sobre o TOTAL das fases, nao sobre a maior. Sobre a maior, toda
+    # fase empatada no topo marca 100% e a tela repete "100%" em varias linhas
+    # sem dizer nada. Sobre o total, o numero responde a pergunta que o RH faz
+    # olhando essa lista: que fatia da minha gente esta parada em cada fase.
+    total_geral = max(sum(contagem.get(e, 0) for e in etapas), 1)
 
     return [
         {
             'situacao': etapa,
             'rotulo': estados.rotulo(etapa),
             'total': contagem.get(etapa, 0),
-            'percentual': round(100 * contagem.get(etapa, 0) / maximo, 1),
+            # Texto pronto: o template so exibe, nao conjuga plural.
+            'meta': ('1 colaborador' if contagem.get(etapa, 0) == 1
+                     else f'{contagem.get(etapa, 0)} colaboradores'),
+            'percentual': round(100 * contagem.get(etapa, 0) / total_geral, 1),
         }
         for etapa in etapas
     ]

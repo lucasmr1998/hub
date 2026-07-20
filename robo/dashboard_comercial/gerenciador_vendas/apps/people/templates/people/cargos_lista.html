@@ -13,7 +13,7 @@
         <p class="page-subtitle">
           Cadastre uma vez e reutilize no cadastro de colaborador. Cargo como
           entidade evita que "Atendente" e "atendente" virem dois cargos e
-          quebrem qualquer relatorio.
+          quebrem qualquer relatório.
         </p>
       </div>
       {% if pode_gerir %}
@@ -31,13 +31,14 @@
   {% endif %}
 
   {% if cargos %}
-    <table class="entity-table">
+    <div class="table-wrap">
+      <table class="table">
       <thead>
         <tr>
           <th>Cargo</th>
-          <th>Descricao</th>
+          <th>Descrição</th>
           <th>Colaboradores</th>
-          <th>Situacao</th>
+          <th>Situação</th>
           {% if pode_gerir %}<th></th>{% endif %}
         </tr>
       </thead>
@@ -49,7 +50,7 @@
                 <a href="{% url 'people:cargo_editar' cargo.pk %}">{{ cargo.nome }}</a>
               {% else %}{{ cargo.nome }}{% endif %}
             </td>
-            <td class="text-muted">{{ cargo.descricao|truncatechars:120|default:"—" }}</td>
+            <td class="field-helper">{{ cargo.descricao|truncatechars:120|default:"—" }}</td>
             <td>{{ cargo.total_colaboradores }}</td>
             <td>
               {% if cargo.ativo %}
@@ -63,7 +64,7 @@
                 <form method="post" action="{% url 'people:cargo_alternar_ativo' cargo.pk %}">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-ghost btn-sm"
-                          title="{% if cargo.ativo %}Some das listas de escolha. Quem ja esta neste cargo continua.{% else %}Volta a aparecer nas listas{% endif %}">
+                          title="{% if cargo.ativo %}Some das listas de escolha. Quem já está neste cargo continua.{% else %}Volta a aparecer nas listas{% endif %}">
                     <i class="bi {% if cargo.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
                     {% if cargo.ativo %}Desativar{% else %}Reativar{% endif %}
                   </button>
@@ -73,7 +74,8 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
+    </div>
   {% else %}
     {% include "components/empty_state.html" with icon="bi-briefcase" text="Nenhum cargo cadastrado" subtext="Sem cargo, o cadastro de colaborador fica sem o campo preenchido." cta_label="Novo cargo" cta_href="/people/cargos/novo/" %}
   {% endif %}
