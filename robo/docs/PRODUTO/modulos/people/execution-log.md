@@ -93,3 +93,34 @@ Os dois tem meta teste provando que pegam o caso real e nao acusam o falso. Moti
 
 - **Limpeza**: `campos_formulario` tinha a chave `label` que ninguem lia, duplicando `rotulo_padrao` e ja divergindo dela (`Numero` contra `Número`). Removida.
 - **Status**: completed
+
+## 2026-07-20 — Recrutamento e Selecao, passo 1 (tarefa 211)
+
+- **Acao**: base do pipeline. Maquina de saidas terminais e etapa configuravel por unidade. Commit b83f983.
+- **Contexto**: corte B do `RECRUTAMENTO-PLANO.md`, escolhido entre tres opcoes. O pre requisito que a spec de origem exige antes de qualquer coisa (`people_staff` mais cadastro do DP, com dedup em constraint) ja estava pago pelo que o modulo entregou.
+
+**A decisao que estrutura o resto do subdominio**
+
+```
+ETAPA INTERMEDIARIA  ->  DADO    (EtapaPipeline, por unidade)
+SAIDA TERMINAL       ->  CODIGO  (estados_recrutamento.py)
+```
+
+O criterio e comportamento, nao estetica. Saida faz coisa: `admitido` aciona a ponte pro DP, `banco_talentos` entra na retencao com expurgo, `inapto` e decisao registrada. Comportamento em tabela de configuracao significa que o cliente cria um estado que o codigo nao sabe tratar, e isso so aparece em producao. Etapa so ordena e nomeia, entao pode ser dado.
+
+Isto e o **oposto** do `estados.py` do DP, onde a maquina inteira e fixa, e a diferenca e proposital: fase de vinculo trabalhista nao e preferencia de cliente, etapa de processo seletivo e. A spec cita uma rede nos EUA rodando so `triagem, entrevista com RH, admissao` contra as sete etapas do default brasileiro.
+
+**Decisoes menores, com o porque**
+
+- **Motivo obrigatorio em toda saida.** A spec marca como coluna real observada em demo que ficou fora da especificacao escrita: *"O campo motivo nao existe em nenhum dos contratos de conclusao dos manifests. E uma coluna real. Modele-a."* Sem ela o board vira cemiterio e a analise de funil so consegue contar.
+- **Reabertura assimetrica.** Banco, inapto e arquivado voltam pro pipeline. Se nao voltassem, o RH corrigiria clique errado cadastrando a pessoa de novo, que e a duplicata que a constraint de WhatsApp vai existir pra impedir. `admitido` volta enquanto NAO houver colaborador vinculado e trava depois, porque ai ja existe gente contratada apontando pro candidato. A regra depende do objeto, entao mora no servico; o modulo puro so expoe `pode_reabrir(saida, tem_colaborador_vinculado=)`.
+- **Override substitui, nao soma.** Unidade com etapa propria ignora a do tenant. Somar produziria um pipeline montado de dois lugares que ninguem configurou.
+- **Desativar etapa nao apaga.** Comportamento observado na origem (*"esse botao ele fica, ele nao some, ele fica invisivel"*). Apagar deixaria orfao o candidato parado nela.
+
+**A peca que quase passa despercebida**
+
+A `UniqueConstraint` usa `nulls_distinct=False`. Unidade nula significa "vale pro tenant inteiro"; sem esse flag o Postgres trata cada NULL como valor distinto, a constraint nao pega nada e o seed acumula uma Triagem nova a cada execucao. Verificado no banco, e nao so no teste: `UNIQUE NULLS NOT DISTINCT (tenant_id, unidade_id, nome)`. Ha teste que pede pro banco recusar a duplicata, porque constraint que ninguem exercita e comentario. Exige PG 15+, e dev e prod rodam PG 17.
+
+- **Nota de ambiente**: a suite colidiu de novo com outra sessao rodando pytest na mesma pasta (`database "test_aurora_dev" already exists`). Resolvido com o `settings_teste_people.py` do scratchpad, que so troca o nome do banco de teste, em vez de derrubar a conexao da outra rodada.
+- **Output**: 28 testes novos, 333 no modulo, `manage.py check` limpo, migration 0005 aplicada em dev.
+- **Status**: completed. Proximo: passo 2 (Vaga mais RequisitoVaga).
