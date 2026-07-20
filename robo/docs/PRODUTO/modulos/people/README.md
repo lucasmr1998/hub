@@ -3,13 +3,24 @@
 Modulo de RH do Hubtrix, portado do departamento pessoal da Visio. Cobre o ciclo
 de vida do colaborador, de cadastro a desligamento.
 
-**Estado**: fundacao e cadastro construidos e funcionando. Admissao,
-desligamento, experiencia, freelancers e escala ainda nao. Ver `GAPS-VISIO.md`
-pro mapa completo do que falta e por que.
+**Estado**: fundacao e cadastro construidos e funcionando. Recrutamento e
+Selecao (vaga, candidatura, pipeline, quadro) construido e em prod, ver
+`RECRUTAMENTO.md`. Admissao, desligamento, experiencia, freelancers e escala
+ainda nao. Ver `GAPS-VISIO.md` pro mapa completo do que falta e por que.
 
 - **Rota**: `/people/`
 - **Modulo comercializavel**: `tenant.modulo_people`
-- **Tarefas**: 205 (fundacao, concluida) e 208 (gaps remanescentes)
+- **Tarefas**: 205 (fundacao), 208 (gaps do DP), 211 (recrutamento, corte B)
+
+### Docs do modulo
+
+| Doc | O que |
+|---|---|
+| Este README | O Departamento Pessoal: ciclo de vida, dedup, formulario publico |
+| `RECRUTAMENTO.md` | Recrutamento e Selecao as-built: vaga, candidatura, pipeline, quadro |
+| `RECRUTAMENTO-PLANO.md` | As decisoes de recrutamento, escritas antes de construir |
+| `GAPS-VISIO.md` | O que a spec da Visio tem e ainda nao foi construido |
+| `execution-log.md` | A trilha cronologica do que foi executado |
 
 ---
 
