@@ -2,15 +2,22 @@
 Card de candidato no board. Extraido porque aparece em dois lugares: nas colunas
 de etapa e na area "fora de etapa".
 {% endcomment %}
-<div class="kanban-card" data-candidato-id="{{ candidato.pk }}">
+{% comment %}
+  O card inteiro abre a ficha, e nao so o nome: alvo de clique pequeno num
+  kanban e um jeito de fazer o usuario mirar. Quem navega e o JS (ver
+  pipeline.js), porque envolver tudo num <a> seria HTML invalido, ja que o card
+  tem link e botao dentro, e ainda brigaria com o arrasto.
+
+  O nome continua sendo um <a> de verdade pra o teclado alcancar, e pra ctrl
+  clique e clique do meio abrirem em aba nova, coisa que handler de JS nao da.
+{% endcomment %}
+<div class="kanban-card" data-candidato-id="{{ candidato.pk }}"
+     data-detalhe="{% url 'people:candidato_detalhe' candidato.pk %}"
+     style="cursor: pointer;">
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-2);">
-    {% comment %}
-      So o NOME e link, nao o card inteiro: o card ja tem botoes dentro (abrir
-      curriculo, tirar do processo), e link dentro de link e HTML invalido. Alem
-      disso o card e arrastavel, e envolver tudo num <a> brigaria com o drag.
-    {% endcomment %}
     <p class="kanban-card-title">
-      <a href="{% url 'people:candidato_detalhe' candidato.pk %}">{{ candidato.nome_completo }}</a>
+      <a href="{% url 'people:candidato_detalhe' candidato.pk %}"
+         style="color: inherit; text-decoration: none;">{{ candidato.nome_completo }}</a>
     </p>
     <span style="display: flex; gap: 2px; margin: -4px -4px 0 0;">
       {% if candidato.curriculo %}

@@ -35,6 +35,11 @@
 
   let arrastando = null;
   let colunaOrigem = null;
+  // Marca que houve arrasto, pra o clique que vem logo depois nao navegar. O
+  // navegador ja costuma suprimir esse clique, mas nao da pra confiar: soltar o
+  // card e cair na ficha e o tipo de surpresa que faz o usuario parar de
+  // arrastar.
+  let arrastouAgora = false;
 
   // ── Cards ──────────────────────────────────────────────────────────────
   function ligarCard(card) {
@@ -43,6 +48,7 @@
     card.addEventListener('dragstart', function (e) {
       arrastando = card;
       colunaOrigem = card.closest('.kanban-col');
+      arrastouAgora = true;
       card.classList.add('is-dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', card.dataset.candidatoId || '');
@@ -53,6 +59,18 @@
       document.querySelectorAll('.kanban-col').forEach(function (col) {
         col.classList.remove('is-drop-target');
       });
+      // Solta a trava no proximo tick: o clique sintetico, quando vem, chega
+      // logo apos o dragend.
+      setTimeout(function () { arrastouAgora = false; }, 0);
+    });
+
+    // Card inteiro abre a ficha. Clique em acao (link do curriculo, botao de
+    // saida) NAO navega: quem clicou no botao quer o botao.
+    card.addEventListener('click', function (e) {
+      if (arrastouAgora) return;
+      if (e.target.closest('a, button, form')) return;
+      const destino = card.dataset.detalhe;
+      if (destino) window.location.href = destino;
     });
   }
 
