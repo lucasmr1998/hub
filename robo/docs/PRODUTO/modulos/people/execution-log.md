@@ -444,3 +444,18 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 1. **Cinco PDFs orfaos** no volume `private_media` do servidor, da limpeza dos testes. Dado pessoal, um deles um contrato social. So o console do EasyPanel alcanca.
 2. **Tres ajustes de upload**, e com gente se candidatando agora este e o que mais custa: aceitar IMAGEM (candidato de vaga operacional fotografa o curriculo), tirar a obrigatoriedade do curriculo, e corrigir o `ERR_UPLOAD_FILE_CHANGED` lendo o arquivo em memoria.
 3. **CronJob do expurgo LGPD** segue sem confirmacao de que roda. Ficou mais critico depois dos campos custom, porque o tenant pode gravar dado sensivel que ele mesmo inventou.
+
+## 2026-07-21 — Curriculo aceita imagem, e o conserto do ERR_UPLOAD_FILE_CHANGED (tarefa 218, item 1)
+
+- **Acao**: primeiro item do bloco de mecanica universal levantado nos prints da Visio. Escolhido primeiro porque era o unico travando candidato REAL: o curriculo estava obrigatorio na vaga em prod, entao quem batia no erro do Chrome nao conseguia se candidatar de jeito nenhum.
+
+- **Decisao**: aceitar imagem (`.jpg`, `.jpeg`, `.png`, `.webp`, `.heic`). Candidato de vaga operacional fotografa o curriculo impresso. `.heic` porque e o padrao do iPhone, e sem ele metade dos candidatos de iOS esbarra num formato que o proprio aparelho gerou.
+- **Decisao**: os TRES lugares que falam de formato passam a derivar de `EXTENSOES_CURRICULO`. Estavam chumbados, e foi exatamente esse tipo de divergencia que matou o honeypot hoje de manha.
+- **Conserto do ERR_UPLOAD_FILE_CHANGED**: le os bytes na selecao e troca o arquivo do input por copia em memoria. Validado no navegador de verdade, com arquivo de 30 dias no disco virando `lastModified` de agora. Teste de template garante que o bloco nao seja removido por engano, porque o erro acontece no aparelho do candidato e nao gera log nenhum aqui.
+
+- **Bug meu no processo**: os 4 testes que fazem POST passavam isolados e falhavam na suite completa. Causa: o rate limit de 5 POSTs por minuto e compartilhado entre arquivos de teste que batem no mesmo endpoint. Ja existia a fixture `sem_rate_limit` nos outros arquivos e eu nao a segui. Corrigido.
+
+- **Nao mexido de proposito**: a obrigatoriedade do curriculo. O padrao de fabrica ja e OPCIONAL; quem marcou como obrigatorio na vaga em prod foi o Lucas, e desmarcar e um clique na tela dele. Nao vou dar UPDATE em config de prod por conta propria.
+
+- **Output**: 578 testes no modulo, 19 novos. Sem migration.
+- **Status**: completed em dev, nao pushado.

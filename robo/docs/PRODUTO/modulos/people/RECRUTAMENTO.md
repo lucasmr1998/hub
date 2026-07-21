@@ -286,6 +286,37 @@ Nenhum dado pessoal e gravado: quem so visitou nao consentiu com nada.
 
 ---
 
+## Curriculo: formatos e o erro do Chrome
+
+**Aceita imagem**, e nao so PDF e Word. Candidato de vaga operacional muitas
+vezes nao tem curriculo em PDF: tem uma FOTO do curriculo impresso. Recusar
+imagem fecha a porta pra essa fatia, e a dor numero um do cliente e "nao chega
+candidato". A origem tambem aceita: os prints mostram "Curriculo (imagem)".
+`.heic` entra porque e o padrao de foto do iPhone.
+
+Os TRES lugares que falam de formato (o `accept` do campo, a validacao do POST e
+o texto que o candidato le) saem de `EXTENSOES_CURRICULO`, em
+`campos_candidatura.py`. Chumbar nos tres foi o que fez o honeypot divergir da
+view em 21/07 e descartar candidato real.
+
+### ERR_UPLOAD_FILE_CHANGED
+
+O Chrome guarda o "modificado em" do arquivo no momento da SELECAO e confere de
+novo no envio. Se mudou, aborta com tela propria, sem chegar no servidor: o
+candidato so ve "Nao foi possivel acessar seu arquivo". No Android isso quebra o
+tempo todo com arquivo vindo do Google Drive ou da Galeria, que sincronizam e
+reescrevem sozinhos. Aconteceu com candidato real em 21/07.
+
+**Conserto**: ler os bytes na selecao e trocar o arquivo do input por uma copia
+em memoria. O que e enviado nao existe mais no disco, entao nao ha o que o Chrome
+reconferir. Degrada bem: navegador sem `DataTransfer` nao troca nada e o envio
+segue como antes.
+
+Validado no navegador, e nao so por teste: com um arquivo de 30 dias no disco, o
+arquivo no input passa a ter `lastModified` de agora.
+
+---
+
 ## Regra de parada
 
 `Vaga.limite_aprovados` (default 50). Ao atingir, a triagem PARA e a captacao

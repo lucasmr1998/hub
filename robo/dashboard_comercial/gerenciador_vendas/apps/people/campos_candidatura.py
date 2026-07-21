@@ -21,6 +21,24 @@ Dois campos sao TRAVADOS, e por razoes diferentes de peso igual:
   duas coisas de uma vez.
 """
 
+# Formatos aceitos no curriculo, em UM lugar so. Os tres consumidores (o
+# `accept` do campo, a validacao do POST e o texto que o candidato le) derivam
+# daqui. Chumbar nos tres foi o que fez o honeypot divergir da view em 21/07.
+#
+# IMAGEM entra de proposito. Candidato de vaga operacional muitas vezes nao tem
+# curriculo em PDF: ele tem uma FOTO do curriculo impresso. Recusar imagem
+# fecha a porta pra essa fatia, e a dor numero um do cliente e "nao chega
+# candidato". A origem tambem aceita: os prints mostram "Curriculo (imagem)".
+#
+# .heic e o padrao de foto do iPhone, e sem ele metade dos candidatos de iOS
+# esbarraria num formato que o proprio aparelho gerou.
+EXTENSOES_CURRICULO = (
+    '.pdf', '.doc', '.docx',
+    '.jpg', '.jpeg', '.png', '.webp', '.heic',
+)
+
+TAMANHO_MAX_CURRICULO_MB = 5
+
 CAMPOS_SISTEMA = [
     {
         'nome': 'nome_completo',
@@ -76,7 +94,8 @@ CAMPOS_SISTEMA = [
         'nome': 'curriculo',
         'tipo': 'file',
         'rotulo_padrao': 'Currículo',
-        'ajuda': 'PDF ou Word, até 5 MB.',
+        'ajuda': f'PDF, Word ou foto do currículo, até {TAMANHO_MAX_CURRICULO_MB} MB.',
+        'accept': ','.join(EXTENSOES_CURRICULO),
     },
 ]
 
@@ -227,3 +246,13 @@ def e_custom(nome):
 def slug_de(nome):
     """A chave em `Candidato.dados_custom` a partir do nome no formulario."""
     return nome[len('custom__'):] if e_custom(nome) else nome
+
+
+def curriculo_aceito(nome_arquivo):
+    """Se a extensao esta na lista. Usado na validacao do POST."""
+    return (nome_arquivo or '').lower().endswith(EXTENSOES_CURRICULO)
+
+
+def rotulo_formatos_curriculo():
+    """Texto pro erro, derivado da lista, pra nunca divergir dela."""
+    return 'PDF, Word (doc, docx) ou imagem (jpg, png, webp, heic)'

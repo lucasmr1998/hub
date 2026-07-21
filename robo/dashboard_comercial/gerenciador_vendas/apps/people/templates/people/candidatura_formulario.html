@@ -125,7 +125,7 @@
                     <label class="field-label" for="{{ campo.nome }}">{{ campo.rotulo }}{% if campo.obrigatorio %} <span class="field-required">*</span>{% endif %}</label>
                     <div class="field-input-wrap">
                       <input type="file" class="field-input" id="{{ campo.nome }}" name="{{ campo.nome }}"
-                             accept=".pdf,.doc,.docx"{% if campo.obrigatorio %} required{% endif %}>
+                             accept="{{ campo.accept }}"{% if campo.obrigatorio %} required{% endif %}>
                     </div>
                     {% if campo.erro %}
                       <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ campo.erro }}</p>
@@ -178,6 +178,64 @@
 
         <button type="submit" class="btn btn-primary">Enviar candidatura</button>
       </form>
+
+      {% comment %}
+        Conserta o ERR_UPLOAD_FILE_CHANGED do Chrome.
+
+        O navegador guarda o "modificado em" do arquivo no momento em que voce
+        seleciona, e confere DE NOVO na hora de enviar. Se mudou, ele aborta com
+        uma tela de erro propria, sem nem chegar no servidor, e o candidato so ve
+        "Nao foi possivel acessar seu arquivo". No Android isso quebra o tempo
+        todo com arquivo vindo do Google Drive ou da Galeria, que sincronizam e
+        reescrevem sozinhos. Aconteceu com candidato real em 21/07.
+
+        A saida: ler os bytes na hora da SELECAO e trocar o arquivo do input por
+        uma copia em memoria. O que for enviado nao existe mais no disco, entao
+        nao ha o que o Chrome reconferir.
+
+        Degrada bem: navegador sem File/DataTransfer simplesmente nao troca nada
+        e o envio segue como era antes.
+      {% endcomment %}
+      <script>
+        (function () {
+          var campo = document.getElementById('curriculo');
+          if (!campo || typeof DataTransfer === 'undefined') { return; }
+
+          var ajuda = campo.closest('.field').querySelector('.field-helper');
+          var textoOriginal = ajuda ? ajuda.textContent : '';
+
+          function avisar(texto, erro) {
+            if (!ajuda) { return; }
+            ajuda.textContent = texto;
+            ajuda.style.color = erro ? 'var(--color-danger)' : '';
+          }
+
+          campo.addEventListener('change', function () {
+            var arquivo = campo.files && campo.files[0];
+            if (!arquivo) { avisar(textoOriginal, false); return; }
+
+            avisar('Preparando o arquivo...', false);
+
+            arquivo.arrayBuffer().then(function (bytes) {
+              // Copia em memoria, com o mesmo nome e tipo. O `lastModified`
+              // passa a ser agora, entao a checagem do Chrome nunca falha.
+              var copia = new File([bytes], arquivo.name, {
+                type: arquivo.type,
+                lastModified: Date.now()
+              });
+              var pacote = new DataTransfer();
+              pacote.items.add(copia);
+              campo.files = pacote.files;
+              avisar(arquivo.name + ' pronto para enviar.', false);
+            }).catch(function () {
+              // Falhou a leitura: nao mexe no input e deixa o envio normal
+              // tentar. Pior caso e o comportamento que ja existia.
+              avisar('Não consegui ler o arquivo. Se ele estiver no Google Drive, '
+                     + 'baixe para o aparelho e tente de novo.', true);
+            });
+          });
+        })();
+      </script>
 
       <p class="pub-sub" style="text-align: center; margin-top: var(--sp-4);">
         Em caso de dúvida, procure o gerente da loja.

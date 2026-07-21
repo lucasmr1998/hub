@@ -253,11 +253,15 @@ def _ler_e_validar(request, link):
             erros[nome] = f'{rotulos.get(nome, "Este campo")} é obrigatório.'
 
     # Curriculo, quando enviado, valida tipo e tamanho independente de exigencia.
+    # Extensoes e limite saem do catalogo, nao chumbados aqui: sao os mesmos que
+    # alimentam o `accept` do campo e o texto que o candidato le.
     arquivo = dados.get('curriculo')
     if arquivo:
-        if arquivo.size > 5 * 1024 * 1024:
-            erros['curriculo'] = 'O arquivo precisa ter até 5 MB.'
-        elif not arquivo.name.lower().endswith(('.pdf', '.doc', '.docx')):
-            erros['curriculo'] = 'Envie em PDF ou Word.'
+        limite = catalogo.TAMANHO_MAX_CURRICULO_MB
+        if arquivo.size > limite * 1024 * 1024:
+            erros['curriculo'] = f'O arquivo precisa ter até {limite} MB.'
+        elif not catalogo.curriculo_aceito(arquivo.name):
+            erros['curriculo'] = (
+                f'Envie em {catalogo.rotulo_formatos_curriculo()}.')
 
     return dados, erros
