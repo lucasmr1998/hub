@@ -499,6 +499,26 @@ def _grafo_bot_venda(agente_id):
             'pos': {'x': 950, 'y': 40},
             'label': 'Checklist: validar resposta (determinístico)',
         },
+        # Toda resposta valida tambem vai pra FICHA do lead, nao so pra tabela
+        # de respostas do checklist. Sem isso a vendedora abria o lead e via
+        # CPF, email e endereco vazios, mesmo o bot tendo coletado tudo.
+        # UM no so: a chave do item tem o mesmo nome do campo do lead, entao
+        # `{{nodes.validar.chave}}` resolve qual campo escrever em execucao.
+        # Chave que nao e campo do lead (`tipo_imovel`, `plano_confirmado`)
+        # cai em skip, que e o caso normal e nao interrompe nada.
+        'grava_no_lead': {
+            'tipo': 'definir_propriedade_lead',
+            'config': {
+                'propriedade': '{{nodes.validar.chave}}',
+                'valor': '{{nodes.validar.valor_processado}}',
+                # Nao sobrescreve o que ja tem valor: o cliente pode
+                # reperguntar um item e um humano pode ter corrigido a ficha
+                # no meio do caminho.
+                'somente_se_vazio': True,
+            },
+            'pos': {'x': 1100, 'y': 40},
+            'label': 'Gravar na ficha do lead',
+        },
         # ── Checagem de cliente HubSoft, so quando a resposta validada e o CPF ──
         # Portado do que o N8N ja fazia: assim que o CPF chega, consulta o
         # HubSoft e, se a pessoa ja for assinante, transborda em vez de seguir
@@ -698,9 +718,14 @@ def _grafo_bot_venda(agente_id):
         {'de': 'ja_respondeu', 'para': 'resp_pergunta_inicio', 'saida': 'false'},
 
         # validar
-        # Resposta valida passa pela checagem de cliente antes de responder.
-        {'de': 'validar', 'para': 'e_cpf', 'saida': 'valida'},
+        # Resposta valida vai pra ficha do lead e so entao segue pras checagens.
+        {'de': 'validar', 'para': 'grava_no_lead', 'saida': 'valida'},
         {'de': 'validar', 'para': 'resp_erro', 'saida': 'erro'},
+        # Gravar na ficha nunca pode barrar o atendimento: os dois branches
+        # seguem pro mesmo lugar. A resposta ja esta salva na tabela do
+        # checklist de qualquer forma, a ficha e conveniencia pra vendedora.
+        {'de': 'grava_no_lead', 'para': 'e_cpf', 'saida': 'sucesso'},
+        {'de': 'grava_no_lead', 'para': 'e_cpf', 'saida': 'erro'},
         # So o CPF dispara a consulta de cliente; as demais seguem pra proxima
         # checagem (uma chamada de API por resposta seria desperdicio, e o bot
         # tem 45s de teto por turno).

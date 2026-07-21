@@ -55,6 +55,7 @@ from . import assinar_contrato_hubsoft  # noqa: F401,E402  (F5 — migração fu
 from . import criar_nota  # noqa: F401,E402  (F6, tarefas 180/181: nota interna na oportunidade)
 from . import reabrir_oportunidade  # noqa: F401,E402  (F8, tarefas 180/181: reabrir oportunidade perdida)
 from . import definir_propriedade_oportunidade  # noqa: F401,E402  (F7/F9 unificados: catálogo de propriedades)
+from . import definir_propriedade_lead  # noqa: F401,E402  (espelho do de oportunidade: o bot precisa escrever na ficha do lead)
 from . import ia_agente  # noqa: F401,E402  (D2 — Agente IA: turno conversacional referenciando Agente)
 from . import checklist_proximo_item  # noqa: F401,E402  (bot vendas vira fluxo: acha a próxima pergunta pendente)
 from . import checklist_validar  # noqa: F401,E402  (bot vendas vira fluxo: cascata determinística, sem LLM)

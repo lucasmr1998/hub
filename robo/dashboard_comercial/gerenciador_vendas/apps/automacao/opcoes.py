@@ -76,6 +76,13 @@ def _propriedades_oportunidade(tenant):
     return opcoes_propriedades(tenant)
 
 
+def _propriedades_lead(tenant):
+    """Catálogo do nó `definir_propriedade_lead`. Não é por tenant, mas segue a
+    assinatura padrão."""
+    from .propriedades_lead import opcoes_propriedades
+    return opcoes_propriedades(tenant)
+
+
 def _checklists(tenant):
     """Catálogo dos nós `checklist_*`. `value` = slug, não pk: o `Checklist.slug`
     já é o identificador estável reservado pra referência externa (mesmo campo
@@ -96,6 +103,7 @@ FONTES = {
     'varreduras': _varreduras,
     'motivos_perda': _motivos_perda,
     'propriedades_oportunidade': _propriedades_oportunidade,
+    'propriedades_lead': _propriedades_lead,
     'checklists': _checklists,
 }
 

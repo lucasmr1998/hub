@@ -223,9 +223,12 @@ def test_grafo_ramo_validar_tem_nos_e_branches_esperados():
     assert nodes['json']['tipo'] == 'extrair_json'
 
     por_saida = {(c['de'], c['saida']): c['para'] for c in grafo['conexoes']}
-    # Resposta valida passa pela checagem de cliente HubSoft antes de responder.
-    assert por_saida[('validar', 'valida')] == 'e_cpf'
+    # Resposta valida vai pra ficha do lead e so entao segue pras checagens.
+    assert por_saida[('validar', 'valida')] == 'grava_no_lead'
     assert por_saida[('validar', 'erro')] == 'resp_erro'
+    # Gravar na ficha nunca barra o atendimento: os dois branches seguem igual.
+    assert por_saida[('grava_no_lead', 'sucesso')] == 'e_cpf'
+    assert por_saida[('grava_no_lead', 'erro')] == 'e_cpf'
     assert por_saida[('validar', 'invalida')] == 'agente'
     assert por_saida[('agente', 'sucesso')] == 'json'
     assert por_saida[('json', 'sucesso')] == 'se_valido'
@@ -899,3 +902,53 @@ def test_e2e_endereco_ainda_nao_respondido_nao_vaza_template_pra_consulta(mock_v
     # O CEP, esse sim respondido, tem que chegar de verdade.
     assert mock_viab.call_args[0][1] == '13327450'
     assert _corpo_resposta(ctx)['needsReception'] == 'false'
+
+
+@pytest.mark.django_db
+@mock.patch('apps.automacao.nodes.hubsoft_consultar_cliente.consultar_cliente')
+def test_e2e_resposta_valida_preenche_a_ficha_do_lead(mock_consulta):
+    """A resposta não fica só na tabela do checklist: cai no campo da ficha, que
+    é onde a vendedora olha (e de onde o HubSoft lê o CPF)."""
+    tenant = TenantFactory()
+    _checklist, item_cpf, _i2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990030', cpf_cnpj='')
+    mock_consulta.return_value = {'status': 'success', 'clientes': []}
+
+    resultado, _ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990030',
+        'question_id': item_cpf.pk, 'answer': '111.444.777-35',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['grava_no_lead'].branch == 'sucesso'
+    lead.refresh_from_db()
+    # Só dígitos: é o formato que o HubSoft espera e o que a deduplicação compara.
+    assert lead.cpf_cnpj == '11144477735'
+
+
+@pytest.mark.django_db
+@mock.patch('apps.automacao.nodes.definir_propriedade_lead.DefinirPropriedadeLeadNode.executar')
+def test_e2e_falha_ao_gravar_na_ficha_nao_derruba_o_atendimento(mock_grava):
+    """A resposta já está salva na tabela do checklist; a ficha é conveniência.
+    Falhar ali não pode custar o atendimento do cliente."""
+    from apps.automacao.nodes.base import NodeResult
+
+    tenant = TenantFactory()
+    _checklist, _i1, item_tipo = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    LeadProspectoFactory(tenant=tenant, telefone='5589999990031')
+    mock_grava.return_value = NodeResult(status='erro', branch='erro', erro='banco fora')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990031',
+        'question_id': item_tipo.pk, 'answer': '1',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['resposta_correta'] == 'true'
+    assert corpo['needsReception'] == 'false'
