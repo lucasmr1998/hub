@@ -327,3 +327,71 @@ Django 4.1+ usa o cached template loader MESMO em DEBUG. Com `runserver --norelo
 
 - **Output**: 520 testes no modulo (16 novos em `test_people_campos_custom.py`). Migration 0016. `manage.py check` limpo.
 - **Status**: completed em dev, **nao pushado**, junto com a tarefa 213. Aguardando validacao.
+
+## 2026-07-21 — INCIDENTE em prod: 500 na ficha e candidatura descartada pelo honeypot
+
+- **Acao**: dois bugs achados pelo Lucas em producao, no mesmo dia do deploy dos campos custom. Corrigidos no commit 2741ec7.
+
+### Bug 1: 500 em /people/candidatos/<pk>/ (introduzido por mim hoje)
+
+Ao adicionar `_respostas_custom`, inseri a funcao ENTRE o decorator
+`@requer_people` e a view `detalhe`. O decorator passou a decorar a auxiliar, que
+recebe `candidato` no lugar de `request`, e estourava em `test_func(request.user)`.
+
+**O 500 era o sintoma barulhento. O silencioso era pior:** `detalhe` ficou sem
+checagem de permissao nenhuma. O isolamento por tenant continuou (TenantManager
+filtra), mas qualquer usuario logado do tenant abriria a ficha de um candidato,
+que e PII.
+
+**Por que passou:** nao havia UM teste abrindo essa view. So o endpoint do
+curriculo tinha cobertura. Entraram quatro testes (abre, exige permissao, mostra
+o rotulo do campo custom, ignora resposta de campo apagado). Varredura no
+projeto inteiro atras da mesma classe de erro (decorator em funcao privada):
+caso unico.
+
+### Bug 2: honeypot descartando candidato real (anterior a hoje)
+
+O campo se chamava `sobrenome_confirmacao`, fora da tela por CSS e nao por
+`type=hidden`, de proposito, pra preenchedor automatico cair nele. **O Chrome
+IGNORA `autocomplete=off` em campo que parece dado pessoal**, e "sobrenome" e
+justamente o token que ele reconhece.
+
+O candidato abria o formulario, o navegador preenchia o campo escondido junto
+com o resto, e a view devolvia a pagina de SUCESSO sem gravar nada. Um candidato
+real perdido hoje, sem rastro nenhum: os dados dele nao dao pra recuperar.
+
+Diagnostico por ELIMINACAO, nao por log: e o unico caminho do codigo que mostra
+sucesso sem criar candidato. Duplicidade mostraria erro; falha na etapa inicial
+deixaria o candidato no banco sem etapa. Confirmado no banco de prod que existe
+um so candidato (o teste de 04:58 UTC) e que o link tem `candidaturas=1`.
+
+**O mesmo campo, com o mesmo nome, estava no formulario publico do DP.** Os dois
+corrigidos.
+
+- **Decisao**: o nome virou constante unica (`apps/people/utils.py::NOME_HONEYPOT`)
+  e vai pro template pelo CONTEXTO. Chumbado dos dois lados, um dia divergiriam,
+  e ai o honeypot para de funcionar em silencio, o que e pior que nao ter.
+- **Decisao**: a rejeicao passa a ser REGISTRADA no lado de recrutamento. Ja era
+  no DP (SubmissaoLinkCadastro). Honeypot que erra calado nao tem como ser
+  auditado, e o custo do falso positivo e um candidato perdido.
+- **Teste que trava o nome**: falha se o campo escolhido contiver qualquer token
+  que o autofill reconhece (nome, sobrenome, email, tel, cpf, endereco, etc).
+
+### Achado colateral, fora do escopo de People
+
+`apps/sistema/decorators.py:175` trata **usuario sem `PermissaoUsuario`
+cadastrado como acesso total** ("retrocompat legado"). Vale pra TODOS os modulos.
+Meu teste de permissao passou por engano ate eu perceber. Nao mexi, porque muda
+o comportamento do sistema inteiro, mas e regra que envelhece mal e merece
+decisao propria.
+
+### Licao de processo
+
+Os dois bugs sao da mesma familia: **codigo que falha em silencio**. O decorator
+orfao removeu uma protecao sem erro nenhum, e o honeypot descartava gente sem
+deixar registro. Nos dois casos o conserto nao foi so corrigir, foi tornar a
+falha VISIVEL (teste que abre a view, log na rejeicao).
+
+- **Output**: 526 testes no modulo. Sem migration. Deploy 21/07.
+- **Status**: completed. Pendencia com o Lucas: pedir pro candidato reenviar,
+  porque o dado dele nao foi gravado em lugar nenhum.
