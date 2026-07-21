@@ -11,8 +11,9 @@ do board do DP, com duas diferencas que vem do dominio:
 A view nao contem regra: chama os servicos de pipeline e traduz o que voltam.
 """
 import json
+import mimetypes
 
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
@@ -145,3 +146,33 @@ def api_dar_saida(request, pk):
     return JsonResponse({'ok': True, 'saida': saida,
                          'rotulo': estados_rs.rotulo_saida(saida),
                          'aviso': aviso})
+
+
+@requer_people()
+def curriculo(request, pk):
+    """
+    Serve o curriculo do candidato.
+
+    O arquivo vive em storage privado (PrivateCurriculoStorage), fora de
+    MEDIA_ROOT, justamente porque a rota `/media/` serve qualquer arquivo sem
+    autenticacao. Aqui passa pelo login, pela permissao do modulo e pelo escopo
+    de tenant do `Candidato.objects`, entao um pk de outro tenant da 404 em vez
+    de entregar o PDF.
+
+    Mesmo desenho do `api_midia` do Inbox, que resolveu isto antes pra RG e
+    comprovante.
+    """
+    candidato = get_object_or_404(Candidato.objects, pk=pk)
+
+    if not candidato.curriculo:
+        raise Http404('Candidato sem currículo')
+    if candidato.anonimizado_em:
+        # Expurgo LGPD ja apagou o arquivo; a linha sobrevive so como numero.
+        raise Http404('Currículo removido por retenção')
+
+    tipo = mimetypes.guess_type(candidato.curriculo.name)[0] or 'application/octet-stream'
+    resposta = FileResponse(candidato.curriculo.open('rb'), content_type=tipo)
+    extensao = candidato.curriculo.name.rsplit('.', 1)[-1]
+    nome = f'curriculo-{candidato.nome_completo}.{extensao}'.replace(' ', '-')
+    resposta['Content-Disposition'] = f'inline; filename="{nome}"'
+    return resposta

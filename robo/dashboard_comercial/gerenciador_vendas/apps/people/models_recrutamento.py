@@ -11,10 +11,36 @@ so a EtapaPipeline. Vaga, LinkCandidatura e Candidato vem nos passos seguintes.
 """
 import re
 
+import os
+
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+
+
+class PrivateCurriculoStorage(FileSystemStorage):
+    """
+    Storage privado pro curriculo do candidato.
+
+    Curriculo e dado pessoal denso: nome, contato, historico, as vezes endereco.
+    MEDIA_ROOT e servido pela rota aberta `/media/` sem autenticacao nenhuma,
+    entao um curriculo la seria baixavel por qualquer um que descobrisse a URL.
+
+    Fica em `private_media/`, que e um volume separado no deploy e NAO tem rota
+    publica. Acesso so pela view auth-gated `views/candidatos.py::curriculo`.
+    Mesmo padrao do PrivateMidiaStorage do Inbox, que resolveu isto antes pra
+    RG e comprovante.
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs['location'] = os.path.join(
+            settings.BASE_DIR, 'private_media', 'people_curriculos')
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        return ('apps.people.models_recrutamento.PrivateCurriculoStorage', [], {})
 
 from apps.sistema.mixins import TenantMixin
 from apps.people import estados_recrutamento as estados_rs
@@ -513,8 +539,10 @@ class Candidato(TenantMixin):
         verbose_name="Disponibilidade de horário",
     )
     curriculo = models.FileField(
-        upload_to='people/curriculos/%Y/%m/', null=True, blank=True,
-        verbose_name="Currículo",
+        upload_to='%Y/%m/', storage=PrivateCurriculoStorage(),
+        null=True, blank=True, verbose_name="Currículo",
+        help_text="Storage privado, fora de /media/. Servido só pela view "
+                  "auth-gated.",
     )
 
     # ── Processo ──

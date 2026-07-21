@@ -5,10 +5,23 @@ de etapa e na area "fora de etapa".
 <div class="kanban-card" data-candidato-id="{{ candidato.pk }}">
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-2);">
     <p class="kanban-card-title">{{ candidato.nome_completo }}</p>
-    <button type="button" class="btn btn-ghost btn-sm" data-abrir-saida
-            title="Tirar do processo" style="padding: 2px 6px; margin: -4px -4px 0 0;">
-      <i class="bi bi-box-arrow-right"></i>
-    </button>
+    <span style="display: flex; gap: 2px; margin: -4px -4px 0 0;">
+      {% if candidato.curriculo %}
+        {% comment %}
+          Abre em aba nova porque o board nao pode perder o estado do arrasto.
+          A rota e auth-gated: o arquivo nao vive em /media/.
+        {% endcomment %}
+        <a href="{% url 'people:candidato_curriculo' candidato.pk %}" target="_blank"
+           class="btn btn-ghost btn-sm" title="Abrir currículo"
+           style="padding: 2px 6px;" onclick="event.stopPropagation();">
+          <i class="bi bi-file-earmark-text"></i>
+        </a>
+      {% endif %}
+      <button type="button" class="btn btn-ghost btn-sm" data-abrir-saida
+              title="Tirar do processo" style="padding: 2px 6px;">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </span>
   </div>
   <p class="kanban-card-sub">
     {% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}Banco de talentos{% endif %} · {{ candidato.unidade.nome }}

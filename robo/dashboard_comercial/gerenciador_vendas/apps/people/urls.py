@@ -43,6 +43,8 @@ urlpatterns = [
     path('candidatos/<int:pk>/mover/', pipeline.api_mover, name='pipeline_mover'),
     path('candidatos/<int:pk>/saida/', pipeline.api_dar_saida,
          name='pipeline_saida'),
+    path('candidatos/<int:pk>/curriculo/', pipeline.curriculo,
+         name='candidato_curriculo'),
 
     # Recrutamento: quadro por unidade
     path('quadro/', quadro.lista, name='quadro_lista'),
