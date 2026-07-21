@@ -31,8 +31,6 @@
   const urlSaida = board.dataset.urlSaida;
   const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
-  if (!podeMover) return;
-
   let arrastando = null;
   let colunaOrigem = null;
   // Marca que houve arrasto, pra o clique que vem logo depois nao navegar. O
@@ -41,7 +39,25 @@
   // arrastar.
   let arrastouAgora = false;
 
-  // ── Cards ──────────────────────────────────────────────────────────────
+  // ── Abrir a ficha: vale pra QUALQUER um que enxerga o board ────────────
+  //
+  // Fica antes da guarda de `podeMover` de proposito. Abrir a ficha e leitura,
+  // nao movimentacao: quem so tem people.ver precisa conseguir clicar no card.
+  // Estava dentro da guarda antes, e o efeito era um board onde so o nome
+  // clicava pra quem nao pode mover.
+  document.querySelectorAll('.kanban-card').forEach(function (card) {
+    card.addEventListener('click', function (e) {
+      if (arrastouAgora) return;
+      // Quem clica no botao de saida ou no link do curriculo quer aquilo.
+      if (e.target.closest('a, button, form')) return;
+      const destino = card.dataset.detalhe;
+      if (destino) window.location.href = destino;
+    });
+  });
+
+  if (!podeMover) return;
+
+  // ── Cards: arrasto, so pra quem pode mover ─────────────────────────────
   function ligarCard(card) {
     card.draggable = true;
 
@@ -62,15 +78,6 @@
       // Solta a trava no proximo tick: o clique sintetico, quando vem, chega
       // logo apos o dragend.
       setTimeout(function () { arrastouAgora = false; }, 0);
-    });
-
-    // Card inteiro abre a ficha. Clique em acao (link do curriculo, botao de
-    // saida) NAO navega: quem clicou no botao quer o botao.
-    card.addEventListener('click', function (e) {
-      if (arrastouAgora) return;
-      if (e.target.closest('a, button, form')) return;
-      const destino = card.dataset.detalhe;
-      if (destino) window.location.href = destino;
     });
   }
 

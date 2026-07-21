@@ -327,3 +327,22 @@ def test_candidato_anonimizado_nao_aparece(cenario):
     corpo = _cliente(cenario).get(reverse('people:pipeline_board')).content.decode()
 
     assert 'Sera Anonimizado' not in corpo
+
+
+@pytest.mark.django_db
+def test_card_tem_o_destino_da_ficha_mesmo_pra_quem_so_le(cenario):
+    """
+    Abrir a ficha e LEITURA, nao movimentacao.
+
+    O JS do board tinha a navegacao dentro da guarda de `podeMover`, entao pra
+    quem nao podia mover o card inteiro parava de clicar e sobrava so o link do
+    nome. Este teste garante que o dado que o JS precisa (data-detalhe) sai no
+    HTML mesmo pro usuario que so tem people.ver.
+    """
+    candidato = _candidato(cenario, nome_completo='So Leitura Ve')
+    garantir_etapa_inicial(candidato)
+    cliente = _cliente(cenario, username='so_le', funcionalidades=('people.ver',))
+
+    corpo = cliente.get(reverse('people:pipeline_board')).content.decode()
+
+    assert f'data-detalhe="/people/candidatos/{candidato.pk}/"' in corpo
