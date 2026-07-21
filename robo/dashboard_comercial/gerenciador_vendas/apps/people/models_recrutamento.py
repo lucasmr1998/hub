@@ -1126,6 +1126,21 @@ class LinkCandidatura(TenantMixin):
         help_text="Quantas chegaram por este link. É a atribuição de canal.",
     )
     ultima_candidatura_em = models.DateTimeField(null=True, blank=True)
+    visitas = models.PositiveIntegerField(
+        default=0, verbose_name="Visitas",
+        help_text="Visitantes unicos que ABRIRAM a pagina. Nao e clique: quem "
+                  "clica e desiste antes de carregar nao conta.",
+    )
+    medindo_visitas_desde = models.DateTimeField(
+        # `default` e nao `auto_now_add`: link criado agora ja nasce medindo, e
+        # os antigos foram marcados pela migration 0018. Com auto_now_add nao
+        # daria pra distinguir um do outro.
+        default=timezone.now,
+        null=True, blank=True, verbose_name="Medindo visitas desde",
+        help_text="Link criado antes da medicao tem candidatura sem visita "
+                  "correspondente, e a taxa mentiria. Guardar a data permite "
+                  "dizer isso em vez de exibir um numero quebrado.",
+    )
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
     desativado_em = models.DateTimeField(null=True, blank=True)
     criado_por = models.ForeignKey(
@@ -1169,6 +1184,31 @@ class LinkCandidatura(TenantMixin):
     @property
     def caminho_publico(self):
         return f'/people/candidatura/{self.token}/'
+
+    @property
+    def taxa_confiavel(self):
+        """
+        Se da pra exibir a taxa sem mentir.
+
+        Link criado ANTES da medicao comecar ja tem candidatura sem visita
+        correspondente. Exibir a divisao ali daria numero acima de 100%, ou uma
+        taxa inventada, e um numero que nasce quebrado destrui a confianca na
+        tela inteira. Nestes casos a tela diz "medindo desde <data>".
+        """
+        return bool(self.medindo_visitas_desde) and self.visitas >= self.candidaturas
+
+    @property
+    def taxa_conversao(self):
+        """
+        Quantos por cento dos visitantes se candidataram. None se nao da pra dizer.
+
+        E ESTE o numero que responde "qual canal vale o dinheiro". Contagem crua
+        de visita nao responde: um canal com 200 visitas e 2 candidaturas e pior
+        que um com 30 e 8, e so a taxa mostra.
+        """
+        if not self.taxa_confiavel or not self.visitas:
+            return None
+        return round(self.candidaturas * 100 / self.visitas, 1)
 
     def desativar(self):
         """

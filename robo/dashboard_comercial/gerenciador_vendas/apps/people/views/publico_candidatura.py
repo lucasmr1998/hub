@@ -24,7 +24,7 @@ from apps.people.services.candidaturas import (
 )
 from apps.people.services.pipeline import garantir_etapa_inicial
 from apps.people.tenant_scope import escopo_tenant
-from apps.people.utils import NOME_HONEYPOT
+from apps.people.utils import NOME_HONEYPOT, e_robo
 from apps.sistema.utils import registrar_acao
 
 
@@ -71,7 +71,49 @@ def formulario(request, token):
 
     contexto = _contexto(link)
     contexto['config'] = config
-    return render(request, 'people/candidatura_formulario.html', contexto)
+    resposta = render(request, 'people/candidatura_formulario.html', contexto)
+    return _contar_visita(request, resposta, link)
+
+
+def _contar_visita(request, resposta, link):
+    """
+    Conta VISITANTE, e nao acesso, e devolve a resposta com o cookie marcado.
+
+    Contar acesso deixaria numerador e denominador em unidades diferentes: a
+    candidatura e uma pessoa, entao a taxa so significa alguma coisa se a visita
+    tambem for. Recarregar a pagina, ou voltar pra corrigir um campo, e comum num
+    formulario e infla o numero sem ninguem novo ter chegado.
+
+    COOKIE PROPRIO, e nao a sessao do Django, de proposito: a sessao mora numa
+    tabela do banco e o `clearsessions` nao roda em lugar nenhum do projeto
+    (prod tinha 144 linhas, 100 ja vencidas). Criar uma sessao por visitante
+    anonimo de QR faria essa virar a tabela que mais cresce, sem nada limpando.
+    Este cookie nao gera linha nenhuma.
+
+    Nada de dado pessoal aqui, e nao por acaso: quem so visitou nao consentiu
+    com nada. O cookie diz apenas "ja contei este visitante neste link".
+
+    LIMITES ASSUMIDOS, ambos errando PRA CIMA (a taxa real e melhor que a
+    exibida, nunca pior): quem bloqueia cookie conta a cada visita, e quem abre
+    no celular e depois no computador conta duas.
+    """
+    from django.db.models import F
+
+    if e_robo(request.META.get('HTTP_USER_AGENT', '')):
+        return resposta
+
+    chave = f'hv{link.pk}'
+    if request.COOKIES.get(chave):
+        return resposta
+
+    # F() em vez de ler, somar e gravar: dois visitantes no mesmo instante
+    # perderiam uma visita, e um QR em evento exercita isso de verdade.
+    LinkCandidatura.all_tenants.filter(pk=link.pk).update(
+        visitas=F('visitas') + 1)
+
+    resposta.set_cookie(chave, '1', max_age=30 * 24 * 3600,
+                        samesite='Lax', httponly=True)
+    return resposta
 
 
 @require_http_methods(['POST'])

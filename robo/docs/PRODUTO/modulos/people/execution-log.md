@@ -395,3 +395,36 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 - **Output**: 526 testes no modulo. Sem migration. Deploy 21/07.
 - **Status**: completed. Pendencia com o Lucas: pedir pro candidato reenviar,
   porque o dado dele nao foi gravado em lugar nenhum.
+
+## 2026-07-21 — Atraso por etapa, captacao continua e taxa de conversao (tarefas 217 e 216)
+
+- **Acao**: fechar duas promessas quebradas do recrutamento (217) e dar o denominador que faltava pra decidir verba por canal (216).
+
+### Tarefa 217
+
+**`sla_dias` era campo morto.** O help_text do model e o helper da tela de fluxo prometiam "depois disso o candidato aparece como atrasado nesta etapa", e nada calculava. Faltava saber DESDE QUANDO: entrou `Candidato.etapa_desde`, preenchido por `mover_para_etapa`. Nao serve `atualizado_em`, porque corrigir o telefone do candidato zeraria o relogio sem ele ter andado no processo. A migration 0017 faz back-fill pelo `HistoricoCandidato`, com fallback pro `criado_em`; sem isso o recurso nasceria mostrando "sem atraso" pra quem ja esta no pipeline.
+
+**Link de banco de talentos nao era criavel.** O model aceitava nulo, o help_text documentava, a view publica tratava e havia TESTES cobrindo. So nao existia botao. `/people/captacao/` e a porta.
+
+- **Decisao**: descartei do escopo a etapa "Teste Comportamental", que eu tinha listado como rotulo sem comportamento. Revisto e admitido: a etapa e so o nome de uma coluna e nada na interface promete enviar teste. Um RH aplica o teste por fora e move o card. Isso e gap de IA, nao promessa quebrada. Eu tinha escalado e desescalado esse item duas vezes antes de concluir.
+
+### Tarefa 216
+
+**Conta VISITANTE, nao acesso.** Candidatura e uma pessoa; com acesso no denominador, a taxa nao significaria nada.
+
+- **Decisao**: cookie proprio, e NAO a sessao do Django. A sessao mora em tabela e o `clearsessions` nao roda em lugar nenhum do projeto (prod tinha 144 linhas, 100 vencidas e nunca limpas). Uma sessao por visitante anonimo de QR faria essa virar a tabela que mais cresce, sem nada limpando. Ha teste garantindo que visita nao cria sessao.
+- **Decisao**: filtro de User-Agent. WhatsApp e Facebook buscam a URL pra montar o preview, e sao justamente os canais em uso: sem o filtro, divulgar ja geraria movimento que ninguem fez. Heuristica assumidamente incompleta; o objetivo e tirar o vies SISTEMATICO dos previews, nao barrar abuso (pra isso ha rate limit).
+- **Decisao**: esconder a taxa quando ela nao e confiavel. Link anterior a medicao daria numero acima de 100%, e numero que nasce quebrado destroi a confianca na tela inteira. A celula diz "medindo visitas desde <data>" ate alcancar.
+- Limites assumidos e documentados: cookie bloqueado e troca de aparelho contam a mais. Os dois erram PRA CIMA, entao a taxa real e melhor que a exibida. Errar pro lado pessimista e o certo pra decidir verba.
+
+**Componente extraido**: `people/_link_conversao.html`, no segundo uso (aba Divulgacao e Captacao continua). A regra de quando NAO mostrar a taxa e justamente a parte que nao pode divergir entre as duas telas.
+
+- **Output**: 559 testes no modulo (15 da 217, 18 da 216). Migrations 0017, 0018 e 0019 aplicadas em dev. `check` limpo.
+- **Status**: completed em dev. **Nao pushado.**
+
+## 2026-07-21 — Limpeza dos candidatos de teste em prod
+
+- **Acao**: apagados 6 candidatos de teste, mantido o unico real (James Dean). Autorizado pelo Lucas, com confirmacao explicita do registro ambiguo (um deles tinha nome completo, Gmail e curriculo com cara de real).
+- **Decisao**: o contador `LinkCandidatura.candidaturas` foi RECALCULADO da contagem real, e nao decrementado. Ele e denormalizado e nao decrementa sozinho no delete; subtrair propagaria qualquer divergencia previa. Sem isso a taxa de conversao da 216 nasceria mentindo, com denominador certo e numerador inflado.
+- **Pendencia**: os cinco PDFs de curriculo continuam no volume `private_media` do servidor. Daqui so ha acesso ao banco, e apagar a linha nao apaga o arquivo. E dado pessoal orfao, um deles um contrato social. Comando de limpeza entregue pro Lucas rodar no console do EasyPanel.
+- **Pergunta em aberto**: o candidato id=2 foi criado SEM curriculo com o campo marcado como obrigatorio. Ou a config mudou entre o envio e a consulta, ou ha furo na validacao do formulario publico. A evidencia foi apagada junto com o registro.

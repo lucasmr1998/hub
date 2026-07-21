@@ -1,0 +1,33 @@
+{% comment %}
+Celula de conversao de um link de candidatura.
+
+Extraida porque aparece em duas telas (aba Divulgacao da vaga e Captacao
+continua). Duplicar inline faria as duas divergirem, e a regra de quando NAO
+mostrar a taxa e justamente a parte que nao pode divergir.
+
+Params:
+  link: LinkCandidatura
+
+Tres estados, nesta ordem de precedencia:
+  1. Ainda nao da pra dizer (link e mais velho que a medicao) -> avisa desde
+     quando esta medindo, em vez de exibir uma taxa acima de 100%.
+  2. Medindo, sem visita ainda -> mostra so as candidaturas.
+  3. Medindo, com visita -> a taxa, que e o numero que decide verba por canal.
+{% endcomment %}
+<span>
+  <strong>{{ link.candidaturas }}</strong>
+  candidatura{{ link.candidaturas|pluralize }}
+
+  {% if not link.taxa_confiavel %}
+    <span class="field-helper" style="display: block;">
+      medindo visitas desde {{ link.medindo_visitas_desde|date:"d/m/Y" }}
+    </span>
+  {% elif not link.visitas %}
+    <span class="field-helper" style="display: block;">nenhuma visita ainda</span>
+  {% else %}
+    <span class="field-helper" style="display: block;">
+      {{ link.visitas }} visita{{ link.visitas|pluralize }} ·
+      <strong>{{ link.taxa_conversao|floatformat:1 }}%</strong> de conversão
+    </span>
+  {% endif %}
+</span>

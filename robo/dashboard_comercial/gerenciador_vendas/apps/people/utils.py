@@ -118,3 +118,45 @@ def mascarar_cpf(cpf):
     if digitos is None:
         return ''
     return f'***.***.**{digitos[-3:-2]}-{digitos[-2:]}'
+
+
+# Robos que buscam a URL pra montar o preview do link. NAO sao pessoas, e
+# contar eles inverteria a leitura da tela: colar o link num grupo de WhatsApp
+# ja geraria "visita", e o canal pareceria ter movimento que nunca teve.
+#
+# Os dois primeiros sao os que mais importam aqui, porque WhatsApp e Facebook
+# sao justamente os canais de divulgacao que os clientes usam.
+ASSINATURAS_DE_ROBO = (
+    'facebookexternalhit',   # Facebook e Instagram, ao gerar o card do link
+    'whatsapp',              # WhatsApp, ao gerar o preview na conversa
+    'twitterbot',
+    'linkedinbot',
+    'telegrambot',
+    'slackbot',
+    'discordbot',
+    'bot',                   # generico, pega a cauda longa
+    'crawler',
+    'spider',
+    'preview',
+    'python-requests',
+    'curl/',
+    'wget',
+    'headlesschrome',        # automacao, nao gente
+)
+
+
+def e_robo(user_agent):
+    """
+    Se o User-Agent e de robo, e nao de pessoa.
+
+    Heuristica, e assumidamente incompleta: robo que mente o User-Agent passa.
+    O objetivo nao e barrar abuso (pra isso ha rate limit), e sim tirar o VIES
+    SISTEMATICO dos previews de link, que sao previsiveis e acontecem toda vez
+    que alguem divulga.
+
+    User-Agent vazio conta como robo: navegador de verdade sempre manda um.
+    """
+    agente = (user_agent or '').strip().lower()
+    if not agente:
+        return True
+    return any(assinatura in agente for assinatura in ASSINATURAS_DE_ROBO)

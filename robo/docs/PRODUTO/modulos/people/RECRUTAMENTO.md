@@ -243,6 +243,49 @@ nao fica ligado a loja nenhuma, e o RH daquela loja nao encontra ele.
 
 ---
 
+## Taxa de conversao por link
+
+A tela dizia quantas candidaturas cada link trouxe e nao quantas pessoas
+abriram. Sem o denominador nao da pra saber qual canal converte: 200 visitas com
+2 candidaturas e pior que 30 com 8, e so a taxa mostra isso.
+
+**Conta VISITANTE, e nao acesso.** Candidatura e uma pessoa; se o denominador
+fosse acesso, numerador e denominador ficariam em unidades diferentes e a taxa
+nao significaria nada. Recarregar a pagina, ou voltar pra corrigir um campo, e
+comum num formulario.
+
+### As tres decisoes
+
+**1. Cookie proprio, e NAO a sessao do Django.** A sessao mora numa tabela do
+banco e o `clearsessions` nao roda em lugar nenhum do projeto (prod tinha 144
+linhas, 100 ja vencidas e nunca limpas). Criar uma sessao por visitante anonimo
+de QR faria essa virar a tabela que mais cresce no sistema, sem nada limpando. O
+cookie nao gera linha nenhuma, e guarda apenas "ja contei este visitante neste
+link". Um teste garante que visita nao cria sessao.
+
+**2. Robo nao conta.** WhatsApp e Facebook BUSCAM a URL pra montar o preview
+quando alguem cola o link, e os dois sao justamente os canais de divulgacao em
+uso. Sem o filtro por User-Agent, o ato de divulgar ja geraria movimento que
+ninguem fez, e a leitura da tela se inverteria. A heuristica esta em
+`utils.py::e_robo` e e assumidamente incompleta: robo que mente o User-Agent
+passa. O objetivo nao e barrar abuso (pra isso ha rate limit), e sim tirar o
+vies SISTEMATICO dos previews, que acontecem toda vez que alguem divulga.
+
+**3. A taxa e escondida quando nao da pra confiar nela.** Link criado ANTES da
+medicao ja tem candidatura sem visita correspondente, e a divisao daria numero
+acima de 100%. Um numero que nasce quebrado destroi a confianca na tela inteira,
+entao a celula diz "medindo visitas desde <data>" ate a contagem alcancar.
+
+### Limites assumidos
+
+Quem bloqueia cookie conta a cada visita, e quem abre no celular e depois no
+computador conta duas. Os dois erram **pra cima**, entao a taxa real e melhor
+que a exibida, nunca pior. Errar pro lado pessimista e o certo pra decidir verba.
+
+Nenhum dado pessoal e gravado: quem so visitou nao consentiu com nada.
+
+---
+
 ## Regra de parada
 
 `Vaga.limite_aprovados` (default 50). Ao atingir, a triagem PARA e a captacao
@@ -312,6 +355,7 @@ python -m pytest tests/test_people_recrutamento_*.py tests/test_people_candidatu
 | `test_people_pipeline_board.py` | Mover livre, sair com motivo, etapa desativada nao some candidato, chips com contagem, saida clicavel, lote |
 | `test_people_fluxo_config.py` | Edicao do fluxo respeita escopo; as duas guardas que impedem perda de dado |
 | `test_people_atraso_e_captacao.py` | As bordas do atraso (etapa sem prazo, quem saiu, mover zera) e o link sem vaga ponta a ponta |
+| `test_people_visitas_link.py` | Robo nao conta, refresh nao conta duas vezes, e quando a taxa NAO pode ser exibida |
 | `test_people_quadro.py` | Ocupacao lida de dois lugares sem contar duas vezes; regra de parada avisa |
 | `test_people_expurgo.py` | Vencido anonimiza, dentro do prazo NAO e tocado, curriculo apagado |
 | `test_people_provisionamento.py` | Signal semeia o pipeline na ativacao, sem duplicar |

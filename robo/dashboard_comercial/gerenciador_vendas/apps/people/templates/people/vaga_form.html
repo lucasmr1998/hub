@@ -263,7 +263,7 @@
                   <tr>
                     <th>Canal</th>
                     <th>Link</th>
-                    <th>Candidaturas</th>
+                    <th>Conversão</th>
                     <th>Situação</th>
                     <th></th>
                   </tr>
@@ -300,7 +300,7 @@
                           <span class="field-helper">Link desativado</span>
                         {% endif %}
                       </td>
-                      <td>{{ item.link.candidaturas }}</td>
+                      <td>{% include "people/_link_conversao.html" with link=item.link %}</td>
                       <td>
                         {% if item.link.ativo %}
                           {% include "components/badge.html" with variant="success" label="Ativo" size="sm" dot=True %}
