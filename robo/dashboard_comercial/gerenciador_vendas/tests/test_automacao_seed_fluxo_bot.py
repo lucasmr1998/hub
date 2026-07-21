@@ -859,3 +859,43 @@ def test_e2e_pergunta_comum_nao_consulta_viabilidade(mock_viab):
     passos = {p.handle: p for p in resultado.passos}
     assert passos['e_endereco'].branch == 'false'
     assert _corpo_resposta(ctx)['needsReception'] == 'false'
+
+
+@pytest.mark.django_db
+@mock.patch('apps.comercial.viabilidade.services.consultar_viabilidade')
+def test_e2e_endereco_ainda_nao_respondido_nao_vaza_template_pra_consulta(mock_viab):
+    """Campos de endereço que o cliente ainda não respondeu chegam VAZIOS na
+    consulta, não como `{{nodes.respostas.cidade}}` literal.
+
+    O `Contexto.resolver` devolve o template cru quando o caminho não existe
+    (decisão do runtime). No roteiro, a confirmação do endereço vem ANTES de
+    cidade/rua/bairro, então esses campos ainda não existem no dicionário de
+    respostas. Sem a limpeza, o HubSoft recebia o template como se fosse o nome
+    da cidade e devolvia erro: o bot transbordava até em CEP com cobertura.
+    Achado testando contra produção."""
+    from apps.comercial.viabilidade.services import ResultadoViabilidade
+
+    tenant = TenantFactory()
+    checklist, _i1, _i2 = _checklist_minimo(tenant)
+    item_cep, item_conf = _item_endereco(checklist, tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990023')
+    registrar_resposta(checklist, item_cep, 'lead', lead.pk, '13327450')
+    mock_viab.return_value = ResultadoViabilidade(
+        status='cobertura_ok', cep_consultado='13327450', fonte='hubsoft',
+    )
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990023',
+        'question_id': item_conf.pk, 'answer': 'sim',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    _args, kwargs = mock_viab.call_args
+    for campo in ('logradouro', 'numero', 'bairro', 'cidade', 'uf'):
+        assert '{{' not in (kwargs.get(campo) or ''), f'{campo} vazou template'
+        assert (kwargs.get(campo) or '') == '', f'{campo} deveria estar vazio'
+    # O CEP, esse sim respondido, tem que chegar de verdade.
+    assert mock_viab.call_args[0][1] == '13327450'
+    assert _corpo_resposta(ctx)['needsReception'] == 'false'

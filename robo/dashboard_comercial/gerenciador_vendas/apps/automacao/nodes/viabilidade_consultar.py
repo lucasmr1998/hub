@@ -18,7 +18,19 @@ Saídas separam "não atende" de "não sei": resposta que não sabemos interpret
 vira `pendente_revisao`, não `fora_cobertura`. Decidir que não há cobertura em
 cima de resposta desconhecida manda o lead pra Perdido calado.
 """
+import re
+
 from .base import BaseNode, NodeResult, registrar
+
+# `Contexto.resolver` devolve o `{{...}}` LITERAL quando o caminho não existe
+# (decisão do runtime, ajuda a flagrar template com erro de digitação em vez de
+# sumir com o valor calado). Aqui isso é uma armadilha: os campos de endereço
+# apontam pra respostas do checklist que podem AINDA não ter sido dadas quando
+# a consulta roda, e mandar `'{{nodes.respostas.cidade}}'` como cidade faz o
+# HubSoft devolver erro. Achado testando um CEP COM cobertura em produção: o
+# bot transbordava do mesmo jeito. Campo não respondido é campo vazio, e o
+# service completa o que faltar pelo ViaCEP.
+_TEMPLATE_NAO_RESOLVIDO = re.compile(r'^\s*\{\{.*\}\}\s*$', re.S)
 
 
 @registrar
@@ -55,7 +67,8 @@ class ViabilidadeConsultarNode(BaseNode):
         from apps.comercial.viabilidade.services import consultar_viabilidade
 
         def txt(nome):
-            return str(contexto.resolver(config.get(nome, '')) or '').strip()
+            valor = str(contexto.resolver(config.get(nome, '')) or '').strip()
+            return '' if _TEMPLATE_NAO_RESOLVIDO.match(valor) else valor
 
         cep = txt('cep')
         if not cep:
