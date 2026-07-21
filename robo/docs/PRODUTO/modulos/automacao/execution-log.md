@@ -913,3 +913,49 @@
   `leads/views.py::_respostas_checklist_do_lead` + secao no `lead_detail.html`.
   16 testes novos em `tests/test_workspace_checklist_respostas.py`.
 - **Status:** completed
+
+## 2026-07-20 — Bot consulta o HubSoft no CPF, e o bug de lista vazia no nó `if`
+
+- **Acao:** portado pro grafo o que o fluxo N8N ja fazia: quando a resposta
+  validada e o CPF, consultar o HubSoft e transbordar se a pessoa ja for
+  assinante, em vez de seguir vendendo internet pra quem ja tem. Commit
+  `af77a6e`, deployado e validado contra a conta real de producao.
+- **Desenho:** `checklist_validar` (valida) vai pra um `if` que pergunta se a
+  resposta era o CPF; so nesse caso dispara `hubsoft_consultar_cliente`. Nos
+  que ja existiam, sem codigo novo. O campo `isAClient` do contrato com o
+  Matrix saia sempre `False` cravado ate aqui, porque ninguem consultava nada.
+- **Decisao:** a saida `erro` da consulta cai no MESMO responder do caminho
+  normal. HubSoft fora do ar nao pode travar a venda: perder a checagem e
+  menos grave que perder o atendimento.
+
+### Bug encontrado no nó `if` (corrigido junto)
+
+Cliente inexistente NAO e erro no HubSoft: a API devolve `status=success` com
+`clientes: []`. O desvio natural seria um `if` com operador `nao_vazio` sobre
+a lista, e foi o que montei. O teste reprovou.
+
+Causa: `_comparar` avaliava `str(valor).strip()`, e `str([])` e `'[]'`, dois
+caracteres, logo "preenchido". **Todo NAO cliente seria classificado como
+cliente e transbordado**, o inverso exato do pretendido, sem erro nenhum
+aparecendo em log. Correcao: coleção (lista/tupla/dict/set) passa a responder
+pela propria emptiness em `vazio`/`nao_vazio`.
+
+Como o `if` e no compartilhado, a suite completa da engine foi rodada COM e
+SEM a correcao: 12 falhas com, 13 sem. Nenhuma regressao, e uma falha a menos.
+As restantes sao a poluicao de thread local do `TenantManager` ja conhecida
+(os arquivos passam isolados).
+
+### Validacao contra producao
+
+- CPF que nao e cliente, pelo fluxo completo: `needsReception="false"`,
+  `isAClient=False`, segue a venda. Era o caminho que tinha o bug.
+- CPF de cliente ativo (consulta read only, sem gravar nada): HubSoft devolve
+  1 cliente, o `if` decide `nao_vazio=True`, ramo `resp_ja_cliente`.
+- **Armadilha de diagnostico:** o PRIMEIRO cliente sincronizado que testei
+  devolveu zero, e por um momento pareceu que a checagem nunca dispararia. Era
+  registro antigo que nao existe mais na conta. Num lote de 10 clientes
+  recentes, o HubSoft achou 10/10. Ao investigar consulta que "nao acha",
+  testar uma amostra antes de concluir que a integracao esta quebrada.
+- Conta consultada: integracao 18 (`api.artelecom.hubsoft.com.br`), a mesma
+  que o fluxo N8N usa.
+- **Status:** completed
