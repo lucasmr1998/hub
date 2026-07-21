@@ -258,6 +258,12 @@ Uso em template que extende layout_app:
         <a href="{% url 'people:quadro_lista' %}" class="app-subnav-item {% if 'quadro' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-clipboard-data"></i><span>Quadro</span>
         </a>
+        <a href="{% url 'people:fluxo_config' %}" class="app-subnav-item {% if 'fluxo' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-diagram-3"></i><span>Fluxo</span>
+        </a>
+        <a href="{% url 'people:campos_config' %}" class="app-subnav-item {% if 'campo' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-input-cursor-text"></i><span>Campos</span>
+        </a>
       </nav>
 
       <div class="app-subnav-section">Cadastro</div>
@@ -280,7 +286,7 @@ Uso em template que extende layout_app:
       </nav>
       <div class="app-subnav-section">Sistema</div>
       <nav class="app-subnav-list">
-        <a href="{% url 'people:config_home' %}" class="app-subnav-item {% if 'config' in request.resolver_match.url_name %}is-active{% endif %}">
+        <a href="{% url 'people:config_home' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':7' == 'config_' %}is-active{% endif %}">
           <i class="bi bi-sliders"></i><span>Configurações</span>
         </a>
       </nav>

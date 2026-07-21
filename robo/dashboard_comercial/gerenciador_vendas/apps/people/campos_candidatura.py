@@ -6,9 +6,14 @@ de CAMPOS DO SISTEMA, e a vaga escolhe por campo se e solicitado e se e
 obrigatorio. Catalogo separado porque candidato e colaborador coletam coisas
 diferentes: candidato tem experiencia previa e curriculo e NAO tem CPF nem Pix.
 
-Python puro, sem Django. O catalogo e codigo porque cada campo tem coluna
-correspondente no Candidato: o cliente nao inventa campo novo aqui sem mexer no
-model.
+Python puro, sem Django, e continua assim depois dos campos custom: as funcoes
+recebem os campos do tenant como PARAMETRO (`extras`), ja convertidos em dict
+por `CampoCandidatura.como_campo()`. Quem consulta o banco e o model; aqui so se
+resolve configuracao. E o que mantem este modulo testavel em milissegundos.
+
+O catalogo de SISTEMA e codigo porque cada campo tem coluna correspondente no
+Candidato. O que nao tem coluna vira `CampoCandidatura` e mora em
+`Candidato.dados_custom`.
 
 Dois campos sao TRAVADOS, e por razoes diferentes de peso igual:
 - nome_completo: sem ele o RH nao sabe a quem esta respondendo.
@@ -134,16 +139,31 @@ def config_padrao():
     }
 
 
-def normalizar_config(config):
+def catalogo(extras=None):
+    """
+    Campos de sistema seguidos dos campos que o tenant inventou.
+
+    Os custom vao DEPOIS de proposito: os de sistema tem ordem pensada (dados,
+    endereco, experiencia) e um campo novo entrando no meio mudaria o
+    formulario de todo mundo sem ninguem ter pedido.
+    """
+    return CAMPOS_SISTEMA + list(extras or [])
+
+
+def normalizar_config(config, extras=None):
     """
     Completa a config com o que faltar e descarta campo desconhecido.
 
     Vaga salva antes de um campo novo entrar no catalogo continua valendo: o
     campo novo aparece com o padrao em vez de sumir da tela.
+
+    Campo custom nasce NAO SOLICITADO. Criar um campo no nivel do tenant nao
+    pode mexer, sozinho, nas vagas que ja estao publicadas e recebendo gente: o
+    RH liga o campo na vaga em que ele faz sentido.
     """
     config = config or {}
     resultado = {}
-    for campo in CAMPOS_SISTEMA:
+    for campo in catalogo(extras):
         nome = campo['nome']
         salvo = config.get(nome) or {}
         travado = campo.get('travado', False)
@@ -161,12 +181,12 @@ def normalizar_config(config):
     return resultado
 
 
-def campos_solicitados(config):
+def campos_solicitados(config, extras=None):
     """Campos que o formulario publico mostra, na ordem do catalogo."""
-    config = normalizar_config(config)
+    config = normalizar_config(config, extras)
     return [
         {**campo, **config[campo['nome']]}
-        for campo in CAMPOS_SISTEMA
+        for campo in catalogo(extras)
         if config[campo['nome']]['solicitar']
     ]
 
@@ -180,7 +200,10 @@ def agrupar_em_secoes(campos):
     """
     por_secao = {}
     for campo in campos:
-        chave = SECAO_DE_CAMPO.get(campo['nome'], 'dados')
+        # Campo custom traz a propria secao; o de sistema tem a dele no mapa.
+        chave = campo.get('secao') or SECAO_DE_CAMPO.get(campo['nome'], 'dados')
+        if chave not in SECAO_DE_CAMPO.values():
+            chave = 'experiencia'
         por_secao.setdefault(chave, []).append(campo)
 
     return [
@@ -190,7 +213,17 @@ def agrupar_em_secoes(campos):
     ]
 
 
-def campos_obrigatorios(config):
+def campos_obrigatorios(config, extras=None):
     """Nomes dos campos que a vaga exige. Usado na validacao do POST."""
-    config = normalizar_config(config)
+    config = normalizar_config(config, extras)
     return [nome for nome, v in config.items() if v['obrigatorio']]
+
+
+def e_custom(nome):
+    """Se a chave veio de um CampoCandidatura, e nao do catalogo de sistema."""
+    return nome.startswith('custom__')
+
+
+def slug_de(nome):
+    """A chave em `Candidato.dados_custom` a partir do nome no formulario."""
+    return nome[len('custom__'):] if e_custom(nome) else nome

@@ -150,6 +150,60 @@ so os campos solicitados: campo desligado nao grava nem se vier num POST forjado
 
 ---
 
+## Campos que o tenant inventa
+
+O catalogo de `campos_candidatura.py` e fixo em codigo porque cada campo de la
+tem coluna no `Candidato`. `CampoCandidatura` e a saida pro que nao tem coluna:
+uma vaga de motoboy quer CNH, uma de caixa nao, e nenhuma justifica migration
+em producao.
+
+**A divisao de papel e a mesma dos campos de sistema:** em `/people/campos/` o
+TENANT define o campo (rotulo, tipo, opcoes, secao); em cada vaga ele escolhe se
+pede e se e obrigatorio, pelo mesmo `config_campos`. Um segundo modelo mental
+faria o usuario ter que aprender qual campo se configura onde.
+
+Tipos: texto curto, texto longo, numero, data, lista de opcoes, sim ou nao.
+Nao ha `file`: curriculo ja e o anexo do formulario, e um segundo upload
+precisaria de storage privado, limite e expurgo proprios.
+
+### As quatro decisoes que sustentam isso
+
+**1. A chave e prefixada com `custom__`.** Sem prefixo, um tenant que criasse a
+chave "email" produziria um campo com o mesmo nome do campo de sistema, e o
+POST, a config da vaga e a validacao passariam a disputar a mesma chave em
+silencio. O prefixo torna a colisao impossivel por construcao, em vez de depender
+de uma lista de nomes proibidos que envelhece.
+
+**2. O expurgo LGPD zera `dados_custom` INTEIRO**, sem inspecionar o conteudo.
+O campo e inventado pelo tenant, entao nao ha como saber o que ele pos ali: um
+cliente cria "Nome da mae" ou "CPF" e, se a limpeza fosse por chave conhecida,
+esse dado sobreviveria a retencao e a promessa do consentimento quebraria em
+silencio. Zerar tudo e a unica limpeza que nao depende de adivinhar. E o ponto
+mais importante desta feature, e o que dois testes protegem primeiro.
+
+**3. Campo novo nasce DESLIGADO nas vagas.** Criar um campo no nivel do tenant
+nao pode, sozinho, mudar o formulario de uma vaga que ja esta no ar recebendo
+candidato.
+
+**4. O slug nao muda na edicao.** Ele e a chave das respostas ja gravadas;
+trocar deixaria toda resposta anterior orfa, sem erro nenhum, so um campo que
+aparece vazio pra quem ja respondeu. Renomear o rotulo continua livre.
+
+### As guardas da tela
+
+| Guarda | Por que |
+|---|---|
+| Nao apaga campo ja respondido | O valor ficaria no `dados_custom` sem nada que diga o que a chave significava. Pra parar de perguntar, o caminho e desativar |
+| Lista sem opcao e recusada | Um select vazio e um campo que o candidato nao consegue preencher |
+| Opcao fora da lista e descartada no POST | Valor que nao esta entre as opcoes e POST forjado, nao erro de digitacao |
+
+O catalogo continua **Python puro, sem Django**: as funcoes recebem os campos do
+tenant como parametro (`extras`), ja convertidos por `CampoCandidatura.como_campo()`.
+Quem consulta o banco e o model. E o que mantem `campos_candidatura.py` testavel
+em milissegundos.
+
+---
+
 ## Regra de parada
 
 `Vaga.limite_aprovados` (default 50). Ao atingir, a triagem PARA e a captacao
@@ -169,6 +223,7 @@ passar do teto seja consciente e nao descuido.
 | `/people/candidatos/?saida=<chave>` | A mesma tela mostrando quem SAIU do processo |
 | `/people/candidatos/<pk>/` | Ficha do candidato: Perfil, Historico, Curriculo |
 | `/people/fluxo/` | Configuracao das etapas do pipeline |
+| `/people/campos/` | Campos de candidatura que o tenant inventa |
 | `/people/quadro/` | Faltam X de Y por cargo por unidade |
 | `/people/candidatura/<token>/` | Publica, sem login, mobile first |
 
@@ -213,6 +268,7 @@ python -m pytest tests/test_people_recrutamento_*.py tests/test_people_candidatu
 | `test_people_recrutamento_link.py` | As tres diferencas do link, e o texto que sai da vaga sem vazar triagem |
 | `test_people_candidatura_publica.py` | Dedup, isolamento com thread local sujo, anti abuso |
 | `test_people_candidatura_campos.py` | Campos configuraveis, travados, e o desligado que nao grava |
+| `test_people_campos_custom.py` | Expurgo limpa o JSON, sem colisao com campo de sistema, campo novo nasce desligado, as guardas da tela |
 | `test_people_pipeline_board.py` | Mover livre, sair com motivo, etapa desativada nao some candidato, chips com contagem, saida clicavel, lote |
 | `test_people_fluxo_config.py` | Edicao do fluxo respeita escopo; as duas guardas que impedem perda de dado |
 | `test_people_quadro.py` | Ocupacao lida de dois lugares sem contar duas vezes; regra de parada avisa |

@@ -8,6 +8,20 @@ Tokens base (cores, tipografia, spacing) ficam em layouts/base.html.
 {% endcomment %}
 <style>
   /* ============================================
+     [hidden] TEM QUE ESCONDER
+     ============================================
+     O user agent aplica `[hidden] { display: none }` com especificidade de
+     elemento, entao QUALQUER classe nossa com `display` (`.btn` e
+     inline-flex, `.lote-barra` e flex) vence e o elemento aparece mesmo com
+     o atributo. O sintoma e sempre o mesmo: um botao "Cancelar edicao" ou
+     uma barra de acao em lote visiveis quando nao deviam estar.
+
+     O `!important` e deliberado: `hidden` significa "isto nao existe agora",
+     e uma classe de layout sobrepondo isso e sempre bug, nunca intencao.
+     ============================================ */
+  [hidden] { display: none !important; }
+
+  /* ============================================
      PAGE HEADER — padrao unico (com ou sem tabs)
      Uso basico:
        <div class="page-header">
@@ -217,6 +231,16 @@ Tokens base (cores, tipografia, spacing) ficam em layouts/base.html.
     cursor: not-allowed;
   }
   .field-input[readonly] { background: var(--color-surface); }
+
+  /* Textarea reusa toda a moldura do .field-input, menos a altura fixa de
+     38px, que esmagaria o campo em uma linha so. */
+  .field-textarea {
+    height: auto;
+    min-height: 78px;
+    padding: var(--sp-2) var(--sp-3);
+    line-height: 1.5;
+    resize: vertical;
+  }
 
   .field-input.has-icon-left { padding-left: 34px; }
   .field-input.has-icon-right { padding-right: 34px; }

@@ -295,3 +295,35 @@ Sem o passo 1, o codigo esta la mas o dado nunca e expurgado, e a promessa do co
 
 - **Output**: 498 testes passando no modulo (`test_people_fluxo_config.py` novo com 15; `test_people_pipeline_board.py` foi de 18 pra 27). `manage.py check` limpo. Migration 0015 aplicada em dev.
 - **Status**: completed em dev, **nao pushado**. Aguardando validacao visual do Lucas antes de subir.
+
+## 2026-07-21 — Campos de candidatura criados pelo tenant (CampoCandidatura)
+
+- **Acao**: o Lucas olhou a tabela de campos da vaga e perguntou "n tem campo de telefone por exemplo". Duas coisas sairam dai: a resposta imediata (telefone ESTA la, e o WhatsApp travado, mas a tela escondia os travados e explicava a ausencia em prosa acima do card, fora do campo de visao) e a pergunta de fundo, que era poder criar campo proprio. Feito o segundo, com o primeiro de carona.
+
+- **Decisao**: model proprio (`CampoCandidatura` em `apps/people`), e nao reuso do `CampoCustomizado` de `comercial/leads`. Reusar seria zero tabela nova, mas People e modulo vendido separado e passaria a importar de comercial; alem disso a tela de gestao dos campos de lead viraria gaveta de entulho com entidades de outros modulos. O contrato foi copiado do que ja funciona la (nome, slug, tipo, opcoes, ordem, ativo), entao o modelo mental e o mesmo sem o acoplamento.
+
+- **Decisao**: o tenant DEFINE o campo, a vaga ESCOLHE se pede. Mesma divisao dos campos de sistema, pelo mesmo `config_campos`. Um segundo modelo mental faria o usuario ter que aprender qual campo se configura onde.
+
+**As quatro decisoes que sustentam a feature:**
+
+1. **Chave prefixada com `custom__`.** Sem prefixo, um tenant que criasse a chave "email" produziria um campo homonimo do de sistema, e o POST, a config da vaga e a validacao passariam a disputar a mesma chave calados. O prefixo torna a colisao impossivel por construcao, em vez de depender de lista de nomes proibidos que envelhece.
+2. **O expurgo LGPD zera `dados_custom` inteiro**, sem olhar o conteudo. O campo e inventado pelo tenant: se a limpeza fosse por chave conhecida, um campo "CPF" ou "Nome da mae" sobreviveria a retencao e a promessa do consentimento quebraria em silencio. Era o custo escondido que eu tinha levantado ANTES de implementar, e entrou no mesmo commit, nao depois.
+3. **Campo novo nasce desligado nas vagas.** Criar um campo no nivel do tenant nao pode, sozinho, mudar o formulario de vaga que ja esta no ar recebendo gente.
+4. **O slug nao muda na edicao.** E a chave das respostas gravadas; trocar deixaria toda resposta anterior orfa sem erro nenhum. Renomear o rotulo continua livre.
+
+- **Catalogo continua puro**: `campos_candidatura.py` recebe os campos do tenant como parametro (`extras`), ja convertidos por `como_campo()`. Quem consulta o banco e o model. Mantem o modulo testavel em milissegundos.
+
+- **Componente novo**: `components/textarea.html`, que faltava na biblioteca. `.field-input` fixa `height: 38px`, entao precisou de `.field-textarea` com altura automatica.
+
+**Bug de design system, achado pela segunda vez em dois dias:**
+
+`[hidden]` do user agent tem especificidade de elemento, entao QUALQUER classe nossa com `display` vence e o elemento aparece com o atributo. Ontem foi a `.lote-barra` do board ("0 selecionados" com nada selecionado); hoje foi o botao "Cancelar edicao" visivel sem edicao nenhuma. Duas ocorrencias e sinal de que o fix pontual estava errado: virou regra global `[hidden] { display: none !important; }` em `_components_styles.html`, e o remendo local do board foi removido.
+
+**Armadilha de ambiente, que me custou dois ciclos de print:**
+
+Django 4.1+ usa o cached template loader MESMO em DEBUG. Com `runserver --noreload`, edicao de template fica invisivel ate reiniciar o processo. Foi o que fez o print mostrar o botao "Cancelar edicao" ainda visivel depois do fix ja estar no arquivo. Mesma causa do "8003 servindo template velho" anotado ontem. Regra pratica: mexeu em template com `--noreload`, reinicia antes de conferir.
+
+- **Correcao de brinde**: no `sidebar_subnav.html`, o item Configuracoes acendia junto com Fluxo porque o teste era `'config' in url_name`, e `fluxo_config` contem 'config'. Trocado por prefixo. Ja aparecia errado no print de ontem.
+
+- **Output**: 520 testes no modulo (16 novos em `test_people_campos_custom.py`). Migration 0016. `manage.py check` limpo.
+- **Status**: completed em dev, **nao pushado**, junto com a tarefa 213. Aguardando validacao.

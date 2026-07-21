@@ -1,0 +1,44 @@
+{% comment %}
+Textarea component. Mesma anatomia do input.html (label, helper, erro), so que
+pra texto de varias linhas.
+
+Params:
+  name: identificador do field
+  id: id do elemento (default: name)
+  label: texto do label
+  value
+  placeholder
+  rows: linhas visiveis (default: 4)
+  helper: texto auxiliar abaixo
+  error: mensagem de erro (ativa estado de erro)
+  required: bool
+  disabled: bool
+  readonly: bool
+  size: sm | md (default) | lg
+
+Exemplo:
+  {% include "components/textarea.html" with name="observacoes" label="Observacoes" value=vaga.observacoes rows=6 helper="Some pro candidato." %}
+{% endcomment %}
+<div class="field{% if error %} has-error{% endif %}{% if disabled %} is-disabled{% endif %}{% if size %} field-{{ size }}{% endif %}">
+  {% if label %}
+    <label for="{{ id|default:name }}" class="field-label">
+      {{ label }}{% if required %} <span class="field-required">*</span>{% endif %}
+    </label>
+  {% endif %}
+  <div class="field-input-wrap">
+    <textarea
+      name="{{ name }}"
+      id="{{ id|default:name }}"
+      class="field-input field-textarea"
+      rows="{{ rows|default:4 }}"
+      {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+      {% if required %}required{% endif %}
+      {% if disabled %}disabled{% endif %}
+      {% if readonly %}readonly{% endif %}>{{ value|default:'' }}</textarea>
+  </div>
+  {% if error %}
+    <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ error }}</p>
+  {% elif helper %}
+    <p class="field-helper">{{ helper }}</p>
+  {% endif %}
+</div>

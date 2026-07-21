@@ -127,6 +127,21 @@
                       <p class="field-helper">{{ campo.ajuda }}</p>
                     {% endif %}
                   </div>
+                {% elif campo.tipo == 'textarea' %}
+                  {% include "components/textarea.html" with name=campo.nome label=campo.rotulo value=campo.valor required=campo.obrigatorio error=campo.erro helper=campo.ajuda placeholder=campo.placeholder %}
+                {% elif campo.tipo == 'select' %}
+                  {% include "components/select.html" with name=campo.nome label=campo.rotulo options=campo.opcoes_pares value=campo.valor required=campo.obrigatorio error=campo.erro helper=campo.ajuda blank_label="Selecione" %}
+                {% elif campo.tipo == 'bool' %}
+                  {% comment %}
+                    Checkbox nao tem estado de erro proprio; obrigatorio aqui
+                    significa "tem que marcar", e o erro vai abaixo.
+                  {% endcomment %}
+                  <div class="field{% if campo.erro %} has-error{% endif %}">
+                    {% include "components/checkbox.html" with name=campo.nome label=campo.rotulo checked=campo.valor helper=campo.ajuda value="sim" %}
+                    {% if campo.erro %}
+                      <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ campo.erro }}</p>
+                    {% endif %}
+                  </div>
                 {% else %}
                   {% include "components/input.html" with name=campo.nome label=campo.rotulo type=campo.tipo value=campo.valor required=campo.obrigatorio error=campo.erro helper=campo.ajuda placeholder=campo.placeholder %}
                 {% endif %}

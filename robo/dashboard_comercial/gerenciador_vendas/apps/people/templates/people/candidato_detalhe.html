@@ -95,6 +95,17 @@
               <dt>Disponibilidade</dt>
               <dd>{{ candidato.disponibilidade_horario|default:"—" }}</dd>
             </div>
+            {% comment %}
+              Respostas dos campos que o tenant criou. Ficam junto do resto do
+              perfil, e nao num bloco "Campos personalizados": pra quem le a
+              ficha, "Tem CNH?" e informacao do candidato como qualquer outra.
+            {% endcomment %}
+            {% for resposta in respostas_custom %}
+              <div>
+                <dt>{{ resposta.rotulo }}</dt>
+                <dd>{{ resposta.valor|default:"—" }}</dd>
+              </div>
+            {% endfor %}
             <div>
               <dt>Como chegou</dt>
               <dd>

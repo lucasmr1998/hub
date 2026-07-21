@@ -106,6 +106,7 @@ def registrar_candidatura(tenant, link, dados):
             bairro=(dados.get('bairro') or '').strip(),
             experiencia_previa=(dados.get('experiencia_previa') or '').strip(),
             disponibilidade_horario=(dados.get('disponibilidade_horario') or '').strip(),
+            dados_custom=dados.get('dados_custom') or {},
             curriculo=dados.get('curriculo') or None,
             retencao_ate=_retencao_ate(tenant),
         )

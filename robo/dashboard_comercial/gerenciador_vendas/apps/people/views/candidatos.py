@@ -15,11 +15,31 @@ from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, render
 
 from apps.people import estados_recrutamento as estados_rs
-from apps.people.models import Candidato
+from apps.people.models import CampoCandidatura, Candidato
 from apps.people.permissoes import pode_acessar, requer_people
 
 
 @requer_people()
+def _respostas_custom(candidato):
+    """
+    As respostas dos campos do tenant, com o rotulo de cada uma.
+
+    Resolve pelo `CampoCandidatura` pra mostrar o rotulo, e nao a chave crua do
+    JSON. Resposta cujo campo foi apagado NAO aparece: sem o campo nao ha rotulo,
+    e exibir "cnh_2: sim" e pior que omitir. Ela continua no banco, e a tela de
+    campos e que impede apagar campo ja respondido.
+    """
+    dados = candidato.dados_custom or {}
+    if not dados:
+        return []
+
+    campos = CampoCandidatura.all_tenants.filter(
+        tenant_id=candidato.tenant_id, slug__in=list(dados)).order_by(
+            'ordem', 'nome')
+    return [{'rotulo': campo.nome, 'valor': dados.get(campo.slug)}
+            for campo in campos]
+
+
 def detalhe(request, pk):
     candidato = get_object_or_404(
         Candidato.objects.select_related(
@@ -41,6 +61,7 @@ def detalhe(request, pk):
     return render(request, 'people/candidato_detalhe.html', {
         'pagetitle': candidato.nome_completo,
         'candidato': candidato,
+        'respostas_custom': _respostas_custom(candidato),
         'historico': historico,
         'tabs': tabs,
         'saidas': [{'valor': v, 'rotulo': r} for v, r in estados_rs.SAIDAS],

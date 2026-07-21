@@ -188,8 +188,11 @@
     {# ── Aba: Formulário da candidatura ── #}
     <div id="tab-formulario" class="tabs-panel">
       <p class="field-helper" style="margin-bottom: var(--sp-4);">
-        O que o candidato preenche. Nome e WhatsApp são sempre pedidos e por isso
-        não aparecem na lista.
+        O que o candidato preenche nesta vaga. Nome e WhatsApp são fixos: o
+        WhatsApp é como o sistema identifica quem já se candidatou e é o único
+        jeito de responder pra pessoa. Para criar uma pergunta que não está na
+        lista, vá em <a href="{% url 'people:campos_config' %}">Campos da
+        candidatura</a>.
       </p>
       <form method="post" action="{% url 'people:vaga_campos_salvar' vaga.pk %}"
             class="section-card">
@@ -202,9 +205,22 @@
               </thead>
               <tbody>
                 {% for campo in campos_config %}
-                  {% if not campo.travado %}
-                    <tr>
-                      <td>{{ campo.rotulo }}</td>
+                  <tr>
+                    <td>
+                      {% if campo.travado %}<i class="bi bi-lock-fill" style="color: var(--color-text-muted);"></i> {% endif %}
+                      {{ campo.rotulo }}
+                      {% if campo.custom %}
+                        {% include "components/badge.html" with variant="info" label="Seu campo" size="sm" %}
+                      {% endif %}
+                    </td>
+                    {% if campo.travado %}
+                      {% comment %}
+                        Travado aparece com cadeado em vez de sumir. Escondendo,
+                        o usuario procura "telefone" na lista, nao acha e conclui
+                        que o formulario nao pede. Aconteceu.
+                      {% endcomment %}
+                      <td colspan="2"><span class="field-helper">Sempre pedido</span></td>
+                    {% else %}
                       <td>
                         <input type="checkbox" name="solicitar_{{ campo.nome }}"
                                {% if campo.solicitar %}checked{% endif %}
@@ -215,8 +231,8 @@
                                {% if campo.obrigatorio %}checked{% endif %}
                                data-obrigatorio="{{ campo.nome }}">
                       </td>
-                    </tr>
-                  {% endif %}
+                    {% endif %}
+                  </tr>
                 {% endfor %}
               </tbody>
             </table>

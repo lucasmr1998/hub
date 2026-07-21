@@ -353,6 +353,16 @@ class Vaga(TenantMixin):
         """
         return self.requisitos.filter(usar_na_triagem=True)
 
+    def campos_extras(self):
+        """
+        Os campos que o tenant inventou, no formato do catalogo.
+
+        `all_tenants` com tenant explicito porque este metodo roda tambem na
+        pagina publica, onde o thread local nao esta preenchido e o
+        TenantManager nao filtraria nada.
+        """
+        return CampoCandidatura.catalogo_do_tenant(self.tenant)
+
     def secoes_do_formulario(self, valores=None, erros=None):
         """
         As secoes de campos que a candidatura desta vaga mostra.
@@ -365,7 +375,8 @@ class Vaga(TenantMixin):
 
         valores = valores or {}
         erros = erros or {}
-        campos = catalogo.campos_solicitados(self.config_campos)
+        campos = catalogo.campos_solicitados(self.config_campos,
+                                             self.campos_extras())
         for campo in campos:
             campo['valor'] = valores.get(campo['nome'], '')
             campo['erro'] = erros.get(campo['nome'], '')
@@ -485,6 +496,130 @@ class RequisitoVaga(TenantMixin):
         return self.texto
 
 
+class CampoCandidatura(TenantMixin):
+    """
+    Campo que o TENANT inventa pro formulario de candidatura.
+
+    O catalogo de `campos_candidatura.py` e fixo em codigo porque cada campo de
+    la tem coluna no Candidato. Este model e a saida pro que nao tem coluna: uma
+    vaga de motoboy quer CNH, uma de caixa nao, e nenhuma das duas justifica
+    migration em producao.
+
+    DIVISAO DE PAPEL, igual a dos campos de sistema: o TENANT define o campo
+    (rotulo, tipo, opcoes) e a VAGA escolhe se pede e se e obrigatorio, via
+    `Vaga.config_campos`. Sem isso seriam dois modelos mentais pra mesma tabela
+    de configuracao, e o usuario teria que aprender qual campo se configura onde.
+
+    O valor vai pra `Candidato.dados_custom`, e o expurgo LGPD zera esse JSON
+    inteiro. Ver `Candidato.anonimizar`: e o que impede o tenant de criar um
+    campo "CPF" que sobrevive a politica de retencao.
+    """
+
+    # Nao ha 'file': curriculo ja e o anexo do formulario, e um segundo upload
+    # precisaria de storage privado, limite de tamanho e expurgo proprios. Se
+    # aparecer demanda real, entra como trabalho proprio e nao de carona.
+    TIPO_CHOICES = [
+        ('text',     'Texto curto'),
+        ('textarea', 'Texto longo'),
+        ('number',   'Número'),
+        ('date',     'Data'),
+        ('select',   'Lista de opções'),
+        ('bool',     'Sim ou não'),
+    ]
+
+    nome = models.CharField(
+        max_length=100, verbose_name="Rótulo do campo",
+        help_text="O que o candidato le. Ex: Tem CNH categoria B?",
+    )
+    slug = models.SlugField(
+        max_length=60, verbose_name="Chave",
+        help_text="Identificador em dados_custom. Nao muda depois de criado.",
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='text',
+                            verbose_name="Tipo")
+    opcoes = models.JSONField(
+        default=list, blank=True, verbose_name="Opções",
+        help_text="Só para o tipo lista. Uma opção por linha.",
+    )
+    ajuda = models.CharField(max_length=200, blank=True, default='',
+                             verbose_name="Texto de ajuda")
+    secao = models.CharField(
+        max_length=20, default='experiencia', verbose_name="Seção",
+        help_text="Em que bloco do formulário o campo aparece.",
+    )
+    ordem = models.PositiveSmallIntegerField(default=0, verbose_name="Ordem")
+    ativo = models.BooleanField(
+        default=True, verbose_name="Ativo",
+        help_text="Desativado some do formulário, sem apagar o que já foi "
+                  "respondido.",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_campo_candidatura'
+        verbose_name = 'Campo de candidatura'
+        verbose_name_plural = 'Campos de candidatura'
+        ordering = ['ordem', 'nome']
+        indexes = [
+            models.Index(fields=['tenant', 'ativo', 'ordem'],
+                         name='people_campo_cand_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'slug'],
+                name='people_campo_cand_slug_unico_por_tenant',
+            ),
+        ]
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def chave(self):
+        """
+        Nome do campo no formulario e em `config_campos`.
+
+        PREFIXADO de proposito. Sem o prefixo, um tenant que criasse a chave
+        "email" produziria um campo com o mesmo nome do campo de sistema, e o
+        POST, a config da vaga e o dedup passariam a disputar a mesma chave em
+        silencio. O prefixo torna a colisao impossivel por construcao, em vez de
+        depender de uma lista de nomes proibidos que envelhece.
+        """
+        return f'custom__{self.slug}'
+
+    def como_campo(self):
+        """
+        Converte pro mesmo dict que o catalogo de sistema devolve.
+
+        E o que permite o formulario publico, a validacao do POST e a tela da
+        vaga tratarem campo de sistema e campo custom pelo mesmo caminho, sem um
+        `if custom` espalhado em quatro lugares.
+        """
+        opcoes = [str(o) for o in (self.opcoes or [])]
+        return {
+            'nome': self.chave,
+            'tipo': self.tipo,
+            'rotulo_padrao': self.nome,
+            'ajuda': self.ajuda,
+            'opcoes': opcoes,
+            # `components/select.html` desempacota PARES. A lista crua fica pra
+            # validacao do POST, que compara com o que o candidato mandou.
+            'opcoes_pares': [(o, o) for o in opcoes],
+            'secao': self.secao,
+            'custom': True,
+            'slug': self.slug,
+        }
+
+    @classmethod
+    def catalogo_do_tenant(cls, tenant):
+        """Os campos ativos do tenant, no formato do catalogo."""
+        campos = cls.all_tenants.filter(tenant=tenant, ativo=True).order_by(
+            'ordem', 'nome')
+        return [campo.como_campo() for campo in campos]
+
+
 class Candidato(TenantMixin):
     """
     Alguem que se candidatou. NAO e colaborador, e por isso mora em tabela
@@ -543,6 +678,14 @@ class Candidato(TenantMixin):
         max_length=200, blank=True, default='',
         verbose_name="Disponibilidade de horário",
     )
+
+    # ── Respostas dos campos que o tenant inventou ──
+    dados_custom = models.JSONField(
+        default=dict, blank=True, verbose_name="Respostas dos campos custom",
+        help_text="Chave e o slug do CampoCandidatura. Vive em JSON porque o "
+                  "tenant inventa o campo e nao da pra virar coluna.",
+    )
+
     curriculo = models.FileField(
         upload_to='%Y/%m/', storage=PrivateCurriculoStorage(),
         null=True, blank=True, verbose_name="Currículo",
@@ -687,9 +830,18 @@ class Candidato(TenantMixin):
 
         O arquivo do curriculo e apagado de verdade. Ele nao entra em nenhuma
         agregacao e e o dado mais sensivel do registro.
+
+        `dados_custom` e ZERADO INTEIRO, sem inspecionar o conteudo. O campo e
+        inventado pelo tenant, entao nao ha como saber o que ele pos ali: um
+        cliente cria "Nome da mae" ou "CPF" e, se a limpeza fosse por chave
+        conhecida, esse dado sobreviveria ao expurgo e a promessa do
+        consentimento quebraria em silencio. Zerar tudo e a unica limpeza que
+        nao depende de adivinhar.
         """
         if self.curriculo:
             self.curriculo.delete(save=False)
+
+        self.dados_custom = {}
 
         self.nome_completo = 'Candidato anonimizado'
         self.whatsapp = None

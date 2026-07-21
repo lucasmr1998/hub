@@ -140,19 +140,37 @@ def _ler_e_validar(request, link):
     from apps.people import campos_candidatura as catalogo
 
     config = link.vaga.config_campos if link.vaga_id else {}
-    solicitados = {c['nome'] for c in catalogo.campos_solicitados(config)}
-    obrigatorios = set(catalogo.campos_obrigatorios(config))
+    extras = link.vaga.campos_extras() if link.vaga_id else []
+    pedidos = catalogo.campos_solicitados(config, extras)
+    solicitados = {c['nome'] for c in pedidos}
+    obrigatorios = set(catalogo.campos_obrigatorios(config, extras))
 
     dados = {}
-    for nome in catalogo.NOMES_DE_CAMPO:
-        if nome not in solicitados:
-            continue
-        if nome == 'curriculo':
+    custom = {}
+    for campo in pedidos:
+        nome = campo['nome']
+        if catalogo.e_custom(nome):
+            # Custom nao vira atributo do model: o valor vai pro JSON, sob o
+            # slug. Guardado sob `nome` aqui so pra validacao e reexibicao
+            # usarem a mesma chave do formulario.
+            bruto = (request.POST.get(nome) or '').strip()
+            if campo['tipo'] == 'bool':
+                bruto = 'sim' if request.POST.get(nome) else ''
+            elif campo['tipo'] == 'select' and bruto not in (campo.get('opcoes') or []):
+                # Opcao fora da lista e POST forjado, nao erro de digitacao.
+                bruto = ''
+            dados[nome] = bruto
+            custom[catalogo.slug_de(nome)] = bruto
+        elif nome == 'curriculo':
             dados[nome] = request.FILES.get('curriculo')
         elif nome == 'data_nascimento':
             dados[nome] = (request.POST.get(nome) or '').strip() or None
         else:
             dados[nome] = (request.POST.get(nome) or '').strip()
+
+    # Chave separada, e nao mais um campo solto, pra `registrar_candidatura`
+    # nao ter que adivinhar o que e coluna e o que e JSON.
+    dados['dados_custom'] = {k: v for k, v in custom.items() if v != ''}
 
     erros = {}
 
@@ -166,8 +184,7 @@ def _ler_e_validar(request, link):
         erros['whatsapp'] = 'Informe um WhatsApp com DDD.'
 
     # Demais obrigatorios da config: so precisa estar preenchido.
-    rotulos = {c['nome']: c['rotulo']
-               for c in catalogo.campos_solicitados(config)}
+    rotulos = {c['nome']: c['rotulo'] for c in pedidos}
     for nome in obrigatorios:
         if nome in ('nome_completo', 'whatsapp'):
             continue

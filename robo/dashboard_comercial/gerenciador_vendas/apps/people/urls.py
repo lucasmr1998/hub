@@ -1,8 +1,8 @@
 from django.urls import path
 
 from apps.people.views import (
-    analises, board, candidatos, cargos, colaboradores, configuracao, fluxo,
-    links, pipeline, quadro, unidades, vagas,
+    analises, board, campos, candidatos, cargos, colaboradores, configuracao,
+    fluxo, links, pipeline, quadro, unidades, vagas,
 )
 
 app_name = 'people'
@@ -57,6 +57,13 @@ urlpatterns = [
     path('fluxo/etapa/<int:pk>/remover/', fluxo.etapa_remover,
          name='fluxo_etapa_remover'),
     path('fluxo/resetar/', fluxo.resetar_padrao, name='fluxo_resetar'),
+
+    # Recrutamento: campos que o tenant inventa pra candidatura
+    path('campos/', campos.configurar, name='campos_config'),
+    path('campos/salvar/', campos.salvar, name='campo_salvar'),
+    path('campos/<int:pk>/alternar/', campos.alternar, name='campo_alternar'),
+    path('campos/<int:pk>/mover/', campos.mover, name='campo_mover'),
+    path('campos/<int:pk>/remover/', campos.remover, name='campo_remover'),
 
     # Recrutamento: quadro por unidade
     path('quadro/', quadro.lista, name='quadro_lista'),

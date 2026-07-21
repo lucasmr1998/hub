@@ -929,6 +929,6 @@ class SubmissaoLinkCadastro(TenantMixin):
 # O re-export existe pra que `from apps.people.models import EtapaPipeline`
 # continue funcionando, no padrao de apps/sistema/models.py.
 from apps.people.models_recrutamento import (  # noqa: E402,F401
-    Candidato, EtapaPipeline, HistoricoCandidato, LinkCandidatura,
-    QuadroUnidade, RequisitoVaga, Vaga,
+    CampoCandidatura, Candidato, EtapaPipeline, HistoricoCandidato,
+    LinkCandidatura, QuadroUnidade, RequisitoVaga, Vaga,
 )

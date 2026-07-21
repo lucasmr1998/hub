@@ -171,10 +171,11 @@ def editar(request, pk):
         return redirect('people:vaga_editar', pk=vaga.pk)
 
     from apps.people import campos_candidatura as catalogo
-    config = catalogo.normalizar_config(vaga.config_campos)
+    extras = vaga.campos_extras()
+    config = catalogo.normalizar_config(vaga.config_campos, extras)
     campos_config = [
         {**campo, **config[campo['nome']]}
-        for campo in catalogo.CAMPOS_SISTEMA
+        for campo in catalogo.catalogo(extras)
     ]
 
     requisitos = list(vaga.requisitos.all())
@@ -245,23 +246,27 @@ def campos_salvar(request, pk):
     """
     Grava quais campos a candidatura desta vaga pede.
 
-    Campo travado (nome, WhatsApp) nao aparece no POST porque nao da pra
-    desligar; o normalizar_config forca solicitar=obrigatorio=True neles de
-    qualquer jeito, entao nao ha como quebrar por form incompleto.
+    Campo travado (nome, WhatsApp) aparece na tela com cadeado e sem checkbox,
+    entao nao chega no POST; o normalizar_config forca solicitar=obrigatorio=True
+    neles de qualquer jeito, e nao ha como quebrar por form incompleto.
+
+    Os campos que o tenant inventou entram pelo mesmo caminho dos de sistema. E
+    o ponto da divisao de papel: o tenant define o campo, a vaga decide se pede.
     """
     from apps.people import campos_candidatura as catalogo
 
     vaga = get_object_or_404(Vaga.objects, pk=pk)
+    extras = vaga.campos_extras()
 
     config = {}
-    for campo in catalogo.CAMPOS_SISTEMA:
+    for campo in catalogo.catalogo(extras):
         nome = campo['nome']
         config[nome] = {
             'solicitar': request.POST.get(f'solicitar_{nome}') == 'on',
             'obrigatorio': request.POST.get(f'obrigatorio_{nome}') == 'on',
         }
 
-    vaga.config_campos = catalogo.normalizar_config(config)
+    vaga.config_campos = catalogo.normalizar_config(config, extras)
     vaga.save(update_fields=['config_campos', 'atualizado_em'])
 
     registrar_acao('people', 'editar', 'vaga', vaga.pk,
