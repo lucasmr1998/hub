@@ -312,3 +312,26 @@
      barras por cidade devolve uma barra unica "Total: 1129". Esta no painel da
      Nuvyon.
 - **Status:** completed (as duas causas); pending (os dois achados acima)
+
+## 2026-07-21 — Widget #77 "Vendas por cidade" estava sem agrupamento
+
+- **Acao:** consertar o widget #77 do Painel Comercial da Nuvyon (config em prod,
+  nao e mudanca de codigo).
+- **Sintoma:** em vez de barras por cidade, uma barra unica "Total: 1132".
+  Ninguem tinha reportado; foi achado ao investigar o reporte de Mococa.
+- **Causa:** `agrupamento={}` e `filtros=[]`. Sem dimensao, o builder devolve o
+  agregado unico; sem filtro, contava TODAS as oportunidades, ganhas ou nao.
+- **Fix (espelha #68 "Consultora lider" e #69 "Vendas por canal"):**
+  - `agrupamento = {"dimensao": "lead__cidade", "transform": "normalizar_cidade"}`.
+    O transform e o mesmo corrigido na entrada anterior; sem ele "Mococa Sp"
+    voltaria a virar fatia separada aqui tambem.
+  - `filtros = [estagio__is_final_ganho = true, data_fechamento_real ultimos 30 dias]`
+  - `visualizacao` de **pizza pra barra**: sao 16 cidades, e pizza com 16 fatias
+    nao se le. O #76 "Leads por cidade" ja e barra, entao os dois ficam
+    consistentes lado a lado no painel.
+- **Resultado validado rodando o widget em prod:** 16 cidades, total 238 vendas.
+  Salto 67, Mococa 48, Mogi Mirim 20, Sumaré 19, São José do Rio Pardo 17.
+- **Observacao:** o total de 238 conta so oportunidades ganhas **com cidade
+  preenchida** nos ultimos 30 dias. Como 69% dos leads estao sem cidade, esse
+  widget tambem subconta, pelo mesmo motivo do #76. Fica pendente junto.
+- **Status:** completed
