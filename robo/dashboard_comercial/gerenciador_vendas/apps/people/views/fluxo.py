@@ -17,7 +17,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.people import estados_recrutamento as estados_rs
-from apps.people.models import Candidato, EtapaPipeline, Unidade
+from apps.people.models import (
+    Candidato, EtapaPipeline, MensagemRecrutamento, Unidade,
+)
 from apps.people.permissoes import pode_acessar, requer_people
 from apps.sistema.utils import registrar_acao
 
@@ -49,7 +51,14 @@ def configurar(request):
         Candidato.objects.filter(saida='', anonimizado_em__isnull=True)
         .values_list('etapa').annotate(n=Count('id')))
 
-    linhas = [{'etapa': e, 'candidatos': ocupacao.get(e.pk, 0)} for e in etapas]
+    # Mensagem sugerida de cada etapa e de cada saida. Uma consulta so, e nao
+    # uma por linha: a tela lista sete etapas mais quatro saidas.
+    mensagens = list(MensagemRecrutamento.objects.all())
+    por_etapa = {m.etapa_id: m for m in mensagens if m.etapa_id}
+    por_saida = {m.saida: m for m in mensagens if m.saida}
+
+    linhas = [{'etapa': e, 'candidatos': ocupacao.get(e.pk, 0),
+               'mensagem': por_etapa.get(e.pk)} for e in etapas]
 
     # A unidade esta herdando o fluxo do tenant, ou ja tem o proprio?
     herda = bool(unidade) and not EtapaPipeline.all_tenants.filter(
@@ -64,7 +73,8 @@ def configurar(request):
             Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
         'cores': estados_rs.CORES_ETAPA,
         'saidas': [
-            {'valor': v, 'rotulo': r, 'cor': estados_rs.COR_DA_SAIDA.get(v, '')}
+            {'valor': v, 'rotulo': r, 'cor': estados_rs.COR_DA_SAIDA.get(v, ''),
+             'mensagem': por_saida.get(v)}
             for v, r in estados_rs.SAIDAS
         ],
         'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
@@ -234,4 +244,58 @@ def resetar_padrao(request):
     registrar_acao('people', 'editar', 'etapa_pipeline', 0,
                    'Fluxo resetado pro padrao.', request=request)
     messages.success(request, 'Fluxo restaurado para o padrão.')
+    return _voltar(unidade)
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def mensagem_salvar(request):
+    """
+    Grava a mensagem sugerida de uma etapa ou de uma saida.
+
+    Texto vazio APAGA a mensagem, em vez de guardar uma linha em branco. Uma
+    mensagem vazia configurada e indistinguivel de nao ter mensagem, e deixar as
+    duas formas conviverem faria a ficha ter que checar as duas.
+    """
+    unidade = _unidade_do_request(request)
+    etapa_pk = (request.POST.get('etapa') or '').strip()
+    saida = (request.POST.get('saida') or '').strip()
+    texto = (request.POST.get('texto') or '').strip()
+
+    # Exatamente um dos dois, igual a constraint do banco. Checar aqui evita
+    # devolver IntegrityError na cara do usuario.
+    if bool(etapa_pk) == bool(saida):
+        messages.error(request, 'Escolha uma etapa ou uma saída.')
+        return _voltar(unidade)
+
+    if saida and saida not in estados_rs.ROTULOS_SAIDA:
+        messages.error(request, 'Saída inválida.')
+        return _voltar(unidade)
+
+    filtro = {'etapa_id': int(etapa_pk)} if etapa_pk else {'saida': saida}
+    if etapa_pk:
+        # get_object_or_404 pelo manager filtrado: etapa de outro tenant nao
+        # pode receber mensagem deste.
+        get_object_or_404(EtapaPipeline.objects, pk=int(etapa_pk))
+
+    existente = MensagemRecrutamento.objects.filter(**filtro).first()
+
+    if not texto:
+        if existente:
+            existente.delete()
+            messages.success(request, 'Mensagem removida.')
+        return _voltar(unidade)
+
+    if existente:
+        existente.texto = texto
+        existente.save(update_fields=['texto', 'atualizado_em'])
+    else:
+        MensagemRecrutamento.all_tenants.create(
+            tenant=request.tenant, texto=texto,
+            etapa_id=int(etapa_pk) if etapa_pk else None,
+            saida=saida)
+
+    registrar_acao('people', 'editar', 'mensagem_recrutamento', 0,
+                   'Mensagem do fluxo de recrutamento ajustada.', request=request)
+    messages.success(request, 'Mensagem salva.')
     return _voltar(unidade)

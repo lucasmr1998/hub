@@ -317,6 +317,44 @@ arquivo no input passa a ter `lastModified` de agora.
 
 ---
 
+## Mensagem de WhatsApp por etapa
+
+Reuso da mecanica que ja existia no Departamento Pessoal (`MensagemEtapa`), com
+a MESMA decisao de produto: **nada e enviado automaticamente**. O botao ABRE o
+WhatsApp com o texto pronto, e o RH manda do proprio numero.
+
+`wa.me` e nao API de proposito: funciona pra qualquer cliente, sem integracao
+contratada, sem custo por mensagem e sem risco de bloqueio de numero. Quem tem
+Uazapi automatiza pela engine, que e outro caminho e continua disponivel.
+
+### ETAPA ou SAIDA, nunca os dois
+
+`MensagemRecrutamento` aponta pra uma `EtapaPipeline` (FK) ou pra uma saida
+(constante), e uma `CheckConstraint` garante que seja exatamente um. E a divisao
+que estrutura o modulo inteiro: etapa e DADO, saida e CODIGO. Sem a constraint,
+uma linha com os dois so seria descoberta quando a tela nao achasse a mensagem,
+e o sintoma seria "sumiu", nao "esta errado".
+
+**Saida tem precedencia sobre etapa** na hora de escolher qual exibir. Quem saiu
+continua apontando pra ultima etapa em que esteve, e mandar a mensagem daquela
+etapa pra quem foi reprovado seria constrangedor.
+
+### Onde se configura e onde se usa
+
+Configura em `/people/fluxo/`, junto das etapas, porque e configuracao do fluxo.
+Usa na ficha do candidato, que mostra a mensagem ja renderizada pra fase atual e
+deixa editar **so para aquele candidato**, sem alterar o padrao. O texto do
+proprio produto de origem diz isso na tela, e a nossa repete.
+
+Placeholders: `{{nome}}`, `{{primeiro_nome}}`, `{{vaga}}`, `{{unidade}}`,
+`{{cargo}}`. Placeholder sem valor vira string vazia: a mensagem vai pro
+candidato, e chave de template aparecendo pra ele e pior que a frase ficar curta.
+
+Candidato anonimizado pelo expurgo LGPD nao gera link: sem numero, `wa.me/`
+abriria uma tela de erro do WhatsApp em vez de simplesmente nao aparecer.
+
+---
+
 ## Regra de parada
 
 `Vaga.limite_aprovados` (default 50). Ao atingir, a triagem PARA e a captacao

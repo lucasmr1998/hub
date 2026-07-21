@@ -459,3 +459,21 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 
 - **Output**: 578 testes no modulo, 19 novos. Sem migration.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-21 — Mensagem de WhatsApp por etapa (tarefa 218, item 6)
+
+- **Acao**: segundo item do bloco. Escolhido logo depois do upload porque era o mais barato da lista inteira: e REUSO, nao construcao. O `MensagemEtapa` do DP ja existia com a mesma decisao de produto no docstring.
+
+- **Decisao**: model proprio (`MensagemRecrutamento`) em vez de estender o `MensagemEtapa` do DP. O do DP e chaveado pelas situacoes do DP, que sao constantes; aqui a etapa e uma LINHA configuravel. Forcar os dois no mesmo model deixaria o campo `etapa` polimorfico e mais dificil de ler que a duplicacao.
+- **Decisao**: `CheckConstraint` garantindo etapa OU saida, nunca os dois nem nenhum. Verificado no banco de dev: as duas combinacoes invalidas sao recusadas pelo Postgres, nao so pelo Python.
+- **Decisao**: saida tem precedencia sobre etapa. Quem saiu continua apontando pra ultima etapa, e mandar a mensagem daquela etapa pra quem foi reprovado seria constrangedor.
+- **Decisao**: `wa.me` e nao API. Funciona pra qualquer cliente, sem integracao contratada, sem custo por mensagem e sem risco de bloqueio de numero. Copiado da origem de proposito.
+- O link e montado NO CLIQUE, e nao na renderizacao: o RH pode ter editado o texto, e o link precisa levar o que esta na tela naquele momento.
+
+- **Bug meu**: usei `{{ "{{nome}}" }}` pra mostrar o placeholder literal na tela de ajuda, e o parser do Django quebra nisso. O certo e `{% verbatim %}`. Pego por compilar o template explicitamente, e nao por print.
+- **Bug meu**: coloquei o bloco de WhatsApp ENTRE dois painteis de aba, o que faria ele aparecer em posicao diferente conforme a aba ativa. Movido pro fim, depois de todos os painteis: e acao, nao conteudo de aba.
+
+- **Anotado pra depois**: a tela de fluxo agora empilha 11 textareas (7 etapas mais 4 saidas), cada uma com botao proprio. Funciona, porem fica longa. Se incomodar, vira accordion.
+
+- **Output**: 595 testes no modulo, 17 novos. Migration 0020.
+- **Status**: completed em dev, nao pushado.

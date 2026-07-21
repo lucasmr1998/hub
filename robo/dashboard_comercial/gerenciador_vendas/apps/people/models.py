@@ -930,5 +930,6 @@ class SubmissaoLinkCadastro(TenantMixin):
 # continue funcionando, no padrao de apps/sistema/models.py.
 from apps.people.models_recrutamento import (  # noqa: E402,F401
     CampoCandidatura, Candidato, EtapaPipeline, HistoricoCandidato,
-    LinkCandidatura, QuadroUnidade, RequisitoVaga, Vaga,
+    LinkCandidatura, MensagemRecrutamento, QuadroUnidade, RequisitoVaga,
+    Vaga,
 )

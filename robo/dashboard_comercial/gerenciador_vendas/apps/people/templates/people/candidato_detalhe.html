@@ -245,4 +245,64 @@
       {% include "components/empty_state.html" with icon="bi-clock-history" text="Sem movimentos ainda" subtext="O histórico começa quando o candidato entra numa etapa." size="sm" %}
     {% endif %}
   </div>
+
+  {% comment %}
+    Mensagem sugerida pra fase em que o candidato esta.
+
+    NADA E ENVIADO DAQUI. O botao ABRE o WhatsApp com o texto pronto, e o RH
+    manda com o proprio numero. E decisao de produto, nao limitacao: funciona
+    pra qualquer cliente, sem integracao contratada, sem custo por mensagem e
+    sem risco de bloqueio de numero.
+
+    Editar aqui NAO altera o padrao do fluxo. Quem quiser mudar pra todo mundo
+    edita em /people/fluxo/.
+  {% endcomment %}
+  {% if mensagem_sugerida %}
+    <div class="section-card" style="margin-top: var(--sp-4); border-color: var(--color-success);"
+         id="bloco-whatsapp">
+      <div class="section-card-header">
+        <h2 class="section-card-title">
+          <i class="bi bi-whatsapp" style="color: var(--color-success);"></i>
+          Mensagem de WhatsApp
+        </h2>
+      </div>
+      <div class="section-card-body form-stack">
+        <p class="field-helper" style="margin: 0;">
+          <i class="bi bi-info-circle"></i>
+          Segue o padrão configurado no
+          <a href="{% url 'people:fluxo_config' %}">Fluxo do processo seletivo</a>
+          para esta fase. Você pode ajustar só para este candidato antes de
+          enviar, sem alterar o padrão.
+        </p>
+
+        {% include "components/textarea.html" with name="mensagem_whatsapp" value=mensagem_sugerida rows=4 id="texto-whatsapp" %}
+
+        {% if tem_whatsapp %}
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="abrir-whatsapp">
+              <i class="bi bi-whatsapp"></i> Abrir no WhatsApp
+            </button>
+          </div>
+        {% else %}
+          <p class="field-helper">
+            Este candidato não tem WhatsApp registrado, então não há para onde
+            enviar.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if tem_whatsapp %}
+      <script>
+        // Monta o wa.me na hora do clique, e nao na renderizacao: o RH pode ter
+        // editado o texto, e o link precisa levar o que esta na tela AGORA.
+        document.getElementById('abrir-whatsapp').addEventListener('click', function () {
+          var texto = document.getElementById('texto-whatsapp').value;
+          var numero = '{{ candidato.whatsapp }}'.replace(/\D/g, '');
+          window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent(texto),
+                      '_blank', 'noopener');
+        });
+      </script>
+    {% endif %}
+  {% endif %}
 {% endblock %}

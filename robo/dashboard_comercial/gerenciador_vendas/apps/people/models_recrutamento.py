@@ -620,6 +620,110 @@ class CampoCandidatura(TenantMixin):
         return [campo.como_campo() for campo in campos]
 
 
+class MensagemRecrutamento(TenantMixin):
+    """
+    Mensagem sugerida ao RH quando o candidato chega numa etapa ou numa saida.
+
+    NADA E ENVIADO AUTOMATICAMENTE. E a mesma decisao de produto do
+    `MensagemEtapa` do Departamento Pessoal, e a origem repete o motivo na
+    propria tela: "Voce pode personaliza-la so para este candidato antes de
+    enviar, sem alterar esse padrao".
+
+    Quem quiser automatizar de verdade monta um fluxo na engine escutando o
+    evento da transicao. Os dois caminhos convivem: este e a sugestao pro
+    humano, aquele e a automacao explicita.
+
+    ETAPA OU SAIDA, NUNCA OS DOIS. E a divisao que estrutura o modulo inteiro:
+    etapa intermediaria e DADO (linha configuravel), saida terminal e CODIGO
+    (constante em estados_recrutamento). A constraint no banco garante que a
+    linha aponte pra exatamente um dos dois, em vez de deixar o codigo torcer.
+
+    ABRE O WHATSAPP, nao envia por API. Copiado da origem de proposito: funciona
+    pra qualquer cliente, sem integracao, sem custo por mensagem e sem risco de
+    bloqueio de numero. Cliente com Uazapi pode automatizar pela engine.
+    """
+
+    etapa = models.ForeignKey(
+        'people.EtapaPipeline', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='mensagens', verbose_name="Etapa",
+        help_text="Mensagem sugerida quando o candidato chega nesta etapa.",
+    )
+    saida = models.CharField(
+        max_length=20, choices=estados_rs.SAIDAS, blank=True, default='',
+        verbose_name="Saída",
+        help_text="Mensagem sugerida quando o candidato sai por este motivo.",
+    )
+    texto = models.TextField(
+        verbose_name="Mensagem padrão",
+        help_text="Aceita {{nome}}, {{primeiro_nome}}, {{vaga}}, {{unidade}} "
+                  "e {{cargo}}.",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_mensagem_recrutamento'
+        verbose_name = 'Mensagem de recrutamento'
+        verbose_name_plural = 'Mensagens de recrutamento'
+        ordering = ['saida', 'etapa__ordem']
+        indexes = [
+            models.Index(fields=['tenant', 'ativo'],
+                         name='people_msg_recr_ativo_idx'),
+        ]
+        constraints = [
+            # Exatamente um dos dois. Sem isto, uma linha com os dois
+            # preenchidos (ou nenhum) so seria descoberta quando a tela nao
+            # achasse a mensagem, e o sintoma seria "sumiu", nao "esta errado".
+            models.CheckConstraint(
+                condition=(
+                    models.Q(etapa__isnull=False, saida='')
+                    | models.Q(etapa__isnull=True) & ~models.Q(saida='')
+                ),
+                name='people_msg_recr_etapa_ou_saida',
+            ),
+            models.UniqueConstraint(
+                fields=['tenant', 'etapa'], condition=models.Q(etapa__isnull=False),
+                name='people_msg_recr_uma_por_etapa',
+            ),
+            models.UniqueConstraint(
+                fields=['tenant', 'saida'], condition=~models.Q(saida=''),
+                name='people_msg_recr_uma_por_saida',
+            ),
+        ]
+
+    def __str__(self):
+        if self.etapa_id:
+            return f'Mensagem de {self.etapa.nome}'
+        return f'Mensagem de {estados_rs.rotulo_saida(self.saida)}'
+
+    def render(self, candidato):
+        """
+        Troca as variaveis. O RH ainda edita antes de enviar.
+
+        Placeholder sem valor vira string vazia, e nao fica como `{{vaga}}` na
+        tela: a mensagem vai pro candidato, e chave de template aparecendo pra
+        ele e pior que a frase ficar mais curta.
+        """
+        nome = (candidato.nome_completo or '').strip()
+        vaga = candidato.vaga.nome_exibido if candidato.vaga_id else ''
+        cargo = (candidato.vaga.cargo.nome
+                 if candidato.vaga_id and candidato.vaga.cargo_id else '')
+
+        substituicoes = {
+            '{{nome}}': nome,
+            '{{primeiro_nome}}': nome.split(' ')[0] if nome else '',
+            '{{vaga}}': vaga,
+            '{{unidade}}': getattr(candidato.unidade, 'nome', ''),
+            '{{cargo}}': cargo,
+        }
+        texto = self.texto
+        for chave, valor in substituicoes.items():
+            texto = texto.replace(chave, valor)
+        return texto
+
+
 class Candidato(TenantMixin):
     """
     Alguem que se candidatou. NAO e colaborador, e por isso mora em tabela
@@ -857,6 +961,46 @@ class Candidato(TenantMixin):
         if not self.esta_atrasado:
             return 0
         return self.dias_na_etapa - self.etapa.sla_dias
+
+    def link_whatsapp(self, texto=''):
+        """
+        URL que ABRE o WhatsApp com a mensagem pronta.
+
+        `wa.me` e nao API de proposito: funciona pra qualquer cliente, sem
+        integracao contratada, sem custo por mensagem e sem risco de bloqueio de
+        numero. Quem tem Uazapi automatiza pela engine, que e outro caminho.
+
+        Devolve vazio quando nao ha WhatsApp: candidato anonimizado pelo expurgo
+        LGPD tem o numero apagado, e um link `wa.me/` sem numero abriria uma tela
+        de erro do WhatsApp em vez de nao aparecer.
+        """
+        from urllib.parse import quote
+
+        if not self.whatsapp:
+            return ''
+        numero = ''.join(c for c in self.whatsapp if c.isdigit())
+        if not numero:
+            return ''
+        base = f'https://wa.me/{numero}'
+        return f'{base}?text={quote(texto)}' if texto else base
+
+    def mensagem_sugerida(self):
+        """
+        A mensagem configurada pra onde o candidato esta AGORA, ja renderizada.
+
+        Saida tem precedencia sobre etapa: quem saiu do processo continua
+        apontando pra ultima etapa, e a mensagem certa e a da saida ("nao foi
+        aprovado"), nao a da etapa em que ele parou.
+        """
+        modelo = None
+        if self.saida:
+            modelo = MensagemRecrutamento.all_tenants.filter(
+                tenant_id=self.tenant_id, saida=self.saida, ativo=True).first()
+        elif self.etapa_id:
+            modelo = MensagemRecrutamento.all_tenants.filter(
+                tenant_id=self.tenant_id, etapa_id=self.etapa_id,
+                ativo=True).first()
+        return modelo.render(self) if modelo else ''
 
     @property
     def rotulo_atraso(self):

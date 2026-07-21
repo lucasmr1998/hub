@@ -62,6 +62,10 @@ def detalhe(request, pk):
         'pagetitle': candidato.nome_completo,
         'candidato': candidato,
         'respostas_custom': _respostas_custom(candidato),
+        # Sugestao pra etapa (ou saida) em que o candidato esta AGORA. Vazia
+        # quando ninguem configurou mensagem pra esta fase, e ai o bloco some.
+        'mensagem_sugerida': candidato.mensagem_sugerida(),
+        'tem_whatsapp': bool(candidato.link_whatsapp()),
         'historico': historico,
         'tabs': tabs,
         'saidas': [{'valor': v, 'rotulo': r} for v, r in estados_rs.SAIDAS],

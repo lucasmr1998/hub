@@ -57,6 +57,7 @@ urlpatterns = [
     path('fluxo/etapa/<int:pk>/remover/', fluxo.etapa_remover,
          name='fluxo_etapa_remover'),
     path('fluxo/resetar/', fluxo.resetar_padrao, name='fluxo_resetar'),
+    path('fluxo/mensagem/', fluxo.mensagem_salvar, name='fluxo_mensagem_salvar'),
 
     # Recrutamento: campos que o tenant inventa pra candidatura
     path('campos/', campos.configurar, name='campos_config'),
