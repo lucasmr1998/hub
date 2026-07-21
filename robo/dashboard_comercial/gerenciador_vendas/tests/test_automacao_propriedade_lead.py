@@ -194,3 +194,38 @@ def test_dropdown_lista_todas_as_propriedades_do_registry():
 
     assert {o['value'] for o in opcoes} == set(PROPRIEDADES)
     assert all(o['label'] for o in opcoes)
+
+
+@pytest.mark.django_db
+def test_nome_provisorio_do_carregar_lead_nao_bloqueia_o_nome_real():
+    """`carregar_lead` cria o lead com "Lead WhatsApp <telefone>" quando não há
+    nome no payload. Esse placeholder NÃO conta como preenchido: sem essa
+    exceção o `somente_se_vazio` protegia o provisório e o nome de verdade
+    nunca entrava. Achado testando em produção."""
+    from apps.automacao.nodes.carregar_lead import NOME_LEAD_SEM_IDENTIFICACAO
+
+    tenant = TenantFactory()
+    lead = LeadProspectoFactory(
+        tenant=tenant, nome_razaosocial=f'{NOME_LEAD_SEM_IDENTIFICACAO} 5511999999999')
+
+    r = _rodar(tenant, lead, {'propriedade': 'nome_razaosocial',
+                              'valor': 'Fulano de Tal'})
+
+    assert r.output['aplicado'] is True
+    lead.refresh_from_db()
+    assert lead.nome_razaosocial == 'Fulano de Tal'
+
+
+@pytest.mark.django_db
+def test_nome_real_ja_preenchido_continua_protegido():
+    """A exceção vale só pro placeholder: nome que uma pessoa escreveu segue
+    intocado."""
+    tenant = TenantFactory()
+    lead = LeadProspectoFactory(tenant=tenant, nome_razaosocial='Maria da Silva')
+
+    r = _rodar(tenant, lead, {'propriedade': 'nome_razaosocial', 'valor': 'Outro Nome'})
+
+    assert r.output['aplicado'] is False
+    assert r.output['motivo_skip'] == 'ja_preenchido'
+    lead.refresh_from_db()
+    assert lead.nome_razaosocial == 'Maria da Silva'

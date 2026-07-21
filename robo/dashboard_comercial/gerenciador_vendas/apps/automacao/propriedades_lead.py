@@ -27,7 +27,6 @@ from datetime import datetime
 # `max_length` em mente nao e necessario aqui: o `full_clean` do save nao roda,
 # mas os campos do model sao folgados o bastante pro que o bot coleta.
 _CAMPOS_TEXTO = {
-    'nome_razaosocial': 'Nome ou razao social',
     'email': 'Email',
     'rg': 'RG',
     'cep': 'CEP',
@@ -64,6 +63,26 @@ def _texto(atributo):
             return _resultado(False, 'valor_vazio', f'nada a gravar em {atributo}')
         return _escrever(lead, atributo, texto, somente_se_vazio)
     return handler
+
+
+def _nome(tenant, lead, valor, *, chave='', somente_se_vazio=True):
+    """Igual ao texto simples, com uma exceção: o nome PROVISÓRIO que
+    `carregar_lead` grava ao criar um lead do zero ("Lead WhatsApp <telefone>")
+    não conta como preenchido.
+
+    Sem isso o `somente_se_vazio` protegia o placeholder e o nome de verdade
+    nunca entrava: o campo tecnicamente tinha valor. Achado testando em
+    produção, a ficha ficava com "Lead WhatsApp 34999999456" mesmo depois do
+    cliente responder o nome completo."""
+    from .nodes.carregar_lead import NOME_LEAD_SEM_IDENTIFICACAO
+
+    texto = str(valor or '').strip()
+    if not texto:
+        return _resultado(False, 'valor_vazio', 'nada a gravar em nome_razaosocial')
+    atual = (lead.nome_razaosocial or '').strip()
+    provisorio = atual.startswith(NOME_LEAD_SEM_IDENTIFICACAO)
+    return _escrever(lead, 'nome_razaosocial', texto,
+                     somente_se_vazio and not provisorio)
 
 
 def _cpf_cnpj(tenant, lead, valor, *, chave='', somente_se_vazio=True):
@@ -112,6 +131,8 @@ PROPRIEDADES = {
                         'handler': _data_nascimento},
     'dado_custom': {'label': 'Dado custom (dados_custom)', 'usa_chave': True,
                     'handler': _dado_custom},
+    'nome_razaosocial': {'label': 'Nome ou razao social', 'usa_chave': False,
+                         'handler': _nome},
     **{
         nome: {'label': label, 'usa_chave': False, 'handler': _texto(nome)}
         for nome, label in _CAMPOS_TEXTO.items()
