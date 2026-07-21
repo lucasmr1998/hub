@@ -270,3 +270,45 @@
 - **Status:** completed (codigo, dev). Deploy pendente de confirmacao.
 
 ---
+
+## 2026-07-21 — "Mococa tem 2": rotulo escondido no eixo e normalizacao de cidade
+
+- **Reporte (Gabriela, Nuvyon):** "os leads por cidade nao ta aparecendo mococa,
+  tem 2, mas e estranho pq mococa sempre tem mt".
+- **Investigacao:** rodei o widget #76 pelo proprio `WidgetQueryBuilder` em prod
+  em vez de deduzir pelo SQL. O dado estava CERTO: Mococa = 65, segunda maior,
+  atras so de Salto (90). O problema era de leitura do grafico, somado a uma
+  duplicata.
+- **Causa 1 (a que enganou):** o grafico tem 20 barras mas so 10 rotulos. Em
+  `echarts_option.js`, o eixo de categoria da barra **horizontal** nao tinha
+  `interval: 0` (a vertical tinha), entao o ECharts escondia um rotulo sim outro
+  nao quando nao cabiam todos. A barra de 65 ficou anonima e o unico rotulo com
+  "Mococa" visivel era o da vizinha "Mococa Sp = 2". Dai a leitura.
+- **Causa 2:** o transform `normalizar_cidade` so tirava sufixo de UF **com
+  barra** (`/SP`) e nao ignorava acento, entao "Mococa Sp" e "Sumare" viravam
+  fatias separadas de "Mococa" e "Sumaré".
+- **Output:**
+  - `apps/relatorios/static/relatorios/echarts_option.js`: `interval: 0` no eixo
+    de categoria horizontal, fonte menor a partir de 15 categorias, rotulo longo
+    truncado (nome inteiro segue no tooltip) e `grid.bottom` reduzido de 50 pra
+    24 na horizontal, onde o eixo de baixo so tem numeros e aqueles 50px eram
+    altura desperdicada, justamente o que faltava pros rotulos caberem.
+  - `apps/relatorios/query_builder.py`: `normalizar_cidade` agora tira UF com
+    qualquer separador (barra, hifen, virgula ou espaco) e agrupa ignorando
+    acento, mas **exibe a grafia mais usada do grupo**, pra "Sumaré" nao virar
+    "Sumare" na tela. Constante `_UFS_RE` com a lista real de UFs em vez de
+    `[a-z]{2}`, pra nao amputar cidade que termine em duas letras (Cotia, Bauru).
+  - `tests/test_relatorios_query_builder.py`: arquivo estava vazio, agora com 10
+    casos do transform.
+- **Efeito medido nos dados reais da Nuvyon:** 20 fatias viram 18. Mococa 65 ->
+  67, Sumaré 22 -> 23.
+- **Achados registrados, NAO corrigidos aqui:**
+  1. O widget so enxerga 348 dos 1135 leads, porque 788 (69%) estao **sem
+     cidade** e o filtro do widget e `cidade existe`. Esses somem calados, o que
+     faz o grafico parecer completo. Mesma causa raiz do bloco A: a cidade so e
+     preenchida quando o endereco e completado no Hubtrix, e no geral o cadastro
+     e completado no HubSoft.
+  2. Widget #77 "Vendas por cidade" esta com `agrupamento={}`, entao em vez de
+     barras por cidade devolve uma barra unica "Total: 1129". Esta no painel da
+     Nuvyon.
+- **Status:** completed (as duas causas); pending (os dois achados acima)

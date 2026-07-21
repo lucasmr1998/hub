@@ -167,11 +167,26 @@ function montarOptionEcharts(viz, labels, valores, seriesName) {
     ? { type: 'value', splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => fmtCompacto(v) } }
     : { type: 'category', data: labels.map(String), axisTick: { show: false }, axisLine: { lineStyle: { color: '#e2e8f0' } }, axisLabel: { color: '#64748b', fontSize: 11, interval: 0, rotate: labels.length > 4 ? 30 : 0 } };
   const yAxis = horizontal
-    ? { type: 'category', data: labels.map(String), axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#64748b', fontSize: 11 }, inverse: true }
+    // `interval: 0` e obrigatorio aqui: sem ele o ECharts esconde um rotulo sim
+    // outro nao quando nao cabem todos, e a barra fica anonima. Isso levou a
+    // Nuvyon a ler "Mococa = 2" num grafico onde Mococa era a 2a maior (65) e
+    // so o rotulo da vizinha "Mococa Sp" aparecia. Rotulo longo e truncado, com
+    // o nome inteiro no tooltip.
+    ? { type: 'category', data: labels.map(String), axisTick: { show: false }, axisLine: { show: false },
+        axisLabel: {
+          color: '#64748b', interval: 0,
+          fontSize: labels.length > 14 ? 9 : 11,
+          formatter: (v) => (String(v).length > 22 ? String(v).slice(0, 21) + '…' : String(v)),
+        }, inverse: true }
     : { type: 'value', splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => fmtCompacto(v) } };
   return {
     ...base,
+    // Na horizontal o eixo de baixo so tem os numeros, entao os 50px reservados
+    // pra rotulo rotacionado viram altura desperdicada — e altura e justamente
+    // o que falta pros rotulos das categorias caberem.
+    grid: { ...base.grid, bottom: horizontal ? 24 : base.grid.bottom },
     tooltip: { ...base.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' },
+      // nome inteiro no tooltip, mesmo quando o rotulo do eixo foi truncado
       formatter: (arr) => arr.map(p => `${p.marker} <b>${p.axisValueLabel}</b><br/>${p.seriesName}: ${fmtCompacto(p.value)}`).join('') },
     xAxis, yAxis,
     series: [{

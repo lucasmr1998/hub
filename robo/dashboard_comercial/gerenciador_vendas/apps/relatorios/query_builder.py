@@ -24,6 +24,14 @@ from apps.relatorios import data_sources as ds_registry
 logger = logging.getLogger(__name__)
 
 
+# UFs pro transform `normalizar_cidade` tirar o sufixo de estado ("Mococa SP",
+# "Ribeirao Preto / SP"). E a lista real, e nao `[a-z]{2}`, pra nao amputar
+# cidade que legitimamente termine em duas letras.
+_UFS_RE = (
+    'ac|al|am|ap|ba|ce|df|es|go|ma|mg|ms|mt|pa|pb|pe|pi|pr|rj|rn|ro|rr|rs|sc|se|sp|to'
+)
+
+
 OPERADORES_VALIDOS = {
     'igual':       lambda c, v: Q(**{c: v}),
     'diferente':   lambda c, v: ~Q(**{c: v}),
@@ -1109,22 +1117,52 @@ class WidgetQueryBuilder:
 
         if transform == 'normalizar_cidade':
             # Agrupa variantes de grafia da mesma cidade: case, espacos
-            # duplicados/nas pontas e sufixo /UF ("RIBEIRÃO PRETO/SP",
-            # "ribeirão preto ", "Ribeirão Preto" viram uma linha so).
+            # duplicados/nas pontas, ACENTO e sufixo de UF em qualquer separador
+            # ("RIBEIRÃO PRETO/SP", "ribeirão preto ", "Ribeirao Preto - SP",
+            # "Ribeirão Preto" viram uma linha so).
+            #
+            # A versao antiga so tirava "/UF" com barra e nao ignorava acento,
+            # entao "Mococa Sp" e "Sumare" viravam fatias separadas de "Mococa"
+            # e "Sumaré". No painel da Nuvyon isso fez parecer que Mococa tinha
+            # 2 leads quando tinha 65.
             import re as _re
+            import unicodedata as _ud
+
+            def _chave(bruto):
+                s = _re.sub(r'\s+', ' ', str(bruto).strip().lower())
+                # UF no fim, com barra, hifen, virgula ou so espaco
+                s = _re.sub(rf'[\s/,-]+({_UFS_RE})$', '', s)
+                # acento fora so da CHAVE (o rotulo exibido mantem o acento)
+                sem_acento = _ud.normalize('NFKD', s)
+                return ''.join(c for c in sem_acento if not _ud.combining(c)).strip()
+
+            _menores = {'de', 'do', 'da', 'dos', 'das', 'e'}
+
+            def _titulo(s):
+                # minuscula antes de comparar, senao "DO" nao bate com a lista
+                # de preposicoes e "SAO JOSE DO RIO PARDO" sai "Do" no meio
+                return ' '.join(
+                    p if (p := parte.lower()) in _menores else p.capitalize()
+                    for parte in s.split()
+                )
+
             agg = {}
             for lb, v in zip(labels, data):
-                chave = _re.sub(r'\s*/\s*[a-zA-Z]{2}\s*$', '', str(lb).strip().lower())
-                chave = _re.sub(r'\s+', ' ', chave)
+                chave = _chave(lb)
                 if not chave or chave == '—':
                     continue
-                agg[chave] = agg.get(chave, 0) + v
-            ordenado = sorted(agg.items(), key=lambda kv: -kv[1])
-            _menores = {'de', 'do', 'da', 'dos', 'das', 'e'}
-            def _titulo(s):
-                return ' '.join(p if p in _menores else p.capitalize() for p in s.split())
-            labels = [_titulo(k) for k, _ in ordenado]
-            data = [v for _, v in ordenado]
+                total, melhor_rotulo, melhor_peso = agg.get(chave, (0, None, -1))
+                # rotulo exibido = a grafia mais usada do grupo, pra preservar
+                # acento ("Sumaré" ganha de "Sumare" se for a mais comum)
+                limpo = _re.sub(rf'[\s/,-]+({_UFS_RE})$', '', _re.sub(r'\s+', ' ', str(lb).strip()), flags=_re.I)
+                if v > melhor_peso:
+                    melhor_rotulo, melhor_peso = limpo, v
+                agg[chave] = (total + v, melhor_rotulo, melhor_peso)
+
+            ordenado = sorted(agg.items(), key=lambda kv: -kv[1][0])
+            labels = [_titulo(rot) if rot.isupper() or rot.islower() else rot
+                      for _, (_, rot, _p) in ordenado]
+            data = [tot for _, (tot, _r, _p) in ordenado]
             return labels, data
 
         if transform == 'conversao_por_canal':
