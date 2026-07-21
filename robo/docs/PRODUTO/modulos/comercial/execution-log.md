@@ -432,3 +432,53 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
   inclui o dia inteiro, so um lado do intervalo, datas trocadas, data invalida,
   e o "carregar mais" respeitando o intervalo). Suite do arquivo: 31 passando.
 - **Status:** completed (codigo em dev; falta deploy)
+
+## 2026-07-21 — Lead PJ travado: validador aplicava regra de CPF em CNPJ (tarefa 185)
+
+- **Gatilho:** alerta "6 leads parados em status erro ha > 1h" (alerta #10821,
+  tenant nuvyon).
+- **Diagnostico:** dos 6, **5 eram CNPJ perfeitamente validos** e so 1 era CPF
+  errado de verdade. Validei cada documento com o algoritmo correto antes de
+  mexer em codigo:
+
+  | Documento | Digitos | Tipo | Valido | Nome |
+  |---|---|---|---|---|
+  | 67559966000134 | 14 | CNPJ | sim | CONSORCIO INFRACON |
+  | 66543964000194 | 14 | CNPJ | sim | MATEUS EDUARDO GUERRA |
+  | 58742188000123 | 14 | CNPJ | sim | Fabio |
+  | 48409090000103 | 14 | CNPJ | sim | GOLD HOUSE CONSTRUTORA |
+  | 30180292000152 | 14 | CNPJ | sim | DOT A DOT TELECOM |
+  | 37777365794 | 11 | CPF | **nao** | Angelica Cristina |
+
+- **Causa:** `_validar_cpf` em `apps/comercial/leads/utils.py` comeca com
+  `if len(s) != 11: return False`. CNPJ tem 14 digitos, entao **nunca passava, por
+  construcao**, e todo lead PJ morria em `cpf_invalido` sem chegar no HubSoft.
+- **Tamanho real do problema (maior que o alerta):** 16 leads PJ na Nuvyon, sendo
+  9 em `rascunho_hubsoft`, 5 em `cpf_invalido` e 2 `incompleto`. E **7 leads PJ ja
+  estao em "Ativacao Confirmada"**, ou seja, viraram venda de verdade, cadastrados
+  na mao no HubSoft contornando o sistema.
+- **Output:**
+  - `_validar_cnpj()` novo, com os pesos padrao (5..2, 9..2), rejeitando tamanho
+    errado e digitos todos iguais.
+  - `validar_documento()` despacha pelo numero de digitos: 14 vira CNPJ, o resto
+    cai no CPF. E o que o pre-flight passa a chamar.
+  - A mensagem de erro agora diz "CNPJ ... nao passa no checksum" quando for PJ,
+    em vez de chamar tudo de CPF.
+  - `tests/test_leads_validacao_documento.py`: 25 casos, incluindo os 5 CNPJs
+    reais que estavam travados e o CPF da Angelica, que **continua reprovado** (o
+    fix nao pode afrouxar a validacao de PF pra acomodar PJ).
+- **Efeito esperado:** os 5 leads destravam sozinhos na proxima passada do cron,
+  sem intervencao manual. O da Angelica segue bloqueado, corretamente.
+- **Escopo deliberadamente contido (opcao A do dono):** nao mexi nos outros
+  pontos que assumem 11 digitos.
+- **Debitos registrados, nao resolvidos aqui:**
+  1. **Validacao de CPF duplicada em 3 lugares:** `leads/utils.py` (este),
+     `marketing/landing_pages/validators.py:63` e
+     `comercial/atendimento_ia/services/validacao.py:161`. O do atendimento_ia
+     **ja trata CNPJ** (`_cnpj_valido`), os outros dois nao. Nao unifiquei aqui
+     porque importar funcao privada entre apps seria acoplamento pior; o certo e
+     extrair pra um modulo compartilhado, e isso e trabalho a parte.
+  2. **Landing page continua reprovando PJ** (`validators.py:98` chama um
+     `_validar_cpf` local que so aceita 11 digitos).
+  3. Lead 2520 (Angelica) precisa de correcao humana do CPF.
+- **Status:** completed (validador); pending (os 3 debitos acima)

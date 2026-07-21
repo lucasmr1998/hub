@@ -104,6 +104,41 @@ def _validar_cpf(cpf: str) -> bool:
     return True
 
 
+_PESOS_CNPJ = (5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+
+
+def _validar_cnpj(cnpj: str) -> bool:
+    """Algoritmo padrao de verificacao de CNPJ (2 digitos verificadores).
+
+    Os pesos comecam em 5 e voltam pra 9 depois do 2; o segundo digito usa a
+    mesma sequencia deslocada, com um 6 na frente.
+    """
+    s = ''.join(ch for ch in (cnpj or '') if ch.isdigit())
+    if len(s) != 14 or s == s[0] * 14:
+        return False
+    for pesos, pos in ((_PESOS_CNPJ, 12), ((6,) + _PESOS_CNPJ, 13)):
+        soma = sum(int(s[k]) * pesos[k] for k in range(pos))
+        resto = soma % 11
+        dv = 0 if resto < 2 else 11 - resto
+        if dv != int(s[pos]):
+            return False
+    return True
+
+
+def validar_documento(doc: str) -> bool:
+    """Valida CPF **ou** CNPJ, escolhendo o algoritmo pelo numero de digitos.
+
+    Existe porque `_validar_cpf` sozinho reprovava todo lead PJ: ele comeca com
+    `len(s) != 11`, entao CNPJ nunca passava e a venda PJ ficava presa em
+    `cpf_invalido` sem nunca chegar no HubSoft (tarefa 185). Na Nuvyon eram 5
+    CNPJs validos travados, de 16 leads PJ no total.
+    """
+    s = ''.join(ch for ch in (doc or '') if ch.isdigit())
+    if len(s) == 14:
+        return _validar_cnpj(s)
+    return _validar_cpf(s)
+
+
 def _ids_validos_no_cache(integracao, chave_cache: str, item_id_key: str) -> set:
     """Retorna set de IDs validos do catalogo cacheado em
     IntegracaoAPI.configuracoes_extras.cache[chave]. Vazio se cache nao sync.
@@ -151,9 +186,12 @@ def validar_lead_pronto_para_prospect(lead, integracao=None) -> tuple[str, str]:
     if faltando:
         return ('incompleto', f'campos faltando: {", ".join(faltando)}')
 
-    # 2) CPF valido (algoritmo brasileiro)
-    if not _validar_cpf(lead.cpf_cnpj):
-        return ('cpf_invalido', f'CPF {lead.cpf_cnpj!r} nao passa no checksum')
+    # 2) Documento valido: CPF (11 digitos) ou CNPJ (14). Lead PJ e caso normal
+    # na Nuvyon, entao nao da pra assumir CPF aqui.
+    if not validar_documento(lead.cpf_cnpj):
+        _digitos = ''.join(ch for ch in (lead.cpf_cnpj or '') if ch.isdigit())
+        _tipo = 'CNPJ' if len(_digitos) == 14 else 'CPF'
+        return ('cpf_invalido', f'{_tipo} {lead.cpf_cnpj!r} nao passa no checksum')
 
     # 3) Duplicado no mesmo tenant (CPF ja convertido em prospect HubSoft).
     # Evita o cenario do Pedro Paulo (id_hubsoft=22633) tentar de novo e
