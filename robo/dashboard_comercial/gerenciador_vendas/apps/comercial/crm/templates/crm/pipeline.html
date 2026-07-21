@@ -896,8 +896,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Selects do list_filters devem recarregar ao mudar
-  document.querySelectorAll('.list-filters-grid select').forEach(el => {
+  // Selects e datas do list_filters devem recarregar ao mudar. Os campos de
+  // data entram aqui pra se comportarem como os selects: o change so dispara
+  // com a data completa, entao nao recarrega a cada tecla.
+  document.querySelectorAll('.list-filters-grid select, .list-filters-grid input[type=date]').forEach(el => {
     el.addEventListener('change', (e) => { e.preventDefault(); carregarPipeline(); });
   });
 
@@ -932,8 +934,9 @@ function carregarPipeline() {
   mostrarLoader(true);
 
   // Le TODOS os campos do form de filtros (inclui os multiselect Canal/Fonte/
-  // Campanha e os novos Estagio/Prioridade/Periodo). Antes montava a query a
-  // mao com so 4 campos, entao os demais filtros nao chegavam ao backend.
+  // Campanha, Estagio/Prioridade e o intervalo data_inicio/data_fim). Antes
+  // montava a query a mao com so 4 campos, entao os demais filtros nao
+  // chegavam ao backend.
   const form = document.querySelector('.list-filters-grid');
   const params = form ? new URLSearchParams(new FormData(form)) : new URLSearchParams();
   for (const [k, v] of [...params.entries()]) { if (!v) params.delete(k); }

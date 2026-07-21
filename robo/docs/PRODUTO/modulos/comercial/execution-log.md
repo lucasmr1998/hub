@@ -399,3 +399,36 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - **Deploy:** push `4f2ae0e..a08c143` (8 commits, o do CRM mais 7 do modulo
   People de outra sessao) e rebuild confirmado consultando o container.
 - **Status:** completed
+
+## 2026-07-21 — Kanban: intervalo de datas no lugar do preset 7/30/90 (tarefa 214)
+
+- **Acao:** o filtro "Criada em" do painel de filtros do kanban era um select com
+  presets (7/30/90 dias). Virou intervalo real, com dois campos de data.
+- **Decisao do dono:** trocar, nao somar. Manter preset e intervalo juntos deixaria
+  o painel cheio e os dois poderiam se sobrepor. Mesmo padrao ja escolhido no
+  painel de relatorios.
+- **Output:**
+  - `apps/comercial/crm/views.py`: em `pipeline_view`, o select `periodo` deu
+    lugar a dois campos `date` (`data_inicio` / `data_fim`). O componente
+    `components/list_filters.html` ja suportava `type: 'date'`, entao nao
+    precisou tocar no design system.
+  - Helper novo `_filtrar_intervalo_criacao(qs, request)`, aplicado dentro de
+    `_qs_pipeline_filtrado`. Como esse helper ja e compartilhado pela carga
+    inicial e pelo "carregar mais" de uma coluna, o recorte fica igual nos dois
+    (senao a coluna pagina sobre um conjunto diferente do que o cabecalho conta).
+  - `templates/crm/pipeline.html`: os inputs de data recarregam ao mudar, junto
+    com os selects. O `change` de campo date so dispara com a data completa,
+    entao nao recarrega a cada tecla. O JS ja lia o form inteiro via `FormData`,
+    entao os campos novos viajam sozinhos pros dois endpoints.
+- **Cuidados no helper:** fim do intervalo com `__lte` no fim do dia (com `__lt`
+  na meia-noite, "ate 20/07" perderia tudo criado no proprio dia 20); data
+  invalida e logada e ignorada em vez de derrubar a tela; datas trocadas sao
+  invertidas em vez de devolver lista vazia. `make_aware` porque o projeto roda
+  com `USE_TZ=True`.
+- **Compatibilidade:** `?periodo=` deixou de ser lido. Verificado que nenhum
+  template linka pro kanban com esse parametro (o unico uso de `periodo=` e em
+  `desempenho.html`, que aponta pra outra view).
+- **Testes:** `TestPipelineFiltroIntervalo`, 6 casos (recorte dos dois lados, fim
+  inclui o dia inteiro, so um lado do intervalo, datas trocadas, data invalida,
+  e o "carregar mais" respeitando o intervalo). Suite do arquivo: 31 passando.
+- **Status:** completed (codigo em dev; falta deploy)

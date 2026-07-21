@@ -292,13 +292,12 @@ def pipeline_view(request):
              ('500-1000', 'R$ 500 a R$ 1.000'),
              ('1000+', 'Acima de R$ 1.000'),
          ]},
-        {'type': 'select', 'label': 'Criada em', 'name': 'periodo', 'value': request.GET.get('periodo', ''),
-         'options': [
-             ('', 'Qualquer data'),
-             ('7', 'Ultimos 7 dias'),
-             ('30', 'Ultimos 30 dias'),
-             ('90', 'Ultimos 90 dias'),
-         ]},
+        # Intervalo real em vez do preset 7/30/90: mesmo padrao do painel de
+        # relatorios. Vazio nos dois = qualquer data.
+        {'type': 'date', 'label': 'Criada de', 'name': 'data_inicio',
+         'value': request.GET.get('data_inicio', '')},
+        {'type': 'date', 'label': 'Criada ate', 'name': 'data_fim',
+         'value': request.GET.get('data_fim', '')},
         # Sprint 5: filtros de origem (multi-select)
         {'type': 'multiselect', 'label': 'Canal', 'name': 'canal',
          'values': request.GET.getlist('canal'),
@@ -381,6 +380,40 @@ def pipeline_view(request):
 LIMITE_CARDS_COLUNA = 20
 
 
+def _filtrar_intervalo_criacao(qs, request):
+    """Aplica o intervalo de `data_criacao` vindo de `data_inicio`/`data_fim`.
+
+    Os dois campos sao opcionais e independentes: da pra passar so um lado.
+    Data invalida e ignorada (a tela nao pode quebrar por causa de um valor
+    digitado na URL) e datas trocadas sao corrigidas em vez de devolver vazio.
+    """
+    from datetime import datetime as _dt, time as _time
+
+    def _ler(chave):
+        bruto = (request.GET.get(chave) or '').strip()
+        if not bruto:
+            return None
+        try:
+            return _dt.strptime(bruto, '%Y-%m-%d').date()
+        except ValueError:
+            logger.info('Filtro do pipeline com %s invalido: %r', chave, bruto[:20])
+            return None
+
+    inicio, fim = _ler('data_inicio'), _ler('data_fim')
+    if inicio and fim and inicio > fim:
+        inicio, fim = fim, inicio
+
+    if inicio:
+        qs = qs.filter(data_criacao__gte=timezone.make_aware(
+            _dt.combine(inicio, _time.min)))
+    if fim:
+        # `__lte` no fim do dia, senao "ate 20/07" perderia tudo que foi criado
+        # depois da meia-noite do dia 20.
+        qs = qs.filter(data_criacao__lte=timezone.make_aware(
+            _dt.combine(fim, _time.max)))
+    return qs
+
+
 def _qs_pipeline_filtrado(request):
     """Queryset do kanban com os filtros da tela aplicados.
 
@@ -430,11 +463,9 @@ def _qs_pipeline_filtrado(request):
     estagio_filtro = request.GET.get('estagio')
     if estagio_filtro:
         qs = qs.filter(estagio_id=estagio_filtro)
-    periodo = request.GET.get('periodo')
-    if periodo and periodo.isdigit():
-        from django.utils import timezone as _tz
-        from datetime import timedelta as _td
-        qs = qs.filter(data_criacao__gte=_tz.now() - _td(days=int(periodo)))
+    # Intervalo de criacao (substituiu o preset 7/30/90). Data invalida e
+    # ignorada em vez de derrubar a tela, e o fim inclui o dia inteiro.
+    qs = _filtrar_intervalo_criacao(qs, request)
     if tag:
         qs = qs.filter(tags__nome=tag)
     if canais:
