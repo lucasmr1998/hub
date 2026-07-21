@@ -427,4 +427,20 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 - **Acao**: apagados 6 candidatos de teste, mantido o unico real (James Dean). Autorizado pelo Lucas, com confirmacao explicita do registro ambiguo (um deles tinha nome completo, Gmail e curriculo com cara de real).
 - **Decisao**: o contador `LinkCandidatura.candidaturas` foi RECALCULADO da contagem real, e nao decrementado. Ele e denormalizado e nao decrementa sozinho no delete; subtrair propagaria qualquer divergencia previa. Sem isso a taxa de conversao da 216 nasceria mentindo, com denominador certo e numerador inflado.
 - **Pendencia**: os cinco PDFs de curriculo continuam no volume `private_media` do servidor. Daqui so ha acesso ao banco, e apagar a linha nao apaga o arquivo. E dado pessoal orfao, um deles um contrato social. Comando de limpeza entregue pro Lucas rodar no console do EasyPanel.
-- **Pergunta em aberto**: o candidato id=2 foi criado SEM curriculo com o campo marcado como obrigatorio. Ou a config mudou entre o envio e a consulta, ou ha furo na validacao do formulario publico. A evidencia foi apagada junto com o registro.
+- **Pergunta RESPONDIDA (21/07)**: o candidato id=2 tinha sido criado sem curriculo com o campo aparentemente obrigatorio. O Lucas confirmou que mexeu no toggle depois daquele envio, entao o candidato entrou enquanto o campo ainda era opcional. **Nao ha furo na validacao**; a obrigatoriedade esta valendo.
+
+## 2026-07-21 — Tarefas 216 e 217 concluidas, e o estado real de prod
+
+- **Acao**: deploy confirmado com as migrations 0017, 0018 e 0019 aplicadas, e os DOIS back-fills verificados em prod (6/6 candidatos com `etapa_desde`, os 2 links com data de medicao). Tarefas 216 e 217 marcadas como concluidas no Workspace, com `log_execucao` preenchido.
+
+- **Taxa de conversao funcionando em producao**, medida logo apos o deploy: link 1 com 4 candidaturas em 10 visitas (40%), link 2 com 2 em 8 (25%). As duas exibiveis, e o filtro de robo nao esta derrubando gente real.
+
+- **Prod tem uso REAL agora.** Depois da limpeza dos testes, chegaram 5 candidatos de verdade e apareceu um segundo link. Confirmado com o Lucas: nao sao testes. A partir daqui, qualquer limpeza de dado em prod precisa de identificacao individual, porque nao da mais pra distinguir teste de candidato pelo nome.
+
+- **Padrao que se repetiu tres vezes hoje**: sessoes concorrentes pushando trabalho meu sem aviso (tarefa 213 de manha, depois 216 e 217). Nao quebrou nada, mas "commitado, aguardando validacao" deixou de significar "nao esta no ar". Ou `main` passa a ser tratado como sempre-deployavel, ou trabalho nao validado fica sem commit, o que contraria o CLAUDE.md 1.10.
+
+### Pendencias abertas com o Lucas
+
+1. **Cinco PDFs orfaos** no volume `private_media` do servidor, da limpeza dos testes. Dado pessoal, um deles um contrato social. So o console do EasyPanel alcanca.
+2. **Tres ajustes de upload**, e com gente se candidatando agora este e o que mais custa: aceitar IMAGEM (candidato de vaga operacional fotografa o curriculo), tirar a obrigatoriedade do curriculo, e corrigir o `ERR_UPLOAD_FILE_CHANGED` lendo o arquivo em memoria.
+3. **CronJob do expurgo LGPD** segue sem confirmacao de que roda. Ficou mais critico depois dos campos custom, porque o tenant pode gravar dado sensivel que ele mesmo inventou.
