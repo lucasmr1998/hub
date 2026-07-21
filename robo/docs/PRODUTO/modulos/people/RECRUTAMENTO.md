@@ -214,3 +214,53 @@ python -m pytest tests/test_people_recrutamento_*.py tests/test_people_candidatu
 | `test_people_quadro.py` | Ocupacao lida de dois lugares sem contar duas vezes; regra de parada avisa |
 | `test_people_expurgo.py` | Vencido anonimiza, dentro do prazo NAO e tocado, curriculo apagado |
 | `test_people_provisionamento.py` | Signal semeia o pipeline na ativacao, sem duplicar |
+
+---
+
+## Gaps achados nos prints do produto real (21/07/2026)
+
+O Lucas apontou a pasta `toolboxes/people/tools/recrutamento-selecao/`, que tem
+11 screenshots do produto rodando. A spec que guiou a construcao
+(`03-recrutamento-selecao.md`) avisava que faltava screenshot em varias partes,
+entao estes prints sao informacao nova. O que eles revelaram, alem do que ja
+estava decidido como fora do corte:
+
+### Alto impacto
+
+**1. O board deles nao e colunas lado a lado.** E uma barra de chips por etapa
+com contador (Triagem 0, Historico 0, Comportam. 2, ...) mais a lista de UMA
+etapa por vez, com toggle entre lista e kanban. Isso nao e detalhe estetico: um
+print da propria operacao mostra 76 candidatos numa unica etapa, e coluna lado a
+lado nao aguenta esse volume. Nosso board renderiza todas as colunas de uma vez.
+
+**2. As saidas aparecem no board deles, o nosso as esconde.** Eles mostram
+`Admitidos 5 · Banco 2 · Inaptos 1` como chips clicaveis, separados por um
+divisor "SAIDAS". O nosso board filtra `saida=''`, entao quem sai do pipeline
+DESAPARECE da interface. O candidato continua no banco de dados e nao ha tela
+que chegue nele. Considerando que o banco de talentos e descrito pela spec como
+sendo o produto ("guarda quem nao foi contratado num banco reaproveitavel"),
+isto e mais perto de um buraco funcional do que de um gap de UX.
+
+**3. Existe editor visual do fluxo, e nos nao temos tela nenhuma.** A tela
+"Configurar Fluxo" tem: arrastar pra reordenar, cor por etapa, engrenagem pra
+configurar cada etapa, toggle de ativar/desativar, "+ Nova etapa", e as saidas
+com "Arquivados" opcional (alternativa neutra a "Inaptos"). Salva
+automaticamente e tem "Resetar padrao". Nosso `EtapaPipeline` suporta ordem,
+ativa e sla_dias, mas sem tela o cliente fica preso nas sete etapas que o seed
+criou, o que contraria o proprio desenho de "etapa e configuracao".
+
+### Medio e baixo
+
+- **Selecao em lote** no board. Com 76 candidatos numa etapa, mover um a um e sofrido.
+- **QR inline** na lista de links (mostram a imagem, nao so o botao de baixar) e um botao "Visualizar" que abre a pagina publica.
+- **Excluir link**, alem de desativar. Nos so desativamos, de proposito, pra preservar a atribuicao de canal.
+- Vaga criada por **wizard de 4 passos**; nosso formulario com abas cobre o mesmo.
+
+### Onde a nossa implementacao ficou melhor
+
+- **Toggle por requisito, nao por grupo.** O print mostra um unico toggle pro bloco "Requisitos Obrigatorios" inteiro. O nosso permite publicar um requisito e filtrar calado outro, que e o mecanismo que a regra 4.3 da spec descreve.
+- **Requisitos estruturados**, nao textarea de texto livre. Sem estrutura, a triagem futura nao teria o que ler.
+- **"Como chegou" e medido** pelo link de origem, nao perguntado ao candidato.
+- **Expurgo LGPD com prazo declarado e anonimizacao**, sem equivalente visivel no material deles.
+
+Estes gaps NAO entraram no corte B. Viraram tarefa propria pra nao se perderem.
