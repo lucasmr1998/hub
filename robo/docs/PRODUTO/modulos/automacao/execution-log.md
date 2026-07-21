@@ -1013,3 +1013,53 @@ so que um atendente vai verificar.
 - **Testes:** 35 no fluxo do bot, 5 novos (cobertura ok, os tres desfechos de
   transbordo via parametrize, e pergunta comum que nao deve gastar chamada).
 - **Status:** completed
+
+## 2026-07-20 — Resposta do bot passa a preencher a ficha do lead
+
+- **Contexto:** levantado pelo dono do produto. O bot coletava CPF, nome, email
+  e endereco e NADA disso chegava na ficha: tudo ficava so na tabela de
+  respostas do checklist. A vendedora abria o lead e via os campos vazios, e o
+  `cpf_cnpj` que o HubSoft le continuava em branco. Zero itens do checklist
+  estavam ligados a `CampoCustomizado`, entao nem o espelho em `dados_custom`
+  acontecia.
+- **Acao:** no novo `definir_propriedade_lead` + registry `propriedades_lead.py`
+  (13 propriedades). Commit `6a26c06`.
+- **Padrao seguido:** espelho exato do `definir_propriedade_oportunidade`.
+  Escrever propriedade e sempre UM no com a propriedade em dropdown, nunca um
+  no por atributo (viraria treze nos quase identicos).
+
+### Decisão: a propriedade aceita template
+
+O fluxo NAO sabe em tempo de desenho qual campo escrever, depende de qual
+pergunta o cliente acabou de responder. A saida obvia seria uma escada de
+treze `if`. Como a chave do item do checklist tem o MESMO nome do campo do
+lead (`cpf_cnpj`, `email`, `cidade`...), `propriedade={{nodes.validar.chave}}`
+resolve com um no so.
+
+Consequencia que virou regra no no: chave que nao corresponde a campo do lead
+(`tipo_imovel`, `plano_confirmado`, `dados_confirmados`) e o caso NORMAL, nao
+excecao. Vira `aplicado=False` com `motivo_skip='propriedade_desconhecida'`.
+Tratar como erro encheria o log e acionaria retry a toa, o mesmo problema ja
+documentado no `definir_motivo_perda` do piloto do fluxo 25.
+
+### Outras decisões
+
+- **Gravar na ficha nunca barra o atendimento:** as saidas `sucesso` e `erro`
+  do no seguem pro MESMO ponto do grafo. A resposta ja esta salva na tabela do
+  checklist; a ficha e conveniencia pra vendedora, nao a fonte da verdade.
+- **CPF grava so digitos:** e o formato que o HubSoft espera em `termo_busca` e
+  o que a deduplicacao de lead compara. Com pontuacao o mesmo CPF nao casaria
+  consigo mesmo entre origens diferentes.
+- **Data aceita os dois formatos:** `01/01/1990` (o que o cliente digita no
+  WhatsApp) e ISO (o que a cascata de validacao ja normaliza).
+- **`somente_se_vazio` nasce LIGADO:** o bot pode reperguntar um item e um
+  humano pode ter corrigido a ficha nesse meio tempo.
+- **Testes:** 53 verdes, 17 novos (`test_automacao_propriedade_lead.py` +
+  dois e2e no fluxo).
+- **Pendente relacionado:** a oportunidade ja e criada por SIGNAL quando o lead
+  nasce (`apps/comercial/crm/signals.py`), nao pelo fluxo, e isso esta certo
+  (vale pra lead de qualquer origem). Falta MOVER de estagio conforme o bot
+  avanca e VINCULAR o plano escolhido. Conferir tambem se o lead que o
+  `carregar_lead` cria passa no criterio do signal (exige score minimo ou
+  `status_api='sucesso'`), senao nasce sem oportunidade.
+- **Status:** completed
