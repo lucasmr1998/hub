@@ -25,17 +25,16 @@ Dois campos sao TRAVADOS, e por razoes diferentes de peso igual:
 # `accept` do campo, a validacao do POST e o texto que o candidato le) derivam
 # daqui. Chumbar nos tres foi o que fez o honeypot divergir da view em 21/07.
 #
-# IMAGEM entra de proposito. Candidato de vaga operacional muitas vezes nao tem
-# curriculo em PDF: ele tem uma FOTO do curriculo impresso. Recusar imagem
-# fecha a porta pra essa fatia, e a dor numero um do cliente e "nao chega
-# candidato". A origem tambem aceita: os prints mostram "Curriculo (imagem)".
+# IMAGEM NAO ENTRA. Decisao do Lucas em 21/07, revertendo o que eu tinha
+# entregue horas antes. O motivo e coerencia com a triagem: a IA le PDF, e nao
+# le foto (isso exigiria OCR). Aceitar imagem produziria candidato que entra no
+# sistema mas nao pode ser triado, e uma fila de curriculos que ninguem
+# consegue processar e pior que a recusa na porta.
 #
-# .heic e o padrao de foto do iPhone, e sem ele metade dos candidatos de iOS
-# esbarraria num formato que o proprio aparelho gerou.
-EXTENSOES_CURRICULO = (
-    '.pdf', '.doc', '.docx',
-    '.jpg', '.jpeg', '.png', '.webp', '.heic',
-)
+# CONSEQUENCIA A LEMBRAR: quem so tem foto do curriculo impresso nao anexa.
+# Enquanto o curriculo estiver marcado como OBRIGATORIO numa vaga, essa pessoa
+# nao se candidata. As duas configuracoes andam juntas.
+EXTENSOES_CURRICULO = ('.pdf', '.doc', '.docx')
 
 TAMANHO_MAX_CURRICULO_MB = 5
 
@@ -94,7 +93,7 @@ CAMPOS_SISTEMA = [
         'nome': 'curriculo',
         'tipo': 'file',
         'rotulo_padrao': 'Currículo',
-        'ajuda': f'PDF, Word ou foto do currículo, até {TAMANHO_MAX_CURRICULO_MB} MB.',
+        'ajuda': f'PDF ou Word, até {TAMANHO_MAX_CURRICULO_MB} MB.',
         'accept': ','.join(EXTENSOES_CURRICULO),
     },
 ]
@@ -255,4 +254,4 @@ def curriculo_aceito(nome_arquivo):
 
 def rotulo_formatos_curriculo():
     """Texto pro erro, derivado da lista, pra nunca divergir dela."""
-    return 'PDF, Word (doc, docx) ou imagem (jpg, png, webp, heic)'
+    return 'PDF ou Word (doc, docx)'

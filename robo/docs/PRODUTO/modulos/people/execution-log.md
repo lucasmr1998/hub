@@ -500,3 +500,12 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 
 - **Output**: migrations 0020 e 0021. Testes novos: 16 da ponte, 16 da triagem.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-21 — Curriculo volta a aceitar so PDF e Word (reversao)
+
+- **Acao**: removido o suporte a imagem entregue horas antes no mesmo dia.
+- **Decisao do Lucas**, e o motivo e coerencia de sistema: a triagem por IA le PDF e nao le foto, o que exigiria OCR. Aceitar imagem produziria candidato que entra no sistema e nao pode ser triado. Fila de curriculo que ninguem consegue processar e pior que a recusa na porta.
+- **Consequencia registrada em teste e na doc**: quem so tem foto do curriculo impresso nao anexa. Com o campo obrigatorio, essa pessoa nao se candidata. As duas configuracoes andam juntas, e o toggle de obrigatorio segue pendente com o Lucas.
+- O teste `test_imagem_NAO_e_aceita` trava a decisao: se alguem reabrir, tem que decidir OCR junto.
+- O conserto do `ERR_UPLOAD_FILE_CHANGED` **continua valendo**: e independente do formato e resolve o erro que derrubou candidato real.
+- **Output**: 19 testes no arquivo de formatos.

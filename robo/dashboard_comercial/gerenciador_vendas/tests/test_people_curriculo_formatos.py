@@ -1,14 +1,19 @@
 """
 Formatos de curriculo aceitos, e o conserto do ERR_UPLOAD_FILE_CHANGED.
 
-DOIS PROBLEMAS REAIS, os dois de 21/07:
+SO PDF E WORD. Decisao do Lucas em 21/07, revertendo o suporte a imagem que eu
+tinha entregue horas antes. O motivo e coerencia com a triagem por IA: ela le
+PDF e nao le foto, o que exigiria OCR. Aceitar imagem produziria candidato que
+entra no sistema mas nao pode ser triado, e uma fila de curriculos que ninguem
+consegue processar e pior que a recusa na porta.
 
-1. So aceitavamos PDF e Word. Candidato de vaga operacional muitas vezes nao tem
-   curriculo em PDF: tem uma FOTO do curriculo impresso. Como o campo estava
-   marcado como obrigatorio na vaga, quem so tinha foto nao conseguia se
-   candidatar de jeito nenhum. A propria origem aceita imagem.
+CONSEQUENCIA que estes testes registram: quem so tem foto do curriculo impresso
+nao anexa. Com o curriculo marcado como obrigatorio numa vaga, essa pessoa nao
+se candidata. As duas configuracoes andam juntas.
 
-2. Um candidato real bateu no ERR_UPLOAD_FILE_CHANGED do Chrome, que aborta o
+O PROBLEMA QUE CONTINUA RESOLVIDO:
+
+Um candidato real bateu no ERR_UPLOAD_FILE_CHANGED do Chrome, que aborta o
    envio no aparelho quando o arquivo muda entre a selecao e o submit. O
    conserto e no template (troca o arquivo por uma copia em memoria) e por isso
    nao da pra testar aqui; o que se testa e que a marcacao que ele depende
@@ -77,33 +82,30 @@ def test_accept_do_campo_sai_da_lista_de_extensoes():
     assert campo['accept'] == ','.join(catalogo.EXTENSOES_CURRICULO)
 
 
-def test_texto_de_ajuda_menciona_foto_e_o_limite_real():
-    """
-    O candidato precisa SABER que pode mandar foto, senao a mudanca nao serve
-    pra nada: ele olha o campo, acha que so aceita PDF e desiste.
-    """
+def test_texto_de_ajuda_diz_o_formato_e_o_limite_real():
     ajuda = catalogo.CAMPOS_POR_NOME['curriculo']['ajuda']
 
-    assert 'foto' in ajuda.lower()
+    assert 'PDF' in ajuda
     assert str(catalogo.TAMANHO_MAX_CURRICULO_MB) in ajuda
 
 
-def test_imagem_esta_entre_os_formatos_aceitos():
+def test_imagem_NAO_e_aceita():
+    """
+    Trava a decisao do Lucas. A IA de triagem le PDF e nao le foto: aceitar
+    imagem produziria candidato que entra e nao pode ser triado. Se alguem
+    reabrir isso, tem que decidir OCR junto.
+    """
     for extensao in ('.jpg', '.jpeg', '.png', '.webp', '.heic'):
-        assert extensao in catalogo.EXTENSOES_CURRICULO, extensao
-
-
-def test_heic_aceito_porque_e_o_padrao_do_iphone():
-    """Sem .heic, candidato de iOS esbarra num formato que o aparelho dele gerou."""
-    assert catalogo.curriculo_aceito('IMG_4021.HEIC') is True
+        assert extensao not in catalogo.EXTENSOES_CURRICULO, extensao
+        assert catalogo.curriculo_aceito(f'curriculo{extensao}') is False
 
 
 @pytest.mark.parametrize('nome,esperado', [
     ('curriculo.pdf', True),
     ('CURRICULO.PDF', True),        # extensao maiuscula
     ('cv.docx', True),
-    ('foto-do-cv.jpg', True),
-    ('scan.png', True),
+    ('foto-do-cv.jpg', False),
+    ('scan.png', False),
     ('arquivo.exe', False),
     ('planilha.xlsx', False),
     ('sem_extensao', False),
@@ -117,15 +119,30 @@ def test_curriculo_aceito(nome, esperado):
 # ── Ponta a ponta pelo formulario publico ────────────────────────────────────
 
 @pytest.mark.django_db
-def test_candidatura_com_foto_do_curriculo_e_aceita(cenario):
-    """O caso que estava fechado: candidato que so tem foto do curriculo."""
+def test_candidatura_com_foto_e_recusada(cenario):
+    """
+    Decisao de produto, e nao limitacao tecnica. Se um dia aceitarmos imagem,
+    a triagem por IA precisa de OCR no mesmo pacote, senao entra candidato que
+    o sistema nao consegue processar.
+    """
     foto = SimpleUploadedFile('curriculo.jpg', b'\xff\xd8\xff' + b'x' * 500,
                               content_type='image/jpeg')
 
-    _enviar(cenario, foto, nome='Marina Foto')
+    resposta = _enviar(cenario, foto, nome='Marina Foto')
 
-    candidato = Candidato.all_tenants.get(nome_completo='Marina Foto')
-    assert candidato.curriculo.name.endswith('.jpg')
+    assert resposta.status_code == 400
+    assert not Candidato.all_tenants.filter(nome_completo='Marina Foto').exists()
+
+
+@pytest.mark.django_db
+def test_candidatura_com_pdf_e_aceita(cenario):
+    pdf = SimpleUploadedFile('curriculo.pdf', b'%PDF-1.4' + b'x' * 500,
+                             content_type='application/pdf')
+
+    _enviar(cenario, pdf, nome='Marina PDF')
+
+    candidato = Candidato.all_tenants.get(nome_completo='Marina PDF')
+    assert candidato.curriculo.name.endswith('.pdf')
 
 
 @pytest.mark.django_db
@@ -138,7 +155,7 @@ def test_formato_nao_aceito_e_recusado_com_a_lista_no_erro(cenario):
 
     assert resposta.status_code == 400
     corpo = resposta.content.decode()
-    assert 'imagem' in corpo.lower()
+    assert 'PDF' in corpo
     assert not Candidato.all_tenants.filter(
         nome_completo='Nao Deve Entrar').exists()
 
@@ -183,5 +200,5 @@ def test_o_formulario_carrega_o_conserto_do_upload(cenario):
 
     assert 'DataTransfer' in corpo
     assert 'arrayBuffer' in corpo
-    # O accept renderizado inclui imagem, e nao a lista antiga so com documento
-    assert '.heic' in corpo
+    assert '.pdf' in corpo
+    assert '.heic' not in corpo

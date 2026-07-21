@@ -288,11 +288,18 @@ Nenhum dado pessoal e gravado: quem so visitou nao consentiu com nada.
 
 ## Curriculo: formatos e o erro do Chrome
 
-**Aceita imagem**, e nao so PDF e Word. Candidato de vaga operacional muitas
-vezes nao tem curriculo em PDF: tem uma FOTO do curriculo impresso. Recusar
-imagem fecha a porta pra essa fatia, e a dor numero um do cliente e "nao chega
-candidato". A origem tambem aceita: os prints mostram "Curriculo (imagem)".
-`.heic` entra porque e o padrao de foto do iPhone.
+**PDF e Word apenas. Imagem NAO e aceita**, por decisao de produto de 21/07,
+revertendo o suporte que chegou a ser entregue no mesmo dia.
+
+O motivo e coerencia com a triagem por IA: ela le PDF e nao le foto, o que
+exigiria OCR. Aceitar imagem produziria candidato que entra no sistema mas nao
+pode ser triado, e uma fila de curriculos que ninguem consegue processar e pior
+que a recusa na porta.
+
+**Consequencia a lembrar**: quem so tem foto do curriculo impresso nao anexa, e
+com o campo marcado como obrigatorio numa vaga essa pessoa nao se candidata. As
+duas configuracoes andam juntas. Se um dia a decisao mudar, OCR entra no mesmo
+pacote.
 
 Os TRES lugares que falam de formato (o `accept` do campo, a validacao do POST e
 o texto que o candidato le) saem de `EXTENSOES_CURRICULO`, em
