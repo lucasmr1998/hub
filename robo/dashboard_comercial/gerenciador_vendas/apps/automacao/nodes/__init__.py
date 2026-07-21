@@ -59,4 +59,6 @@ from . import ia_agente  # noqa: F401,E402  (D2 — Agente IA: turno conversacio
 from . import checklist_proximo_item  # noqa: F401,E402  (bot vendas vira fluxo: acha a próxima pergunta pendente)
 from . import checklist_validar  # noqa: F401,E402  (bot vendas vira fluxo: cascata determinística, sem LLM)
 from . import checklist_progresso  # noqa: F401,E402  (bot vendas vira fluxo: resumo do andamento do checklist)
+from . import checklist_respostas  # noqa: F401,E402  (respostas ja dadas, pra no adiante usar turno anterior)
+from . import viabilidade_consultar  # noqa: F401,E402  (cobertura no bot de venda, embrulha o service de dominio)
 from . import carregar_lead  # noqa: F401,E402  (bot vendas fluxo único: fecha o gap de contexto.lead no caminho HTTP)

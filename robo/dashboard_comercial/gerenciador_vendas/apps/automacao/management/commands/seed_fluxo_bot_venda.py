@@ -128,6 +128,12 @@ NOMES_FLUXOS_ANTIGOS = (NOME_FLUXO_ANTIGO_PROXIMO, NOME_FLUXO_ANTIGO_VALIDAR)
 # tentativa seguinte a este número, o grafo encerra em vez de insistir de novo.
 LIMITE_TENTATIVAS_RECONTATO = 2
 
+# Chaves de item do checklist que disparam uma checagem externa no ramo
+# "validar". Ficam aqui porque o grafo referencia as duas; no fluxo em si elas
+# viram config de um nó `if`, editável no editor sem passar por deploy.
+CHAVE_CPF = 'cpf_cnpj'
+CHAVE_ENDERECO_CONFIRMADO = 'endereco_confirmado'
+
 DESCRICAO_AGENTE = (
     'Segunda opinião semântica pras respostas do checklist de venda que a '
     'cascata determinística (`checklist_validar`) reprovou. Só entra quando o '
@@ -338,6 +344,17 @@ MSG_JA_E_CLIENTE = (
     'atendente que cuida de quem ja esta com a gente.'
 )
 
+# Sem cobertura confirmada o bot NAO segue vendendo: decisao do dono do produto
+# em 20/07 (transbordar em vez de encerrar ou registrar pra recontato). A
+# mensagem serve pros tres desfechos que nao sao "atende" (fora de cobertura,
+# pendente de revisao e erro), entao nao afirma que a regiao nao tem cobertura:
+# em dois desses casos a gente simplesmente NAO SABE, e cravar isso pro cliente
+# derruba venda boa.
+MSG_SEM_VIABILIDADE = (
+    'Preciso confirmar a disponibilidade no seu endereco ##1f4cd## Vou te '
+    'transferir para um atendente que verifica isso pra voce.'
+)
+
 # CPF de quem JA e cliente HubSoft. A resposta do CPF e valida (o cliente
 # digitou certo), mas a venda para aqui: `needsReception="true"` e o unico
 # gatilho de transbordo que o flow do Matrix realmente avalia hoje. O campo
@@ -351,6 +368,18 @@ CORPO_VALIDAR_JA_CLIENTE = _corpo({
     'isAClient': True,
     'cancelado': False,
     'message': MSG_JA_E_CLIENTE,
+})
+
+# Endereco sem cobertura confirmada. Igual ao caso do cliente: a resposta do
+# cliente estava certa, o que muda e o destino do atendimento.
+CORPO_VALIDAR_SEM_VIABILIDADE = _corpo({
+    'resposta_correta': 'true',
+    'resposta_sem_erro_api': True,
+    'retorno_erro_api': '',
+    'needsReception': 'true',
+    'isAClient': False,
+    'cancelado': False,
+    'message': MSG_SEM_VIABILIDADE,
 })
 
 # payload_recontato (contrato: apps.comercial.atendimento_ia.services.contrato)
@@ -480,7 +509,7 @@ def _grafo_bot_venda(agente_id):
             'config': {
                 'esquerda': '{{nodes.validar.chave}}',
                 'operador': 'igual',
-                'direita': 'cpf_cnpj',
+                'direita': CHAVE_CPF,
             },
             'pos': {'x': 1250, 'y': 40},
             'label': 'A resposta era o CPF?',
@@ -512,6 +541,46 @@ def _grafo_bot_venda(agente_id):
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_JA_CLIENTE},
             'pos': {'x': 2150, 'y': -200},
             'label': 'Responder: já é cliente, transborda',
+        },
+        # ── Checagem de cobertura, so quando o cliente confirma o endereco ──
+        # Portado do N8N, que consulta viabilidade logo apos a confirmacao.
+        'e_endereco': {
+            'tipo': 'if',
+            'config': {
+                'esquerda': '{{nodes.validar.chave}}',
+                'operador': 'igual',
+                'direita': CHAVE_ENDERECO_CONFIRMADO,
+            },
+            'pos': {'x': 1250, 'y': 200},
+            'label': 'Confirmou o endereço?',
+        },
+        # O endereco foi montado ao longo da conversa, em turnos anteriores.
+        # `checklist_validar` so enxerga a resposta do turno corrente, dai o nó
+        # que devolve TODAS as respostas ja dadas.
+        'respostas': {
+            'tipo': 'checklist_respostas',
+            'config': {'checklist': SLUG_CHECKLIST, 'entidade': 'lead'},
+            'pos': {'x': 1550, 'y': 200},
+            'label': 'Respostas já dadas',
+        },
+        'viabilidade': {
+            'tipo': 'viabilidade_consultar',
+            'config': {
+                'cep': '{{nodes.respostas.cep}}',
+                'logradouro': '{{nodes.respostas.rua}}',
+                'numero': '{{nodes.respostas.numero_residencia}}',
+                'bairro': '{{nodes.respostas.bairro}}',
+                'cidade': '{{nodes.respostas.cidade}}',
+                'uf': '{{nodes.respostas.uf}}',
+            },
+            'pos': {'x': 1850, 'y': 200},
+            'label': 'Tem cobertura?',
+        },
+        'resp_sem_viabilidade': {
+            'tipo': 'responder_webhook',
+            'config': {'status': 200, 'corpo': CORPO_VALIDAR_SEM_VIABILIDADE},
+            'pos': {'x': 2150, 'y': 320},
+            'label': 'Responder: sem cobertura confirmada, transborda',
         },
         'resp_ok': {
             'tipo': 'responder_webhook',
@@ -632,15 +701,32 @@ def _grafo_bot_venda(agente_id):
         # Resposta valida passa pela checagem de cliente antes de responder.
         {'de': 'validar', 'para': 'e_cpf', 'saida': 'valida'},
         {'de': 'validar', 'para': 'resp_erro', 'saida': 'erro'},
-        # So o CPF dispara a consulta; qualquer outra pergunta responde direto.
+        # So o CPF dispara a consulta de cliente; as demais seguem pra proxima
+        # checagem (uma chamada de API por resposta seria desperdicio, e o bot
+        # tem 45s de teto por turno).
         {'de': 'e_cpf', 'para': 'consultar_cliente', 'saida': 'true'},
-        {'de': 'e_cpf', 'para': 'resp_ok', 'saida': 'false'},
+        {'de': 'e_cpf', 'para': 'e_endereco', 'saida': 'false'},
         {'de': 'consultar_cliente', 'para': 'e_cliente', 'saida': 'sucesso'},
         # HubSoft fora do ar NAO pode travar a venda: segue o fluxo normal.
         # Perder a checagem de cliente e menos grave que perder o atendimento.
         {'de': 'consultar_cliente', 'para': 'resp_ok', 'saida': 'erro'},
         {'de': 'e_cliente', 'para': 'resp_ja_cliente', 'saida': 'true'},
         {'de': 'e_cliente', 'para': 'resp_ok', 'saida': 'false'},
+        # Confirmou o endereco: checa cobertura antes de seguir vendendo.
+        {'de': 'e_endereco', 'para': 'respostas', 'saida': 'true'},
+        {'de': 'e_endereco', 'para': 'resp_ok', 'saida': 'false'},
+        {'de': 'respostas', 'para': 'viabilidade', 'saida': 'sucesso'},
+        # Sem nenhuma resposta guardada nao ha endereco pra consultar. Nao e
+        # erro (pode ser conversa recomecando), so nao ha o que checar.
+        {'de': 'respostas', 'para': 'resp_ok', 'saida': 'vazio'},
+        {'de': 'respostas', 'para': 'resp_ok', 'saida': 'erro'},
+        {'de': 'viabilidade', 'para': 'resp_ok', 'saida': 'cobertura_ok'},
+        # Os TRES desfechos que nao sao "atende" transbordam (decisao do dono
+        # do produto). `pendente_revisao` inclui resposta que a gente nao sabe
+        # interpretar: cravar "sem cobertura" nesse caso derruba venda boa.
+        {'de': 'viabilidade', 'para': 'resp_sem_viabilidade', 'saida': 'fora_cobertura'},
+        {'de': 'viabilidade', 'para': 'resp_sem_viabilidade', 'saida': 'pendente_revisao'},
+        {'de': 'viabilidade', 'para': 'resp_sem_viabilidade', 'saida': 'erro'},
         # Se a IA cair ou devolver algo que nao e JSON, o turno ainda responde
         # ao Matrix pelo caminho de erro, em vez de morrer sem resposta.
         {'de': 'agente', 'para': 'resp_erro', 'saida': 'erro'},

@@ -745,3 +745,117 @@ def test_e2e_pergunta_que_nao_e_cpf_nao_consulta_o_hubsoft(mock_consulta):
     passos = {p.handle: p for p in resultado.passos}
     assert passos['e_cpf'].branch == 'false'
     assert _corpo_resposta(ctx)['resposta_correta'] == 'true'
+
+
+# ──────────────────────────────────────────────
+# E2E: checagem de cobertura ao confirmar o endereço
+# ──────────────────────────────────────────────
+
+def _item_endereco(checklist, tenant):
+    """Item de confirmação de endereço + o CEP já respondido antes dele, que é
+    o mínimo que a consulta precisa (o service completa o resto via ViaCEP)."""
+    from apps.automacao.management.commands.seed_fluxo_bot_venda import (
+        CHAVE_ENDERECO_CONFIRMADO,
+    )
+    cep = ItemChecklist.all_tenants.create(
+        tenant=tenant, checklist=checklist, chave='cep', ordem=3,
+        pergunta='Qual o seu CEP?', tipo_resposta='texto_livre',
+        tipo_validacao='nenhuma', obrigatorio=True,
+    )
+    conf = ItemChecklist.all_tenants.create(
+        tenant=tenant, checklist=checklist, chave=CHAVE_ENDERECO_CONFIRMADO, ordem=4,
+        pergunta='Está tudo certo com esse endereço?', tipo_resposta='texto_livre',
+        tipo_validacao='nenhuma', obrigatorio=True,
+    )
+    return cep, conf
+
+
+@pytest.mark.django_db
+@mock.patch('apps.comercial.viabilidade.services.consultar_viabilidade')
+def test_e2e_endereco_com_cobertura_segue_a_venda(mock_viab):
+    from apps.comercial.viabilidade.services import ResultadoViabilidade
+
+    tenant = TenantFactory()
+    checklist, _i1, _i2 = _checklist_minimo(tenant)
+    item_cep, item_conf = _item_endereco(checklist, tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990020')
+    registrar_resposta(checklist, item_cep, 'lead', lead.pk, '64000000')
+    mock_viab.return_value = ResultadoViabilidade(
+        status='cobertura_ok', cep_consultado='64000000', fonte='hubsoft',
+    )
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990020',
+        'question_id': item_conf.pk, 'answer': 'sim',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    mock_viab.assert_called_once()
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['e_endereco'].branch == 'true'
+    assert passos['viabilidade'].branch == 'cobertura_ok'
+    corpo = _corpo_resposta(ctx)
+    assert corpo['needsReception'] == 'false'
+
+
+@pytest.mark.django_db
+@mock.patch('apps.comercial.viabilidade.services.consultar_viabilidade')
+@pytest.mark.parametrize('status_viab,branch', [
+    ('fora_cobertura', 'fora_cobertura'),
+    # `pendente_revisao` tambem transborda: NAO sabemos se atende, e cravar
+    # "sem cobertura" em cima de resposta desconhecida derruba venda boa.
+    ('nao_consultado', 'pendente_revisao'),
+    ('endereco_incompleto', 'pendente_revisao'),
+])
+def test_e2e_endereco_sem_cobertura_confirmada_transborda(mock_viab, status_viab, branch):
+    from apps.comercial.viabilidade.services import ResultadoViabilidade
+
+    tenant = TenantFactory()
+    checklist, _i1, _i2 = _checklist_minimo(tenant)
+    item_cep, item_conf = _item_endereco(checklist, tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990021')
+    registrar_resposta(checklist, item_cep, 'lead', lead.pk, '64000000')
+    mock_viab.return_value = ResultadoViabilidade(
+        status=status_viab, cep_consultado='64000000', fonte='hubsoft',
+    )
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990021',
+        'question_id': item_conf.pk, 'answer': 'sim',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['viabilidade'].branch == branch
+    corpo = _corpo_resposta(ctx)
+    # A resposta do cliente estava certa; o que muda e o destino do atendimento.
+    assert corpo['resposta_correta'] == 'true'
+    assert corpo['needsReception'] == 'true'
+    assert corpo['message']
+
+
+@pytest.mark.django_db
+@mock.patch('apps.comercial.viabilidade.services.consultar_viabilidade')
+def test_e2e_pergunta_comum_nao_consulta_viabilidade(mock_viab):
+    """Só a confirmação de endereço dispara a consulta."""
+    tenant = TenantFactory()
+    checklist, _item_cpf, item_tipo = _checklist_minimo(tenant)
+    _item_endereco(checklist, tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    LeadProspectoFactory(tenant=tenant, telefone='5589999990022')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990022',
+        'question_id': item_tipo.pk, 'answer': '1',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    mock_viab.assert_not_called()
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['e_endereco'].branch == 'false'
+    assert _corpo_resposta(ctx)['needsReception'] == 'false'
