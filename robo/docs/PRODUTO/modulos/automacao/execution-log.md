@@ -959,3 +959,57 @@ As restantes sao a poluicao de thread local do `TenantManager` ja conhecida
 - Conta consultada: integracao 18 (`api.artelecom.hubsoft.com.br`), a mesma
   que o fluxo N8N usa.
 - **Status:** completed
+
+## 2026-07-20 — Bot checa cobertura ao confirmar o endereço
+
+- **Acao:** portado pro grafo o que o fluxo N8N ja fazia: consultar viabilidade
+  logo apos o cliente confirmar o endereco. Commit `9fdd570`.
+- **Decisao do dono do produto:** sem cobertura confirmada o bot TRANSBORDA pra
+  humano, em vez de encerrar ou registrar pra recontato futuro.
+- **Nós novos:**
+  - `checklist_respostas`: devolve o que a entidade ja respondeu como
+    dicionario. Era a peca que faltava pra um no adiante usar resposta de turno
+    ANTERIOR. Ate aqui o grafo enxergava a resposta corrente
+    (`checklist_validar`) e a CONTAGEM do andamento (`checklist_progresso`),
+    nunca os valores; a viabilidade precisa do CEP, respondido muitas
+    perguntas antes.
+  - `viabilidade_consultar`: embrulha o service de dominio de
+    `apps/comercial/viabilidade`, NAO o no `hubsoft_viabilidade_endereco` cru.
+
+### Por que embrulhar o service em vez de usar o nó HubSoft
+
+A resposta da API e traicoeira de interpretar. Verificado contra a conta da
+Nuvyon em 20/07:
+
+- COM cobertura: `projetos` e uma LISTA de projetos.
+- SEM cobertura: `projetos` e um TEXTO ("Nenhum Projeto foi compativel com a
+  localizacao."), nao uma lista vazia.
+
+Um `if` de "nao vazio" em cima disso responde "tem cobertura" nos DOIS casos.
+Irmao gemeo do bug de lista vazia corrigido no mesmo dia. O service ja
+resolvia isso e vai alem: confere PORTAS LIVRES (projeto compativel nao
+significa porta disponivel), completa o endereco pelo ViaCEP (mesmo papel da
+BrasilAPI no fluxo N8N) e nunca levanta excecao.
+
+### "Não atende" não é a mesma coisa que "não sei"
+
+O service separa os dois, e isso virou desenho no grafo. Teste real: o
+endereco de um cliente ATIVO da Nuvyon devolveu "Nenhum Projeto foi
+compativel" e mesmo assim saiu como `pendente_revisao`, nao `fora_cobertura`
+(ha whitelist de cidade). Se o grafo tratasse como sem cobertura, o bot
+perderia venda de gente que a operadora claramente atende.
+
+Os tres desfechos que nao sao "atende" transbordam, mas por caminhos distintos
+no grafo, e a mensagem pro cliente NAO afirma que a regiao nao tem cobertura,
+so que um atendente vai verificar.
+
+- **Gatilho configuravel:** a chave do item que dispara a checagem
+  (`endereco_confirmado`) vive na config de um nó `if` no grafo, editavel no
+  editor sem deploy. Mesmo padrao da checagem de CPF.
+- **Nota de ordem:** o gatilho e a confirmacao do endereco (item 7 do roteiro
+  atual), mas a consulta so EXIGE o CEP (item 6): o service completa o resto
+  via ViaCEP. Os campos de cidade/rua/bairro do roteiro atual vem depois do
+  item 7 e apenas refinam a consulta quando ja respondidos.
+- **Testes:** 35 no fluxo do bot, 5 novos (cobertura ok, os tres desfechos de
+  transbordo via parametrize, e pergunta comum que nao deve gastar chamada).
+- **Status:** completed
