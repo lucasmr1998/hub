@@ -294,10 +294,16 @@ def test_candidato_em_etapa_desativada_aparece_fora_de_etapa(cenario):
     triagem.ativa = False
     triagem.save()
 
-    resposta = _cliente(cenario).get(reverse('people:pipeline_board'))
-    corpo = resposta.content.decode()
+    cliente = _cliente(cenario)
 
+    # Na vista padrao o chip existe, entao ninguem fica invisivel
+    corpo = cliente.get(reverse('people:pipeline_board')).content.decode()
     assert 'Fora de etapa' in corpo
+    assert 'etapa=sem-etapa' in corpo
+
+    # E clicar no chip lista quem esta la
+    corpo = cliente.get(reverse('people:pipeline_board'),
+                        {'etapa': 'sem-etapa'}).content.decode()
     assert 'Fica Visivel' in corpo
 
 
@@ -343,6 +349,180 @@ def test_card_tem_o_destino_da_ficha_mesmo_pra_quem_so_le(cenario):
     garantir_etapa_inicial(candidato)
     cliente = _cliente(cenario, username='so_le', funcionalidades=('people.ver',))
 
+    # Na lista, o nome e link; no kanban, o card inteiro carrega o destino.
     corpo = cliente.get(reverse('people:pipeline_board')).content.decode()
+    assert f'/people/candidatos/{candidato.pk}/' in corpo
 
+    corpo = cliente.get(reverse('people:pipeline_board'),
+                        {'vista': 'kanban'}).content.decode()
     assert f'data-detalhe="/people/candidatos/{candidato.pk}/"' in corpo
+
+
+# ── Board novo: chips, saidas visiveis, lote (gaps 1 e 2) ────────────────────
+
+@pytest.mark.django_db
+def test_saida_aparece_no_board_com_contador(cenario):
+    """
+    O gap 1, que era quase um bug: antes o board filtrava saida vazia e quem ia
+    pro Banco de Talentos sumia da interface, sem tela que chegasse nele.
+    """
+    candidato = _candidato(cenario, nome_completo='Foi Pro Banco')
+    garantir_etapa_inicial(candidato)
+    dar_saida(candidato, estados_rs.SAIDA_BANCO_TALENTOS, motivo='Sem vaga agora')
+
+    corpo = _cliente(cenario).get(reverse('people:pipeline_board')).content.decode()
+
+    # O chip da saida existe e conta
+    assert 'Banco de talentos' in corpo
+    assert f'?saida={estados_rs.SAIDA_BANCO_TALENTOS}' in corpo
+
+
+@pytest.mark.django_db
+def test_clicar_na_saida_lista_quem_esta_nela(cenario):
+    candidato = _candidato(cenario, nome_completo='Achavel No Banco')
+    garantir_etapa_inicial(candidato)
+    dar_saida(candidato, estados_rs.SAIDA_BANCO_TALENTOS, motivo='Sem vaga agora')
+
+    corpo = _cliente(cenario).get(
+        reverse('people:pipeline_board'),
+        {'saida': estados_rs.SAIDA_BANCO_TALENTOS}).content.decode()
+
+    assert 'Achavel No Banco' in corpo
+    assert 'Sem vaga agora' in corpo   # o motivo fica visivel
+
+
+@pytest.mark.django_db
+def test_lista_mostra_so_a_etapa_selecionada(cenario):
+    """O board nao renderiza todas as fases de uma vez: seleciona uma."""
+    na_triagem = _candidato(cenario, nome_completo='Esta Na Triagem')
+    garantir_etapa_inicial(na_triagem)
+
+    adiante = _candidato(cenario, nome_completo='Esta Adiante')
+    garantir_etapa_inicial(adiante)
+    mover_para_etapa(adiante, cenario['etapas'][3])
+
+    corpo = _cliente(cenario).get(reverse('people:pipeline_board')).content.decode()
+
+    # Default e a primeira etapa
+    assert 'Esta Na Triagem' in corpo
+    assert 'Esta Adiante' not in corpo
+
+
+@pytest.mark.django_db
+def test_candidato_em_etapa_desativada_tem_chip_proprio(cenario):
+    candidato = _candidato(cenario, nome_completo='Ficou Fora')
+    garantir_etapa_inicial(candidato)
+    triagem = cenario['etapas'][0]
+    triagem.ativa = False
+    triagem.save()
+
+    corpo = _cliente(cenario).get(reverse('people:pipeline_board'),
+                                  {'etapa': 'sem-etapa'}).content.decode()
+
+    assert 'Fora de etapa' in corpo
+    assert 'Ficou Fora' in corpo
+
+
+@pytest.mark.django_db
+def test_busca_por_nome_filtra_a_lista(cenario):
+    for nome in ['Maria Aparecida', 'Joao Pedro']:
+        c = _candidato(cenario, nome_completo=nome)
+        garantir_etapa_inicial(c)
+
+    corpo = _cliente(cenario).get(reverse('people:pipeline_board'),
+                                  {'busca': 'maria'}).content.decode()
+
+    assert 'Maria Aparecida' in corpo
+    assert 'Joao Pedro' not in corpo
+
+
+@pytest.mark.django_db
+def test_lote_move_varios_de_uma_vez(cenario):
+    import json
+
+    candidatos = []
+    for nome in ['Um', 'Dois', 'Tres']:
+        c = _candidato(cenario, nome_completo=nome)
+        garantir_etapa_inicial(c)
+        candidatos.append(c)
+
+    destino = cenario['etapas'][2]
+    resposta = _cliente(cenario).post(
+        reverse('people:pipeline_lote'),
+        data=json.dumps({'acao': 'etapa', 'etapa_id': destino.pk,
+                         'ids': [c.pk for c in candidatos]}),
+        content_type='application/json')
+
+    assert resposta.status_code == 200
+    assert resposta.json()['movidos'] == 3
+    for c in candidatos:
+        c.refresh_from_db()
+        assert c.etapa_id == destino.pk
+
+
+@pytest.mark.django_db
+def test_lote_grava_historico_de_cada_um(cenario):
+    """
+    O lote passa pelos servicos, um a um, e nao por queryset.update(): update em
+    massa passaria por cima do historico e deixaria o funil cego.
+    """
+    import json
+
+    candidatos = []
+    for nome in ['A', 'B']:
+        c = _candidato(cenario, nome_completo=nome)
+        garantir_etapa_inicial(c)
+        candidatos.append(c)
+
+    _cliente(cenario).post(
+        reverse('people:pipeline_lote'),
+        data=json.dumps({'acao': 'etapa', 'etapa_id': cenario['etapas'][1].pk,
+                         'ids': [c.pk for c in candidatos]}),
+        content_type='application/json')
+
+    for c in candidatos:
+        # entrada (garantir_etapa) + o movimento do lote
+        assert HistoricoCandidato.all_tenants.filter(candidato=c).count() == 2
+
+
+@pytest.mark.django_db
+def test_lote_de_saida_exige_motivo(cenario):
+    import json
+
+    c = _candidato(cenario)
+    garantir_etapa_inicial(c)
+
+    resposta = _cliente(cenario).post(
+        reverse('people:pipeline_lote'),
+        data=json.dumps({'acao': 'saida', 'saida': estados_rs.SAIDA_INAPTO,
+                         'motivo': '', 'ids': [c.pk]}),
+        content_type='application/json')
+
+    assert resposta.status_code == 400
+    assert resposta.json().get('precisa_motivo') is True
+    c.refresh_from_db()
+    assert c.esta_no_pipeline
+
+
+@pytest.mark.django_db
+def test_lote_nao_alcanca_candidato_de_outro_tenant(cenario):
+    """O id vem do cliente; quem decide de quem e o escopo de tenant."""
+    import json
+    import secrets
+
+    outro = TenantFactory(modulo_people=True)
+    unidade_alheia = Unidade.all_tenants.create(tenant=outro, nome='Deles',
+                                                codigo='deles')
+    alheio = Candidato.all_tenants.create(
+        tenant=outro, unidade=unidade_alheia, nome_completo='Do Outro',
+        whatsapp=''.join(str(secrets.randbelow(10)) for _ in range(11)))
+
+    resposta = _cliente(cenario).post(
+        reverse('people:pipeline_lote'),
+        data=json.dumps({'acao': 'etapa', 'etapa_id': cenario['etapas'][1].pk,
+                         'ids': [alheio.pk]}),
+        content_type='application/json')
+
+    alheio.refresh_from_db()
+    assert resposta.json()['movidos'] == 0
+    assert alheio.etapa_id is None

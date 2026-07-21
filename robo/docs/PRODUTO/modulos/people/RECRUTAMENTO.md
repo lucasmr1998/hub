@@ -165,7 +165,10 @@ passar do teto seja consciente e nao descuido.
 |---|---|
 | `/people/vagas/` | Lista com filtro por status e unidade |
 | `/people/vagas/<pk>/` | Vaga: requisitos, campos, divulgacao, publicacao (tudo numa tela) |
-| `/people/candidatos/` | Board do pipeline, arrastavel |
+| `/people/candidatos/` | Board do pipeline: chips por etapa, lista da selecao, toggle kanban |
+| `/people/candidatos/?saida=<chave>` | A mesma tela mostrando quem SAIU do processo |
+| `/people/candidatos/<pk>/` | Ficha do candidato: Perfil, Historico, Curriculo |
+| `/people/fluxo/` | Configuracao das etapas do pipeline |
 | `/people/quadro/` | Faltam X de Y por cargo por unidade |
 | `/people/candidatura/<token>/` | Publica, sem login, mobile first |
 
@@ -210,7 +213,8 @@ python -m pytest tests/test_people_recrutamento_*.py tests/test_people_candidatu
 | `test_people_recrutamento_link.py` | As tres diferencas do link, e o texto que sai da vaga sem vazar triagem |
 | `test_people_candidatura_publica.py` | Dedup, isolamento com thread local sujo, anti abuso |
 | `test_people_candidatura_campos.py` | Campos configuraveis, travados, e o desligado que nao grava |
-| `test_people_pipeline_board.py` | Mover livre, sair com motivo, etapa desativada nao some candidato |
+| `test_people_pipeline_board.py` | Mover livre, sair com motivo, etapa desativada nao some candidato, chips com contagem, saida clicavel, lote |
+| `test_people_fluxo_config.py` | Edicao do fluxo respeita escopo; as duas guardas que impedem perda de dado |
 | `test_people_quadro.py` | Ocupacao lida de dois lugares sem contar duas vezes; regra de parada avisa |
 | `test_people_expurgo.py` | Vencido anonimiza, dentro do prazo NAO e tocado, curriculo apagado |
 | `test_people_provisionamento.py` | Signal semeia o pipeline na ativacao, sem duplicar |
@@ -251,10 +255,10 @@ criou, o que contraria o proprio desenho de "etapa e configuracao".
 
 ### Medio e baixo
 
-- **Selecao em lote** no board. Com 76 candidatos numa etapa, mover um a um e sofrido.
-- **QR inline** na lista de links (mostram a imagem, nao so o botao de baixar) e um botao "Visualizar" que abre a pagina publica.
-- **Excluir link**, alem de desativar. Nos so desativamos, de proposito, pra preservar a atribuicao de canal.
-- Vaga criada por **wizard de 4 passos**; nosso formulario com abas cobre o mesmo.
+- **Selecao em lote** no board. Com 76 candidatos numa etapa, mover um a um e sofrido. FECHADO.
+- **QR inline** na lista de links (mostram a imagem, nao so o botao de baixar) e um botao "Visualizar" que abre a pagina publica. FECHADO.
+- **Excluir link**, alem de desativar. Nos so desativamos, de proposito, pra preservar a atribuicao de canal. FECHADO com guarda: so exclui link SEM candidatura; com candidatura, desativa.
+- Vaga criada por **wizard de 4 passos**; nosso formulario com abas cobre o mesmo. Nao vamos fazer.
 
 ### Onde a nossa implementacao ficou melhor
 
@@ -263,4 +267,61 @@ criou, o que contraria o proprio desenho de "etapa e configuracao".
 - **"Como chegou" e medido** pelo link de origem, nao perguntado ao candidato.
 - **Expurgo LGPD com prazo declarado e anonimizacao**, sem equivalente visivel no material deles.
 
-Estes gaps NAO entraram no corte B. Viraram tarefa propria pra nao se perderem.
+Estes gaps NAO entraram no corte B. Viraram a tarefa 213.
+
+---
+
+## Como os tres gaps de alto impacto foram fechados (tarefa 213)
+
+### O board: chips, nao colunas
+
+`views/pipeline.py` monta uma barra de chips (etapa, contador, cor) mais a lista
+de UMA selecao. As contagens saem de **duas consultas agregadas**, uma por eixo,
+nao de uma por chip:
+
+```python
+por_etapa = dict(base.filter(saida='').values_list('etapa').annotate(n=Count('id')))
+por_saida = dict(base.exclude(saida='').values_list('saida').annotate(n=Count('id')))
+```
+
+O kanban continua existindo atras do toggle `?vista=kanban`, porque arrastar e
+melhor com poucos candidatos. A escolha do padrao e a lista: e a vista que
+aguenta os 76 candidatos numa etapa que o print da operacao mostrou.
+
+**Fora de etapa.** Candidato cuja etapa foi desativada ou apagada nao some: cai
+num chip proprio (`sem-etapa`), calculado como o resto entre o total por etapa e
+os ids das etapas vivas. Sem isso, desativar uma etapa esconderia gente.
+
+### As saidas viraram destino navegavel
+
+Os quatro chips de saida (`?saida=admitido|banco_talentos|inapto|arquivado`)
+usam a MESMA lista, so trocando o filtro. O banco de talentos deixou de ser um
+registro sem tela: e um clique a partir do board, mostrando o motivo da saida
+sob o nome.
+
+### `/people/fluxo/`: a etapa virou configuracao de verdade
+
+Criar, renomear, cor, prazo, reordenar (troca de `ordem` com a vizinha),
+ativar/desativar e apagar. Editar reusa o formulario de criar, com `pk` num
+hidden: dois formularios paralelos e a origem classica de um divergir do outro.
+
+**As duas guardas, que sao o ponto da tela:**
+
+| Guarda | Por que |
+|---|---|
+| Nao apaga etapa com candidato dentro | Apagar deixaria a pessoa orfa. Com gente dentro, o caminho e desativar, que preserva o vinculo e joga o candidato pro chip "Fora de etapa" |
+| Nao reseta o fluxo com candidato no meio | Resetar tiraria todos de etapa de uma vez |
+
+Uma unidade **herda** o fluxo do tenant ate criar a primeira etapa propria. O
+aviso disso aparece ANTES de criar, nao depois: descobrir pelo efeito e ruim.
+
+As saidas aparecem na tela como cartoes fixos, com o motivo escrito de nao serem
+configuraveis (cada uma tem comportamento: admitir aciona a ponte com o DP,
+banco de talentos entra na retencao LGPD). E a decisao "etapa e dado, saida e
+codigo" ficando visivel pro usuario em vez de so viver no codigo.
+
+### Mover em lote
+
+`api_lote` processa **um a um pelos servicos**, nunca `queryset.update()`. Um
+update em massa pularia `HistoricoCandidato` e o candidato perderia a trilha,
+que e justamente o que da pra responder "quanto tempo esse processo levou".

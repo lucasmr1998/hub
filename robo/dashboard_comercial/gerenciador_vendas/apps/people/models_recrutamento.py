@@ -5,19 +5,18 @@ Arquivo separado de `models.py` porque o modulo ja passa de 900 linhas e
 Recrutamento e um subdominio inteiro, no padrao de split de
 `apps/sistema/models.py`. O re-export em `models.py` mantem
 `from apps.people.models import X` funcionando pra quem importa.
-
-Passo 1 do plano (`robo/docs/PRODUTO/modulos/people/RECRUTAMENTO-PLANO.md`):
-so a EtapaPipeline. Vaga, LinkCandidatura e Candidato vem nos passos seguintes.
 """
-import re
-
 import os
+import re
 
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+
+from apps.sistema.mixins import TenantMixin
+from apps.people import estados_recrutamento as estados_rs
 
 
 class PrivateCurriculoStorage(FileSystemStorage):
@@ -41,10 +40,6 @@ class PrivateCurriculoStorage(FileSystemStorage):
 
     def deconstruct(self):
         return ('apps.people.models_recrutamento.PrivateCurriculoStorage', [], {})
-
-from apps.sistema.mixins import TenantMixin
-from apps.people import estados_recrutamento as estados_rs
-
 
 # Turno esperado. Vocabulario proprio porque o DP nao tem equivalente: la o
 # colaborador ja tem escala, aqui e expectativa declarada no anuncio.
@@ -116,6 +111,10 @@ class EtapaPipeline(TenantMixin):
         help_text="Em branco significa que a etapa vale pro tenant inteiro.",
     )
     nome = models.CharField(max_length=80, verbose_name="Nome da etapa")
+    cor = models.CharField(
+        max_length=20, blank=True, default='', verbose_name="Cor",
+        help_text="Chave da paleta (ver CORES_ETAPA). Vazio usa a cor da ordem.",
+    )
     ordem = models.PositiveSmallIntegerField(default=0, verbose_name="Ordem")
     ativa = models.BooleanField(
         default=True, verbose_name="Ativa",
@@ -158,6 +157,11 @@ class EtapaPipeline(TenantMixin):
         escopo = self.unidade.nome if self.unidade_id else 'todas as unidades'
         return f'{self.nome} ({escopo})'
 
+    @property
+    def cor_hex(self):
+        """Cor resolvida. Sem cor gravada, deriva da ordem."""
+        return estados_rs.hex_da_cor(self.cor, self.ordem)
+
     @classmethod
     def do_escopo(cls, tenant, unidade=None, *, somente_ativas=True):
         """
@@ -195,7 +199,8 @@ class EtapaPipeline(TenantMixin):
 
         return cls.all_tenants.bulk_create([
             cls(tenant=tenant, unidade=unidade, nome=etapa['nome'],
-                ordem=etapa['ordem'], sla_dias=etapa['sla_dias'])
+                ordem=etapa['ordem'], sla_dias=etapa['sla_dias'],
+                cor=etapa.get('cor', ''))
             for etapa in estados_rs.ETAPAS_PADRAO
         ])
 

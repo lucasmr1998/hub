@@ -1,8 +1,8 @@
 from django.urls import path
 
 from apps.people.views import (
-    analises, board, candidatos, cargos, colaboradores, configuracao, links,
-    pipeline, quadro, unidades, vagas,
+    analises, board, candidatos, cargos, colaboradores, configuracao, fluxo,
+    links, pipeline, quadro, unidades, vagas,
 )
 
 app_name = 'people'
@@ -43,9 +43,20 @@ urlpatterns = [
     path('candidatos/<int:pk>/mover/', pipeline.api_mover, name='pipeline_mover'),
     path('candidatos/<int:pk>/saida/', pipeline.api_dar_saida,
          name='pipeline_saida'),
+    path('candidatos/lote/', pipeline.api_lote, name='pipeline_lote'),
     path('candidatos/<int:pk>/', candidatos.detalhe, name='candidato_detalhe'),
     path('candidatos/<int:pk>/curriculo/', candidatos.curriculo,
          name='candidato_curriculo'),
+
+    # Recrutamento: configuracao do fluxo
+    path('fluxo/', fluxo.configurar, name='fluxo_config'),
+    path('fluxo/etapa/salvar/', fluxo.etapa_salvar, name='fluxo_etapa_salvar'),
+    path('fluxo/etapa/<int:pk>/alternar/', fluxo.etapa_alternar,
+         name='fluxo_etapa_alternar'),
+    path('fluxo/etapa/<int:pk>/mover/', fluxo.etapa_mover, name='fluxo_etapa_mover'),
+    path('fluxo/etapa/<int:pk>/remover/', fluxo.etapa_remover,
+         name='fluxo_etapa_remover'),
+    path('fluxo/resetar/', fluxo.resetar_padrao, name='fluxo_resetar'),
 
     # Recrutamento: quadro por unidade
     path('quadro/', quadro.lista, name='quadro_lista'),
@@ -67,6 +78,8 @@ urlpatterns = [
          name='vaga_link_desativar'),
     path('vagas/<int:pk>/links/<int:link_pk>/qr.svg', vagas.link_qr,
          name='vaga_link_qr'),
+    path('vagas/<int:pk>/links/<int:link_pk>/remover/', vagas.link_remover,
+         name='vaga_link_remover'),
 
     # Cargos
     path('cargos/', cargos.lista, name='cargos_lista'),

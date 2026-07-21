@@ -367,6 +367,35 @@ def link_desativar(request, pk, link_pk):
     return redirect('people:vaga_editar', pk=vaga.pk)
 
 
+@require_POST
+@requer_people('people.gerir_vagas')
+def link_remover(request, pk, link_pk):
+    """
+    Apaga o link, e SO se ninguem tiver se candidatado por ele.
+
+    Link com candidatura nao se apaga: a atribuicao de canal ("qual canal
+    trouxe esta pessoa") mora nele, e apagar reescreveria a analise de origem
+    pra tras. Pra tirar de circulacao com candidatura dentro, o caminho e
+    desativar, que ja existe.
+    """
+    vaga = get_object_or_404(Vaga.objects, pk=pk)
+    link = get_object_or_404(LinkCandidatura.objects, pk=link_pk, vaga=vaga)
+
+    if link.candidaturas:
+        messages.error(
+            request,
+            f'Este link ja trouxe {link.candidaturas} candidatura(s). Apagar '
+            f'apagaria de onde essas pessoas vieram. Use Desativar.')
+        return redirect('people:vaga_editar', pk=vaga.pk)
+
+    canal = link.get_canal_display()
+    link.delete()
+    registrar_acao('people', 'excluir', 'link_candidatura', link_pk,
+                   f'Link de {canal} removido (sem candidaturas).', request=request)
+    messages.success(request, f'Link de {canal} removido.')
+    return redirect('people:vaga_editar', pk=vaga.pk)
+
+
 @requer_people('people.gerir_vagas')
 def link_qr(request, pk, link_pk):
     """

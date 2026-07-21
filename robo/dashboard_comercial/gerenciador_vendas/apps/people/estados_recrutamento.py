@@ -87,14 +87,50 @@ SAIDA_QUE_VINCULA_COLABORADOR = SAIDA_ADMITIDO
 # desfecho. Mesma distincao que o DP faz entre `em_admissao` e estar contratado.
 
 ETAPAS_PADRAO = [
-    {'nome': 'Triagem',             'ordem': 1, 'sla_dias': 3},
-    {'nome': 'Histórico',           'ordem': 2, 'sla_dias': 3},
-    {'nome': 'Teste Comportamental', 'ordem': 3, 'sla_dias': 5},
-    {'nome': 'Seleção',             'ordem': 4, 'sla_dias': 5},
-    {'nome': 'Teste prático',       'ordem': 5, 'sla_dias': 5},
-    {'nome': 'Avaliação Gestor',    'ordem': 6, 'sla_dias': 3},
-    {'nome': 'Admissão',            'ordem': 7, 'sla_dias': 5},
+    {'nome': 'Triagem',             'ordem': 1, 'sla_dias': 3, 'cor': 'ambar'},
+    {'nome': 'Histórico',           'ordem': 2, 'sla_dias': 3, 'cor': 'azul'},
+    {'nome': 'Teste Comportamental', 'ordem': 3, 'sla_dias': 5, 'cor': 'ciano'},
+    {'nome': 'Seleção',             'ordem': 4, 'sla_dias': 5, 'cor': 'laranja'},
+    {'nome': 'Teste prático',       'ordem': 5, 'sla_dias': 5, 'cor': 'azul'},
+    {'nome': 'Avaliação Gestor',    'ordem': 6, 'sla_dias': 3, 'cor': 'roxo'},
+    {'nome': 'Admissão',            'ordem': 7, 'sla_dias': 5, 'cor': 'verde'},
 ]
+
+# Paleta das etapas. Chave em vez de hex no banco: se a identidade visual mudar,
+# muda aqui e vale pra todo tenant, em vez de ficar hex velho gravado em linha
+# de cliente. A tela de configuracao oferece estas.
+CORES_ETAPA = [
+    ('ambar',   'Âmbar',   '#F59E0B'),
+    ('azul',    'Azul',    '#3B82F6'),
+    ('ciano',   'Ciano',   '#06B6D4'),
+    ('laranja', 'Laranja', '#F97316'),
+    ('roxo',    'Roxo',    '#8B5CF6'),
+    ('verde',   'Verde',   '#10B981'),
+    ('rosa',    'Rosa',    '#EC4899'),
+    ('cinza',   'Cinza',   '#6B7280'),
+]
+
+HEX_POR_COR = {chave: hexa for chave, _, hexa in CORES_ETAPA}
+CORES_CHOICES = [(chave, rotulo) for chave, rotulo, _ in CORES_ETAPA]
+
+
+def hex_da_cor(chave, ordem=0):
+    """
+    Hex da cor da etapa. Sem cor definida, deriva da ordem, pra que um pipeline
+    novo ja nasca colorido em vez de cinza uniforme.
+    """
+    if chave in HEX_POR_COR:
+        return HEX_POR_COR[chave]
+    return CORES_ETAPA[(max(ordem, 1) - 1) % len(CORES_ETAPA)][2]
+
+
+# Cor de cada saida. Fixas junto com as saidas, porque saida e codigo.
+COR_DA_SAIDA = {
+    SAIDA_ADMITIDO:       '#10B981',
+    SAIDA_BANCO_TALENTOS: '#06B6D4',
+    SAIDA_INAPTO:         '#EF4444',
+    SAIDA_ARQUIVADO:      '#6B7280',
+}
 
 
 # ── Status da vaga ───────────────────────────────────────────────────────────

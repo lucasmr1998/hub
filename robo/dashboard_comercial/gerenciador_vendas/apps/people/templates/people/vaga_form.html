@@ -256,16 +256,30 @@
                   {% for item in links %}
                     <tr>
                       <td>
-                        {{ item.link.get_canal_display }}
-                        {% if item.link.apelido_interno %}
-                          <span class="field-helper" style="display: block;">{{ item.link.apelido_interno }}</span>
-                        {% endif %}
+                        {% comment %}
+                          QR na propria linha, e nao so no botao de baixar: o RH
+                          confere o codigo antes de mandar imprimir cartaz.
+                        {% endcomment %}
+                        <div style="display: flex; gap: var(--sp-2); align-items: center;">
+                          {% if item.link.ativo %}
+                            <img src="{% url 'people:vaga_link_qr' vaga.pk item.link.pk %}"
+                                 alt="QR do link de {{ item.link.get_canal_display }}"
+                                 width="44" height="44"
+                                 style="border: 1px solid var(--color-border); border-radius: 4px; background: #fff;">
+                          {% endif %}
+                          <span>
+                            {{ item.link.get_canal_display }}
+                            {% if item.link.apelido_interno %}
+                              <span class="field-helper" style="display: block;">{{ item.link.apelido_interno }}</span>
+                            {% endif %}
+                          </span>
+                        </div>
                       </td>
                       <td>
                         {% if item.link.ativo %}
                           <input class="field-input" id="url-{{ item.link.pk }}" value="{{ item.url }}"
                                  readonly onclick="this.select()"
-                                 style="max-width: 320px; font-size: var(--fs-xs);">
+                                 style="max-width: 300px; font-size: var(--fs-xs);">
                         {% else %}
                           <span class="field-helper">Link desativado</span>
                         {% endif %}
@@ -284,8 +298,13 @@
                                   data-copiar="url-{{ item.link.pk }}" title="Copiar link">
                             <i class="bi bi-clipboard"></i>
                           </button>
+                          <a href="{{ item.url }}" target="_blank" rel="noopener"
+                             class="btn btn-ghost btn-sm" title="Abrir a página como o candidato vê">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                          </a>
                           <a href="{% url 'people:vaga_link_qr' vaga.pk item.link.pk %}"
-                             class="btn btn-ghost btn-sm" title="Baixar QR Code em SVG">
+                             class="btn btn-ghost btn-sm" title="Baixar QR Code em SVG"
+                             download="qr-{{ item.link.canal }}.svg">
                             <i class="bi bi-qr-code"></i>
                           </a>
                           <form method="post" action="{% url 'people:vaga_link_desativar' vaga.pk item.link.pk %}"
@@ -294,6 +313,21 @@
                             {% csrf_token %}
                             <button type="submit" class="btn btn-ghost btn-sm" title="Desativar link">
                               <i class="bi bi-pause-circle"></i>
+                            </button>
+                          </form>
+                        {% endif %}
+                        {% comment %}
+                          Excluir so aparece pra link sem candidatura. Com
+                          candidatura, apagar reescreveria a atribuicao de canal
+                          pra tras, entao o caminho e desativar.
+                        {% endcomment %}
+                        {% if not item.link.candidaturas %}
+                          <form method="post" action="{% url 'people:vaga_link_remover' vaga.pk item.link.pk %}"
+                                style="display: inline;"
+                                onsubmit="return confirm('Apagar este link? Ainda não trouxe nenhuma candidatura.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-ghost btn-sm" title="Apagar link">
+                              <i class="bi bi-trash"></i>
                             </button>
                           </form>
                         {% endif %}

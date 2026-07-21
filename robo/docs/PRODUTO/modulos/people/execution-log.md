@@ -270,3 +270,28 @@ Sem o passo 1, o codigo esta la mas o dado nunca e expurgado, e a promessa do co
 
 - **Output**: 27 testes novos, 462 no modulo. Migration 0011 aplicada em dev.
 - **Status**: completed. **Corte B (passos 1 a 7) fechado.** Fora do corte, cada um com sua razao no RECRUTAMENTO-PLANO.md: triagem IA, entrevista, ponte pro DP, banco de talentos como busca, analise de pipeline, Indeed, Meta.
+
+## 2026-07-21 — Gaps dos prints da Visio: board em chips, saidas navegaveis, tela de fluxo (tarefa 213)
+
+- **Acao**: fechar os tres gaps de alto impacto que os 11 screenshots do produto real revelaram, mais os tres de medio impacto. O corte B tinha sido desenhado sem esses prints; eles sao informacao nova, nao mudanca de escopo.
+
+**1. O board nao escalava.** Renderizava todas as colunas de uma vez, e um print da propria operacao mostra 76 candidatos numa unica etapa. Virou barra de chips (etapa, contador, cor) mais a lista de UMA selecao, com o kanban preservado atras de `?vista=kanban` porque arrastar e melhor com poucos candidatos. As contagens saem de duas consultas agregadas, uma por eixo, nao de uma por chip.
+
+**2. As saidas eram invisiveis (o pior dos tres).** O board filtrava `saida=''`, entao quem saia do pipeline DESAPARECIA da interface. O banco de talentos, que a spec descreve como sendo o produto, era um registro sem tela. Agora as quatro saidas sao chips clicaveis que reusam a mesma lista trocando so o filtro.
+
+**3. Nao havia tela de configuracao do fluxo.** `EtapaPipeline` ja suportava ordem, ativa e sla_dias, mas sem tela o cliente ficava preso nas sete etapas do seed, o que contradiz o proprio desenho de "etapa e dado". Criada `/people/fluxo/` com criar, renomear, cor, prazo, reordenar, ativar e apagar. Editar reusa o formulario de criar.
+
+- **Decisao**: as duas guardas da tela de fluxo sao a parte que importa, nao o CRUD. Nao apaga etapa com candidato dentro (deixaria a pessoa orfa; com gente dentro o caminho e desativar) e nao reseta o fluxo com candidato no meio. Desativar preserva o vinculo e joga o candidato pro chip "Fora de etapa", calculado como o resto entre o total por etapa e os ids das etapas vivas: sem esse chip, desativar uma etapa esconderia gente.
+
+- **Decisao**: `api_lote` processa um a um pelos servicos, nunca `queryset.update()`. Update em massa pularia `HistoricoCandidato` e o candidato perderia a trilha, que e o que responde "quanto tempo esse processo levou".
+
+- **Campo novo**: `EtapaPipeline.cor` (migration 0015), com paleta em `estados_recrutamento.py` e fallback pela ordem quando vazia. A cor tambem alimenta o ponto do chip no board, entao nao e decoracao: e o que da continuidade visual entre as duas telas.
+
+**Bugs meus, achados nos prints depois de prontos:**
+
+- `.lote-barra { display: flex }` numa classe vence o `[hidden]` do user agent, entao a barra de acao em lote aparecia dizendo "0 selecionados" com nada selecionado. Precisou de `.lote-barra[hidden] { display: none }` explicito.
+- O divisor vertical "SAIDAS" entre os chips se soltava na quebra de linha, deixando saidas em duas fileiras separadas. Virou um grupo proprio com rotulo lateral.
+- O handler de clique do card estava DEPOIS da guarda `podeMover`, entao quem so tinha `people.ver` nao conseguia abrir a ficha. Abrir ficha e leitura: o handler foi pra antes da guarda.
+
+- **Output**: 498 testes passando no modulo (`test_people_fluxo_config.py` novo com 15; `test_people_pipeline_board.py` foi de 18 pra 27). `manage.py check` limpo. Migration 0015 aplicada em dev.
+- **Status**: completed em dev, **nao pushado**. Aguardando validacao visual do Lucas antes de subir.

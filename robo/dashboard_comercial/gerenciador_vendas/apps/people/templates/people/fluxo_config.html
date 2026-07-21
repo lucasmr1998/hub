@@ -1,0 +1,233 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <style>
+    .etapa-linha {
+      display: flex; align-items: center; gap: var(--sp-3);
+      padding: var(--sp-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius); background: var(--color-bg);
+    }
+    .etapa-linha.is-inativa { opacity: .55; }
+    .etapa-ordem {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: #fff;
+    }
+    .etapa-nome { flex: 1; min-width: 0; }
+    .etapa-acoes { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
+    .saida-cartao {
+      padding: var(--sp-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius); background: var(--color-bg); min-width: 150px;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Recrutamento</p>
+        <h1 class="page-title">Fluxo do processo seletivo</h1>
+        <p class="page-subtitle">
+          As etapas pelas quais o candidato passa. As saídas são fixas, porque
+          cada uma tem comportamento próprio.
+        </p>
+      </div>
+      <form method="get" style="display: flex; gap: var(--sp-3); align-items: flex-end;">
+        {% include "components/select.html" with name="unidade" label="Fluxo de" options=unidades_opcoes value=unidade.pk|default:"" blank_label="Todas as unidades" size="sm" %}
+        <noscript><button type="submit" class="btn btn-ghost btn-sm">Trocar</button></noscript>
+      </form>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-info-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  {% if herda_do_tenant %}
+    {% comment %}
+      Aviso ANTES, nao depois: criar a primeira etapa da unidade faz ela parar
+      de herdar o fluxo do tenant, e descobrir isso pelo efeito e ruim.
+    {% endcomment %}
+    <div class="section-card section-card-info" style="margin-bottom: var(--sp-4);">
+      <div class="section-card-body">
+        <p class="field-helper" style="margin: 0;">
+          <i class="bi bi-info-circle"></i>
+          <strong>{{ unidade.nome }}</strong> está usando o fluxo geral do tenant.
+          Ao criar a primeira etapa aqui, esta unidade passa a ter um fluxo
+          próprio e deixa de acompanhar o geral.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  <h2 class="form-section-title">Etapas do fluxo</h2>
+
+  {% if linhas %}
+    <div class="form-stack" style="gap: var(--sp-2); margin-bottom: var(--sp-4);">
+      {% for linha in linhas %}
+        <div class="etapa-linha{% if not linha.etapa.ativa %} is-inativa{% endif %}">
+          <span class="etapa-ordem" style="background: {{ linha.etapa.cor_hex }};">{{ forloop.counter }}</span>
+
+          <div class="etapa-nome">
+            <strong>{{ linha.etapa.nome }}</strong>
+            {% if not linha.etapa.ativa %}
+              {% include "components/badge.html" with variant="neutral" label="Desativada" size="sm" %}
+            {% endif %}
+            <span class="field-helper" style="display: block;">
+              {% if linha.etapa.sla_dias %}Prazo de {{ linha.etapa.sla_dias }} dias{% else %}Sem prazo definido{% endif %}
+              · {{ linha.candidatos }} candidato{{ linha.candidatos|pluralize }}
+            </span>
+          </div>
+
+          {% if pode_gerir %}
+            <div class="etapa-acoes">
+              <form method="post" action="{% url 'people:fluxo_etapa_mover' linha.etapa.pk %}" style="display: inline;">
+                {% csrf_token %}
+                {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+                <input type="hidden" name="direcao" value="cima">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Subir"
+                        {% if forloop.first %}disabled{% endif %}><i class="bi bi-arrow-up"></i></button>
+              </form>
+              <form method="post" action="{% url 'people:fluxo_etapa_mover' linha.etapa.pk %}" style="display: inline;">
+                {% csrf_token %}
+                {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+                <input type="hidden" name="direcao" value="baixo">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Descer"
+                        {% if forloop.last %}disabled{% endif %}><i class="bi bi-arrow-down"></i></button>
+              </form>
+
+              <button type="button" class="btn btn-ghost btn-sm" title="Editar"
+                      data-editar='{"pk": "{{ linha.etapa.pk }}", "nome": "{{ linha.etapa.nome|escapejs }}", "cor": "{{ linha.etapa.cor }}", "sla": "{{ linha.etapa.sla_dias|default:"" }}"}'>
+                <i class="bi bi-sliders"></i>
+              </button>
+
+              <form method="post" action="{% url 'people:fluxo_etapa_alternar' linha.etapa.pk %}"
+                    style="display: inline;"
+                    {% if linha.etapa.ativa and linha.candidatos %}onsubmit="return confirm('{{ linha.candidatos }} candidato(s) estão nesta etapa. Eles não somem: passam a aparecer como Fora de etapa no board, para serem realocados. Continuar?');"{% endif %}>
+                {% csrf_token %}
+                {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+                <button type="submit" class="btn btn-ghost btn-sm"
+                        title="{% if linha.etapa.ativa %}Desativar{% else %}Ativar{% endif %}">
+                  <i class="bi {% if linha.etapa.ativa %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+                </button>
+              </form>
+
+              <form method="post" action="{% url 'people:fluxo_etapa_remover' linha.etapa.pk %}"
+                    style="display: inline;"
+                    onsubmit="return confirm('Apagar a etapa \"{{ linha.etapa.nome|escapejs }}\"? Só é possível se estiver vazia.');">
+                {% csrf_token %}
+                {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+                <button type="submit" class="btn btn-ghost btn-sm" title="Apagar"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% include "components/empty_state.html" with icon="bi-diagram-3" text="Nenhuma etapa neste fluxo" subtext="Crie a primeira etapa abaixo, ou restaure o padrão de sete etapas." %}
+  {% endif %}
+
+  {% if pode_gerir %}
+    <div class="section-card" style="max-width: 620px; margin-bottom: var(--sp-5);">
+      <div class="section-card-header">
+        <h2 class="section-card-title" id="titulo-form-etapa">Nova etapa</h2>
+      </div>
+      <div class="section-card-body">
+        <form method="post" action="{% url 'people:fluxo_etapa_salvar' %}" class="form-stack" id="form-etapa">
+          {% csrf_token %}
+          {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+          <input type="hidden" name="pk" id="etapa-pk" value="">
+
+          {% include "components/input.html" with name="nome" label="Nome da etapa" required=True placeholder="Ex: Entrevista com RH" %}
+
+          <div class="form-grid-2">
+            <div class="field">
+              <label class="field-label" for="etapa-cor">Cor</label>
+              <div class="field-input-wrap">
+                <select class="field-input field-select" name="cor" id="etapa-cor">
+                  <option value="">Automática (pela ordem)</option>
+                  {% for chave, rotulo, hexa in cores %}
+                    <option value="{{ chave }}">{{ rotulo }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            {% include "components/input.html" with name="sla_dias" label="Prazo máximo (dias)" type="number" helper="Depois disso o candidato aparece como atrasado. Em branco, sem prazo." %}
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i> Salvar etapa</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="cancelar-edicao" hidden>Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  <h2 class="form-section-title">Saídas do processo</h2>
+  <p class="field-helper" style="margin-bottom: var(--sp-3);">
+    Fixas, e não configuráveis, porque cada uma tem comportamento próprio:
+    admitir aciona a ponte com o Departamento Pessoal, e o banco de talentos
+    entra na política de retenção. O candidato pode ir para qualquer uma a
+    qualquer momento do fluxo, sempre com motivo registrado.
+  </p>
+  <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-5);">
+    {% for saida in saidas %}
+      <div class="saida-cartao">
+        <span class="pipe-chip-nome" style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ saida.cor }};"></span>
+          <strong style="font-size: var(--fs-sm);">{{ saida.rotulo }}</strong>
+        </span>
+        <span class="field-helper">Fase final</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if pode_gerir %}
+    <form method="post" action="{% url 'people:fluxo_resetar' %}"
+          onsubmit="return confirm('Restaurar as sete etapas padrão? Só funciona com o fluxo vazio de candidatos.');">
+      {% csrf_token %}
+      {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+      <button type="submit" class="btn btn-ghost btn-sm">
+        <i class="bi bi-arrow-counterclockwise"></i> Restaurar padrão
+      </button>
+    </form>
+  {% endif %}
+
+  <script>
+    // Editar reusa o mesmo formulario de criar: dois formularios identicos pra
+    // criar e editar e a origem classica de um divergir do outro.
+    document.querySelectorAll('[data-editar]').forEach(function (botao) {
+      botao.addEventListener('click', function () {
+        var dados = JSON.parse(botao.dataset.editar);
+        document.getElementById('etapa-pk').value = dados.pk;
+        document.querySelector('#form-etapa [name=nome]').value = dados.nome;
+        document.getElementById('etapa-cor').value = dados.cor || '';
+        document.querySelector('#form-etapa [name=sla_dias]').value = dados.sla || '';
+        document.getElementById('titulo-form-etapa').textContent = 'Editar: ' + dados.nome;
+        document.getElementById('cancelar-edicao').hidden = false;
+        document.getElementById('form-etapa').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+
+    document.getElementById('cancelar-edicao')?.addEventListener('click', function () {
+      document.getElementById('form-etapa').reset();
+      document.getElementById('etapa-pk').value = '';
+      document.getElementById('titulo-form-etapa').textContent = 'Nova etapa';
+      this.hidden = true;
+    });
+
+    document.querySelectorAll('form[method=get] select').forEach(function (s) {
+      s.addEventListener('change', function () { s.form.submit(); });
+    });
+  </script>
+{% endblock %}

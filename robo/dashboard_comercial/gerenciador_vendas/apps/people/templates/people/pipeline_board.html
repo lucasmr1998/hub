@@ -5,6 +5,47 @@
 {% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
 {% block main_mod %} has-subnav{% endblock %}
 
+{% block extra_head %}
+  {{ block.super }}
+  <style>
+    {% comment %}
+      Chips do pipeline. Cada um e uma etapa (ou uma saida) com contador, e
+      trocar de chip troca a lista abaixo. Substituiu as colunas simultaneas
+      porque a operacao real tem dezenas de candidatos numa etapa so.
+    {% endcomment %}
+    .pipe-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: stretch; }
+    .pipe-chip {
+      display: flex; flex-direction: column; gap: 2px;
+      padding: var(--sp-2) var(--sp-3);
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-bg); cursor: pointer; min-width: 96px;
+      text-decoration: none; color: inherit;
+    }
+    .pipe-chip:hover { border-color: var(--color-text-muted); }
+    .pipe-chip.is-active { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+    .pipe-chip-nome { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .pipe-chip-ponto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .pipe-chip-total { font-size: var(--fs-lg); font-weight: var(--fw-semibold); color: var(--color-text); }
+    .pipe-chip.is-vazio .pipe-chip-total { color: var(--color-text-muted); }
+    /* Saidas ficam num grupo proprio: sao de natureza diferente das etapas
+       (tem comportamento) e nao podem se separar na quebra de linha. */
+    .pipe-saidas-rotulo {
+      display: flex; align-items: center; padding-right: var(--sp-2);
+      font-size: 10px; letter-spacing: .08em; color: var(--color-text-muted);
+      border-right: 1px solid var(--color-border); margin-right: var(--sp-2);
+    }
+    /* `display:flex` na classe vence o [hidden] do user agent, entao a barra
+       aparecia com "0 selecionados". Precisa desta regra explicita. */
+    .lote-barra[hidden] { display: none; }
+    .lote-barra {
+      display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap;
+      padding: var(--sp-3); border: 1px solid var(--color-primary);
+      border-radius: var(--radius); background: var(--color-bg);
+      margin-bottom: var(--sp-3);
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
   {% csrf_token %}
 
@@ -13,63 +54,154 @@
       <div>
         <p class="page-eyebrow">People · Recrutamento</p>
         <h1 class="page-title">Candidatos</h1>
-        <p class="page-subtitle">Arraste pra mudar de etapa. Pra tirar do processo, use o botão do card e registre o motivo.</p>
+        <p class="page-subtitle">Escolha a fase pra ver quem está nela. As saídas também são clicáveis.</p>
       </div>
-      <form method="get" id="filtro-pipeline" style="display: flex; gap: var(--sp-3); align-items: flex-end;">
-        {% include "components/select.html" with name="vaga" label="Vaga" options=vagas_opcoes value=vaga_selecionada blank_label="Todas" size="sm" %}
-        {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas" size="sm" %}
-        <noscript><button type="submit" class="btn btn-ghost btn-sm">Filtrar</button></noscript>
-      </form>
+      <div style="display: flex; gap: var(--sp-2); align-items: flex-end;">
+        <a href="{% url 'people:pipeline_board' %}?{% if vista == 'kanban' %}vista=lista{% else %}vista=kanban{% endif %}{% if unidade_selecionada %}&unidade={{ unidade_selecionada }}{% endif %}{% if vaga_selecionada %}&vaga={{ vaga_selecionada }}{% endif %}"
+           class="btn btn-ghost btn-sm" title="Alternar entre lista e kanban">
+          <i class="bi {% if vista == 'kanban' %}bi-list-ul{% else %}bi-kanban{% endif %}"></i>
+          {% if vista == 'kanban' %}Ver em lista{% else %}Ver em kanban{% endif %}
+        </a>
+      </div>
     </div>
   </div>
 
-  {% if not tem_etapas %}
-    {% include "components/empty_state.html" with icon="bi-diagram-3" text="O pipeline ainda não tem etapas" subtext="As etapas padrão são criadas quando o módulo é ativado. Fale com o suporte se esta unidade precisa de um fluxo próprio." %}
-  {% else %}
-    {% if sem_etapa %}
-      {% comment %}
-        Candidato numa etapa que foi desativada depois que ele entrou. Nao some:
-        aparece aqui em cima pra ser realocado, senao ficaria invisivel e a
-        conta do funil nao fecharia.
-      {% endcomment %}
-      <div class="section-card section-card-warning" style="margin-bottom: var(--sp-4);">
-        <div class="section-card-header">
-          <h2 class="section-card-title"><i class="bi bi-exclamation-triangle"></i> Fora de etapa ({{ sem_etapa|length }})</h2>
-        </div>
-        <div class="section-card-body">
-          <p class="field-helper" style="margin-bottom: var(--sp-3);">
-            Estes candidatos estavam numa etapa que foi desativada. Arraste cada um para uma etapa ativa.
-          </p>
-          <div class="kanban-col-body" style="flex-direction: row; flex-wrap: wrap; gap: var(--sp-2);">
-            {% for candidato in sem_etapa %}
-              {% include "people/_pipeline_card.html" with candidato=candidato saidas=saidas %}
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    {% endif %}
+  <form method="get" id="filtro-pipeline"
+        style="display: flex; gap: var(--sp-3); align-items: flex-end; margin-bottom: var(--sp-4); flex-wrap: wrap;">
+    {% if vista == 'kanban' %}<input type="hidden" name="vista" value="kanban">{% endif %}
+    {% include "components/input.html" with name="busca" label="Buscar candidato" value=busca placeholder="Nome" size="sm" %}
+    {% include "components/select.html" with name="vaga" label="Vaga" options=vagas_opcoes value=vaga_selecionada blank_label="Todas" size="sm" %}
+    {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas" size="sm" %}
+    <button type="submit" class="btn btn-ghost btn-sm">Filtrar</button>
+  </form>
 
-    <div class="kanban-board"
-         style="grid-template-columns: repeat({{ colunas|length }}, minmax(240px, 1fr));"
-         data-pode-mover="{% if pode_mover %}1{% else %}0{% endif %}"
-         data-url-mover="{% url 'people:pipeline_mover' 0 %}"
-         data-url-saida="{% url 'people:pipeline_saida' 0 %}">
-      {% for coluna in colunas %}
-        <div class="kanban-col" data-etapa-id="{{ coluna.etapa.pk }}">
-          <div class="kanban-col-header">
-            <h2 class="kanban-col-title">{{ coluna.etapa.nome }}</h2>
-            <span class="kanban-col-count">{{ coluna.total }}</span>
-          </div>
-          <div class="kanban-col-body">
-            {% for candidato in coluna.cards %}
-              {% include "people/_pipeline_card.html" with candidato=candidato saidas=saidas %}
-            {% empty %}
-              <p class="kanban-empty">Vazio</p>
-            {% endfor %}
-          </div>
-        </div>
+  {% if not tem_etapas %}
+    {% include "components/empty_state.html" with icon="bi-diagram-3" text="O pipeline ainda não tem etapas" subtext="Configure o fluxo para começar a receber candidatos." cta_label="Configurar fluxo" cta_href="/people/fluxo/" cta_icon="bi-sliders" %}
+  {% else %}
+    {# ── Chips: etapas do fluxo, divisor, saídas ── #}
+    <div class="pipe-chips" style="margin-bottom: var(--sp-4);">
+      {% for chip in chips %}
+        <a class="pipe-chip{% if chip.ativo %} is-active{% endif %}{% if not chip.total %} is-vazio{% endif %}"
+           href="?etapa={{ chip.chave }}{% if unidade_selecionada %}&unidade={{ unidade_selecionada }}{% endif %}{% if vaga_selecionada %}&vaga={{ vaga_selecionada }}{% endif %}{% if busca %}&busca={{ busca }}{% endif %}">
+          <span class="pipe-chip-nome">
+            <span class="pipe-chip-ponto" style="background: {{ chip.cor }};"></span>
+            {{ chip.rotulo }}
+          </span>
+          <span class="pipe-chip-total">{{ chip.total }}</span>
+        </a>
+      {% endfor %}
+
+    </div>
+
+    <div class="pipe-chips" style="margin-bottom: var(--sp-4);">
+      <span class="pipe-saidas-rotulo">SAÍDAS</span>
+      {% for chip in chips_saida %}
+        <a class="pipe-chip{% if chip.ativo %} is-active{% endif %}{% if not chip.total %} is-vazio{% endif %}"
+           href="?saida={{ chip.chave }}{% if unidade_selecionada %}&unidade={{ unidade_selecionada }}{% endif %}{% if vaga_selecionada %}&vaga={{ vaga_selecionada }}{% endif %}{% if busca %}&busca={{ busca }}{% endif %}">
+          <span class="pipe-chip-nome">
+            <span class="pipe-chip-ponto" style="background: {{ chip.cor }};"></span>
+            {{ chip.rotulo }}
+          </span>
+          <span class="pipe-chip-total">{{ chip.total }}</span>
+        </a>
       {% endfor %}
     </div>
+
+    {% if vista == 'kanban' %}
+      {# ── Kanban: bom com poucos candidatos, porque mover e arrastar ── #}
+      <div class="kanban-board"
+           style="grid-template-columns: repeat({{ colunas|length }}, minmax(240px, 1fr));"
+           data-pode-mover="{% if pode_mover %}1{% else %}0{% endif %}"
+           data-url-mover="{% url 'people:pipeline_mover' 0 %}"
+           data-url-saida="{% url 'people:pipeline_saida' 0 %}">
+        {% for coluna in colunas %}
+          <div class="kanban-col" data-etapa-id="{{ coluna.etapa.pk }}">
+            <div class="kanban-col-header">
+              <h2 class="kanban-col-title">{{ coluna.etapa.nome }}</h2>
+              <span class="kanban-col-count">{{ coluna.total }}</span>
+            </div>
+            <div class="kanban-col-body">
+              {% for candidato in coluna.cards %}
+                {% include "people/_pipeline_card.html" with candidato=candidato %}
+              {% empty %}
+                <p class="kanban-empty">Vazio</p>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      {# ── Lista da seleção ── #}
+      <h2 class="form-section-title">
+        {{ selecao.rotulo }}
+        <span class="field-helper">· {{ lista|length }} candidato{{ lista|length|pluralize }}</span>
+      </h2>
+
+      {% if pode_mover %}
+        <div class="lote-barra" id="lote-barra" hidden>
+          <strong style="font-size: var(--fs-sm);"><span id="lote-total">0</span> selecionados</strong>
+          <span class="field-helper">mover para</span>
+          <select class="field-input field-select" id="lote-etapa" style="max-width: 220px;">
+            <option value="">Etapa...</option>
+            {% for etapa in etapas %}<option value="{{ etapa.pk }}">{{ etapa.nome }}</option>{% endfor %}
+          </select>
+          <button type="button" class="btn btn-secondary btn-sm" id="lote-mover">Mover</button>
+          <span class="field-helper">ou</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="lote-sair">Tirar do processo</button>
+        </div>
+      {% endif %}
+
+      {% if lista %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                {% if pode_mover %}<th style="width: 32px;"><input type="checkbox" id="lote-todos" title="Selecionar todos"></th>{% endif %}
+                <th>Candidato</th>
+                <th>Vaga</th>
+                <th>Unidade</th>
+                <th>Canal</th>
+                <th>Chegou em</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for candidato in lista %}
+                <tr>
+                  {% if pode_mover %}
+                    <td><input type="checkbox" class="lote-item" value="{{ candidato.pk }}"></td>
+                  {% endif %}
+                  <td>
+                    <a href="{% url 'people:candidato_detalhe' candidato.pk %}">{{ candidato.nome_completo }}</a>
+                    {% if candidato.saida and candidato.motivo_saida %}
+                      <span class="field-helper" style="display: block;">{{ candidato.motivo_saida|truncatechars:60 }}</span>
+                    {% endif %}
+                  </td>
+                  <td>{% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}<span class="field-helper">Banco de talentos</span>{% endif %}</td>
+                  <td>{{ candidato.unidade.nome }}</td>
+                  <td>{{ candidato.canal_origem|default:"—" }}</td>
+                  <td>{{ candidato.criado_em|date:"d/m/Y" }}</td>
+                  <td style="text-align: right; white-space: nowrap;">
+                    {% if candidato.curriculo %}
+                      <a href="{% url 'people:candidato_curriculo' candidato.pk %}" target="_blank"
+                         class="btn btn-ghost btn-sm" title="Abrir currículo">
+                        <i class="bi bi-file-earmark-text"></i>
+                      </a>
+                    {% endif %}
+                    <a href="{% url 'people:candidato_detalhe' candidato.pk %}"
+                       class="btn btn-ghost btn-sm" title="Abrir ficha">
+                      <i class="bi bi-arrow-right"></i>
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {% include "components/empty_state.html" with icon="bi-people" text="Nenhum candidato nesta fase" subtext="Escolha outra fase acima, ou divulgue a vaga para receber candidaturas." %}
+      {% endif %}
+    {% endif %}
 
     {% comment %} Modal de saida: exige escolher pra onde e um motivo. {% endcomment %}
     <div id="modal-saida" class="modal-overlay" role="dialog" aria-modal="true" hidden>
