@@ -322,3 +322,75 @@ def test_nao_edita_campo_de_outro_tenant(cenario):
     alheio.refresh_from_db()
     assert resposta.status_code == 404
     assert alheio.nome == 'Alheio'
+
+
+# ── 6. A ficha do candidato ──────────────────────────────────────────────────
+#
+# Nao havia NENHUM teste abrindo people:candidato_detalhe, e foi por isso que um
+# 500 chegou em prod em 21/07: eu inseri uma funcao auxiliar entre o decorator
+# @requer_people e a view, entao o decorator passou a decorar a auxiliar. A view
+# quebrava ao ser aberta E, pior, ficava sem checagem de permissao nenhuma.
+
+@pytest.mark.django_db
+def test_ficha_do_candidato_abre(cenario):
+    candidato = Candidato.all_tenants.create(
+        tenant=cenario['tenant'], unidade=cenario['unidade'],
+        nome_completo='Helena Dias', whatsapp='5586999990007')
+
+    resposta = _cliente(cenario).get(
+        reverse('people:candidato_detalhe', args=[candidato.pk]))
+
+    assert resposta.status_code == 200
+    assert 'Helena Dias' in resposta.content.decode()
+
+
+@pytest.mark.django_db
+def test_ficha_exige_permissao_de_people(cenario):
+    """
+    O decorator na view, e nao numa auxiliar. Sem ele, qualquer usuario logado
+    do tenant abriria a ficha de um candidato, que e PII.
+    """
+    candidato = Candidato.all_tenants.create(
+        tenant=cenario['tenant'], unidade=cenario['unidade'],
+        nome_completo='Igor Nunes', whatsapp='5586999990008')
+
+    # Perfil COM PermissaoUsuario e sem nenhuma funcionalidade de People.
+    # Usuario sem PermissaoUsuario nenhuma nao serve aqui: o sistema trata isso
+    # como acesso total por retrocompatibilidade
+    # (apps/sistema/decorators.py:175), entao o teste passaria por engano.
+    cliente = _cliente(cenario, username='sem_people', funcionalidades=())
+
+    resposta = cliente.get(
+        reverse('people:candidato_detalhe', args=[candidato.pk]))
+
+    assert resposta.status_code in (302, 403)
+
+
+@pytest.mark.django_db
+def test_ficha_mostra_a_resposta_custom_com_o_rotulo(cenario):
+    """Rotulo do campo, nao a chave crua do JSON."""
+    _campo(cenario, nome='Tem CNH categoria B?', slug='cnh')
+    candidato = Candidato.all_tenants.create(
+        tenant=cenario['tenant'], unidade=cenario['unidade'],
+        nome_completo='Joana Reis', whatsapp='5586999990009',
+        dados_custom={'cnh': 'Sim'})
+
+    corpo = _cliente(cenario).get(
+        reverse('people:candidato_detalhe', args=[candidato.pk])).content.decode()
+
+    assert 'Tem CNH categoria B?' in corpo
+    assert 'cnh' not in corpo.replace('Tem CNH categoria B?', '')
+
+
+@pytest.mark.django_db
+def test_ficha_ignora_resposta_de_campo_apagado(cenario):
+    """Sem o campo nao ha rotulo, e exibir "cnh_2: sim" e pior que omitir."""
+    candidato = Candidato.all_tenants.create(
+        tenant=cenario['tenant'], unidade=cenario['unidade'],
+        nome_completo='Karina Melo', whatsapp='5586999990010',
+        dados_custom={'campo_que_nao_existe_mais': 'valor orfao'})
+
+    corpo = _cliente(cenario).get(
+        reverse('people:candidato_detalhe', args=[candidato.pk])).content.decode()
+
+    assert 'valor orfao' not in corpo

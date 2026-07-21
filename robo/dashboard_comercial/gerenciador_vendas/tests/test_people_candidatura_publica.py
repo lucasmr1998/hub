@@ -18,6 +18,7 @@ from apps.people.models import (
 )
 from apps.people.models_recrutamento import JUSTIFICATIVA_AUMENTO
 from apps.people.services.candidaturas import MENSAGEM_CONFLITO
+from apps.people.utils import NOME_HONEYPOT
 from tests.factories import TenantFactory
 
 
@@ -242,7 +243,7 @@ def test_honeypot_responde_sucesso_falso_e_nao_grava(cenario):
     Sucesso falso pro robo nao aprender qual foi o sinal que o denunciou.
     """
     resposta = Client().post(_url(cenario['link'], 'enviar'),
-                             _payload(sobrenome_confirmacao='robo'))
+                             _payload(**{NOME_HONEYPOT: 'robo'}))
 
     assert resposta.status_code == 200
     assert 'enviada' in resposta.content.decode().lower()
@@ -378,3 +379,40 @@ def test_anonimizar_libera_o_numero_pra_nova_candidatura(cenario):
 
     assert resposta.status_code == 200
     assert Candidato.all_tenants.filter(tenant=cenario['tenant']).count() == 2
+
+
+def test_honeypot_nao_tem_nome_de_dado_pessoal():
+    """
+    O campo se chamava `sobrenome_confirmacao`. O Chrome ignora
+    autocomplete=off em campo que parece nome, entao o preenchedor automatico
+    caia no honeypot e a candidatura de uma pessoa REAL era descartada com
+    tela de sucesso. Aconteceu em prod em 21/07 e nao deixou rastro.
+
+    Este teste existe pra que o proximo nome escolhido nao repita o erro.
+    """
+    TOKENS_DE_AUTOFILL = (
+        'nome', 'sobrenome', 'email', 'mail', 'tel', 'fone', 'phone', 'cpf',
+        'endereco', 'address', 'cep', 'cidade', 'city', 'estado', 'nascimento',
+        'birth', 'user', 'senha', 'password', 'cartao', 'card',
+    )
+    achados = [t for t in TOKENS_DE_AUTOFILL if t in NOME_HONEYPOT.lower()]
+    assert not achados, (
+        f'O honeypot se chama {NOME_HONEYPOT!r} e contem {achados}, que o '
+        f'autofill do navegador reconhece como dado pessoal. Ele vai preencher '
+        f'o campo e descartar candidato de verdade. Escolha um nome neutro.')
+
+
+@pytest.mark.django_db
+def test_honeypot_deixa_rastro_no_log(cenario):
+    """
+    Sucesso falso sem registro e indepuravel: o candidato jura que enviou e
+    nao ha nada que confirme. O rastro e o que permite responder.
+    """
+    from apps.sistema.models import LogSistema
+
+    Client().post(_url(cenario['link'], 'enviar'),
+                  _payload(**{NOME_HONEYPOT: 'robo'}))
+
+    assert LogSistema.all_tenants.filter(
+        tenant=cenario['tenant'], acao='rejeitar',
+        entidade='candidatura').exists()

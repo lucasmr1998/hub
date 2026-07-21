@@ -28,6 +28,7 @@ from apps.people.services import (
     config_efetiva, registrar_colaborador, registrar_submissao, resolver_por_token,
 )
 from apps.people.tenant_scope import escopo_tenant
+from apps.people.utils import NOME_HONEYPOT
 
 
 MENSAGEM_CONFLITO = (
@@ -102,6 +103,7 @@ def formulario(request, token):
     return render(request, 'people/publico_formulario.html', {
         'link': link, 'unidade': link.unidade, 'secoes': secoes,
         'config': config, 'erros': {},
+        'nome_honeypot': NOME_HONEYPOT,
     })
 
 
@@ -124,7 +126,7 @@ def enviar(request, token):
 
         # Honeypot: campo escondido que humano nao ve. Preenchido, respondemos
         # sucesso falso pro robo nao aprender, e registramos como rejeitado.
-        if request.POST.get('sobrenome_confirmacao'):
+        if request.POST.get(NOME_HONEYPOT):
             registrar_submissao(
                 link, resultado='rejeitado', erro='honeypot',
                 ip=_ip(request), user_agent=request.META.get('HTTP_USER_AGENT', ''))
@@ -141,6 +143,7 @@ def enviar(request, token):
             return render(request, 'people/publico_formulario.html', {
                 'link': link, 'unidade': link.unidade, 'secoes': secoes,
                 'config': config, 'erros': erros,
+                'nome_honeypot': NOME_HONEYPOT,
             }, status=400)
 
         resultado = registrar_colaborador(
@@ -158,6 +161,7 @@ def enviar(request, token):
             return render(request, 'people/publico_formulario.html', {
                 'link': link, 'unidade': link.unidade, 'secoes': secoes,
                 'config': config, 'erros': {'geral': MENSAGEM_CONFLITO},
+                'nome_honeypot': NOME_HONEYPOT,
             }, status=409)
 
         _gravar_consentimento(resultado.colaborador, request, config)

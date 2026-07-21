@@ -13,6 +13,17 @@ import unicodedata
 
 DDI_PADRAO = '55'
 
+# Nome do campo honeypot dos DOIS formularios publicos (cadastro do DP e
+# candidatura). NAO pode conter token de dado pessoal (nome, sobrenome,
+# email, tel, cpf, endereco): o Chrome ignora autocomplete=off nesses e o
+# preenchedor automatico enche o campo, o que faz uma pessoa REAL ser
+# tratada como robo e o envio dela ser descartado. Chamava-se
+# `sobrenome_confirmacao` e custou uma candidatura em prod em 21/07.
+#
+# Vive aqui, e vai pro template pelo contexto, porque view e template
+# divergirem faria o honeypot parar de funcionar em silencio.
+NOME_HONEYPOT = 'controle_envio'
+
 
 def normalizar_cpf(valor):
     """

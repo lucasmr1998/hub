@@ -24,6 +24,7 @@ from apps.people.models import (
 )
 from apps.people.services import criar_link, desativar_link, mover_situacao, registrar_colaborador
 from apps.sistema.models import ConfiguracaoEmpresa
+from apps.people.utils import NOME_HONEYPOT
 from tests.factories import TenantFactory
 
 
@@ -331,7 +332,7 @@ def test_honeypot_finge_sucesso_e_nao_cadastra(cenario):
     resposta = _enviar(Client(), cenario['link'],
                        nome_completo='Robo', cpf=CPF_VALIDO,
                        telefone='86999998888', data_nascimento='1995-04-10',
-                       sobrenome_confirmacao='preenchido por robo')
+                       **{NOME_HONEYPOT: 'preenchido por robo'})
 
     assert resposta.status_code == 200
     assert not Colaborador.all_tenants.filter(cpf=CPF_VALIDO).exists()
@@ -348,7 +349,7 @@ def test_honeypot_nao_conta_no_teto_do_link(cenario):
 
     for _ in range(3):
         _enviar(Client(), cenario['link'], nome_completo='Robo',
-                sobrenome_confirmacao='x')
+                **{NOME_HONEYPOT: 'x'})
 
     cenario['link'].refresh_from_db()
     assert cenario['link'].submissoes == 0

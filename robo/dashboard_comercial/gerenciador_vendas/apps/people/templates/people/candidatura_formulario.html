@@ -96,10 +96,16 @@
         {% comment %}
           Honeypot. Humano nao ve, robo preenche. Fora da tela por CSS e nao por
           type=hidden, porque preenchedor automatico ignora hidden.
+
+          O NOME vem da view (`nome_honeypot`), nao chumbado aqui: se os dois
+          lados divergirem, a checagem nunca dispara e o honeypot morre calado.
+          E nao pode conter token de dado pessoal. Chamava-se
+          `sobrenome_confirmacao` e o autofill do Chrome preenchia, o que
+          descartava candidato de verdade como se fosse robo.
         {% endcomment %}
         <div style="position: absolute; left: -9999px;" aria-hidden="true">
-          <label for="sobrenome_confirmacao">Não preencha</label>
-          <input type="text" id="sobrenome_confirmacao" name="sobrenome_confirmacao"
+          <label for="{{ nome_honeypot }}">Não preencha</label>
+          <input type="text" id="{{ nome_honeypot }}" name="{{ nome_honeypot }}"
                  tabindex="-1" autocomplete="off">
         </div>
 

@@ -19,7 +19,6 @@ from apps.people.models import CampoCandidatura, Candidato
 from apps.people.permissoes import pode_acessar, requer_people
 
 
-@requer_people()
 def _respostas_custom(candidato):
     """
     As respostas dos campos do tenant, com o rotulo de cada uma.
@@ -40,6 +39,7 @@ def _respostas_custom(candidato):
             for campo in campos]
 
 
+@requer_people()
 def detalhe(request, pk):
     candidato = get_object_or_404(
         Candidato.objects.select_related(

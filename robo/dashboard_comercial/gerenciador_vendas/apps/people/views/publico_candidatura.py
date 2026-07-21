@@ -24,6 +24,8 @@ from apps.people.services.candidaturas import (
 )
 from apps.people.services.pipeline import garantir_etapa_inicial
 from apps.people.tenant_scope import escopo_tenant
+from apps.people.utils import NOME_HONEYPOT
+from apps.sistema.utils import registrar_acao
 
 
 def _link_ou_404(token):
@@ -55,6 +57,7 @@ def _contexto(link, valores=None, erros=None):
         'secoes': fonte.secoes_do_formulario(valores, erros),
         'valores': valores or {},
         'erros': erros or {},
+        'nome_honeypot': NOME_HONEYPOT,
     }
 
 
@@ -89,7 +92,22 @@ def enviar(request, token):
 
         # Honeypot: campo escondido que humano nao ve. Preenchido, devolvemos
         # sucesso falso pro robo nao aprender qual foi o sinal.
-        if request.POST.get('sobrenome_confirmacao'):
+        #
+        # O campo NAO pode ter nome de dado pessoal. Ele se chamava
+        # `sobrenome_confirmacao`, e o Chrome ignora autocomplete=off em campo
+        # que parece nome, entao o preenchedor automatico caia nele: candidato
+        # real via a tela de sucesso e a candidatura era descartada. Aconteceu
+        # em prod em 21/07 e nao deixou rastro nenhum.
+        #
+        # Por isso a rejeicao agora e REGISTRADA. Honeypot que falha em silencio
+        # nao tem como ser auditado, e falso positivo custa candidato.
+        if request.POST.get(NOME_HONEYPOT):
+            registrar_acao(
+                'people', 'rejeitar', 'candidatura', link.pk,
+                f'Candidatura descartada pelo honeypot no link {link.pk} '
+                f'({link.get_canal_display()}). Se houver reclamacao de '
+                f'candidato que "enviou e nao apareceu", comecar por aqui.',
+                request=request, tenant=link.tenant)
             return render(request, 'people/candidatura_ok.html',
                           {'unidade': link.unidade, 'vaga': link.vaga})
 
