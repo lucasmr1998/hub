@@ -3,12 +3,55 @@
 Contexto pra quem constroi fluxo no N8N/Matrix. Levantado em 21/07/2026 lendo o
 codigo e conferindo os dados em prod.
 
-> **ANTES DE USAR:** a checagem de CPF tem um bug ativo que derruba a resposta
-> exatamente no caso "ja e cliente". Ver a secao [Bug ativo](#bug-ativo-eh_cliente-quebra-em-500).
+> **LEIA A SECAO 1.0 PRIMEIRO.** Hoje a checagem de CPF NAO passa pelo Hubtrix:
+> o N8N fala direto com o HubSoft. O endpoint nosso descrito abaixo existe,
+> nunca foi chamado e esta quebrado.
 
 ---
 
-## 1. "Esse CPF ja e cliente?"
+## 1.0 Como funciona HOJE (WhatsApp): o N8N vai direto no HubSoft
+
+No fluxo do WhatsApp a checagem e feita inteira dentro do N8N, sem passar por
+nos:
+
+```
+HasValidCPFToSearch?  ->  TokenHubsoft (POST oauth)  ->  Consulta dados cliente (GET)
+                          ->  TesteCancelado (x3)  ->  Edit Fields
+```
+
+Ele pega o proprio token OAuth e consulta `https://api.artelecom.hubsoft.com.br/`,
+que e a mesma instancia HubSoft configurada no tenant Nuvyon.
+
+**E isso esta certo hoje, por dois motivos concretos:**
+
+1. **O N8N ve dado ao vivo; nos veriamos dado velho.** Nosso endpoint le a tabela
+   espelho `ClienteHubsoft`, populada por um cron que so processa lead com
+   `status_api='processado'`. Hoje sao 754 leads da Nuvyon presos em
+   `rascunho_hubsoft` cujos clientes nunca entram nesse espelho.
+2. **Nosso espelho nao sabe o que e cliente cancelado.** Conferido em prod
+   (21/07): dos 1218 clientes espelhados, **zero** tem servico cancelado. Os
+   status que existem sao Habilitado (1432), Aguardando Instalacao (63),
+   Aguardando Assinatura (22), Suspenso por Debito (12) e Suspenso a Pedido (2).
+   Os nos `TesteCancelado` do fluxo dependem justamente dessa informacao, que so
+   existe ao vivo no HubSoft.
+
+**Custo dessa escolha, pra ter consciencia:** as credenciais do HubSoft ficam
+duplicadas dentro do N8N, a logica de token OAuth e refeita a cada execucao (nos
+ja temos cache de token em `IntegracaoAPI.access_token`), e sao 6 nos por
+checagem.
+
+Se um dia fizer sentido centralizar, a peca ja existe:
+`HubsoftService.consultar_cliente(cpf_cnpj)` em
+`apps/integracoes/services/hubsoft.py:360` consulta o HubSoft **ao vivo** por
+CPF. Bastaria expor isso como endpoint com Bearer, devolvendo tambem o status
+dos servicos. Nao ha urgencia: o caminho atual funciona.
+
+---
+
+## 1.1 O endpoint nosso de CPF (existe, NAO e usado, esta quebrado)
+
+> Documentado por completude. **Verificado em prod: zero chamadas.** Nao construa
+> fluxo novo em cima dele sem antes corrigir o bug da secao "Bug ativo".
 
 ### Chamada
 
@@ -244,14 +287,39 @@ Quando um humano valida pela automacao, entram tres subcampos a mais:
 
 ---
 
-## 3. Resumo pra quem monta o fluxo
+## 3. Endpoints N8N que REALMENTE recebem chamada hoje
 
-1. **CPF:** `GET /api/leads/consultar-cpf/?cpf=<numeros>` com Bearer do token
-   **por tenant**. Decida por `deve_abrir_cartao`. Trate 400/401/500 como
-   indeterminado.
-2. **Nao confie em `eh_cliente: true` ainda** — hoje esse ramo devolve 500.
+Medido em prod (`integracoes_log_webhook_n8n`), 21/07/2026:
+
+| Endpoint | Chamadas |
+|---|---|
+| `/api/public/n8n/inbox/mensagem/` | 17032 |
+| `/api/public/n8n/conversa/estado/` | 8984 |
+| `/api/public/n8n/conversa/status-por-telefone/` | 774 |
+| `/api/public/n8n/lead/hubsoft-status/` | 542 |
+| `/api/public/n8n/viabilidade/` | 284 |
+| `/api/public/n8n/atendimento/registrar-erro-resposta/` | 97 |
+| `/api/public/n8n/lead/imagem/` | 53 |
+| `/api/public/n8n/conhecimento/registrar-pergunta/` | 35 |
+| **`/api/leads/consultar-cpf/`** | **0** |
+
+Nao confundir `/lead/hubsoft-status/` com a checagem de CPF: ele recebe
+**`lead_id`, nao CPF** (`apps/integracoes/views.py:148`), e serve pra saber se um
+lead que ja existe virou cliente. E o unico que devolve `servicos[]`.
+
+---
+
+## 4. Resumo pra quem monta o fluxo
+
+1. **CPF, hoje:** o N8N vai direto no HubSoft e faz certo. Nao migre pro nosso
+   endpoint sem antes ler a secao 1.0 (nosso espelho e defasado e nao conhece
+   cliente cancelado).
+2. **Se algum dia usar o nosso:** `GET /api/leads/consultar-cpf/` com Bearer do
+   token **por tenant** (token global de env nao resolve tenant e da 400). Decida
+   por `deve_abrir_cartao`. E **nao confie em `eh_cliente: true`** enquanto o bug
+   do `id_cliente_hubsoft` nao for corrigido: esse ramo devolve 500.
 3. **Viabilidade por cidade (rapido, local):** `POST /api/public/n8n/viabilidade/`
-   com `X-N8N-Webhook-Secret`. Responde `atendido: bool`.
+   com `X-N8N-Webhook-Secret`. Responde `atendido: bool`. Ja em uso, 284 chamadas.
 4. **Viabilidade real no HubSoft:** unico caminho pra fluxo e o webhook da engine
    de automacao com os nos `hubsoft_viabilidade_*`. Precisa de endereco
    estruturado, nao CEP. Pode levar ate ~94s no pior caso.
