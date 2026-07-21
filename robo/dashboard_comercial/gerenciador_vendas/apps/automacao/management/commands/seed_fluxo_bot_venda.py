@@ -67,9 +67,23 @@ venda"). Agora é decisão do grafo: `checklist_progresso` conta quantas
 respostas o lead já tem; um `if` (`{{nodes.progresso.respondidos}}` maior que
 `0`) escolhe entre `CORPO_PROXIMO_PERGUNTA_EM_ANDAMENTO` (`status_lead =
 "em_andamento"`, string) e `CORPO_PROXIMO_PERGUNTA_INICIO` (`status_lead = 0`,
-int, sem aspas). `"cliente_ativo"` (3º valor do contrato) continua FORA de
-escopo aqui — depende de consulta ao HubSoft (cliente já é assinante), que
-este fluxo não faz; documentar isso é intencional, não esquecimento.
+int, sem aspas).
+
+CORREÇÃO 4 (CLIENTE JÁ ASSINANTE, portado do N8N): assim que a resposta
+validada é o CPF, o grafo consulta o HubSoft (`hubsoft_consultar_cliente`) e,
+se a pessoa já for cliente, responde com `needsReception="true"` +
+`isAClient=true` em vez de seguir vendendo. Era o que o fluxo N8N já fazia e o
+nosso não: `isAClient` saía sempre `False` cravado, porque ninguém consultava
+nada. Dois detalhes que valem lembrar:
+- Cliente inexistente NÃO é erro no HubSoft: volta `status=success` com
+  `clientes` vazio (verificado contra a conta da Nuvyon em 20/07). O desvio é
+  por lista vazia (`if` com operador `nao_vazio`), não por branch de erro.
+- A saída `erro` da consulta cai no MESMO `resp_ok` do caminho normal: HubSoft
+  fora do ar não pode travar a venda. Perder a checagem é menos grave que
+  perder o atendimento.
+`status_lead="cliente_ativo"` (3º valor do contrato) segue fora de escopo no
+ramo `proximo_passo`: a checagem acontece no ramo `validar`, que é onde o CPF
+chega, e ali o campo do contrato é `isAClient`, não `status_lead`.
 
 CORREÇÃO 3 (GAP DO LEAD): os nós de checklist exigem `contexto.lead` já
 carregado; o gatilho `webhook` genérico só hidrata `{{var.payload}}`, nunca
@@ -317,6 +331,28 @@ CORPO_VALIDAR_REPERGUNTA = _corpo({
     'message': '',
 })
 
+# Mensagem de quem JA e cliente. O bot nao deve tentar vender internet pra
+# assinante: manda pro atendimento humano, que resolve o que a pessoa precisa.
+MSG_JA_E_CLIENTE = (
+    'Vi aqui que voce ja e nosso cliente ##1f60a## Vou te transferir para um '
+    'atendente que cuida de quem ja esta com a gente.'
+)
+
+# CPF de quem JA e cliente HubSoft. A resposta do CPF e valida (o cliente
+# digitou certo), mas a venda para aqui: `needsReception="true"` e o unico
+# gatilho de transbordo que o flow do Matrix realmente avalia hoje. O campo
+# `isAClient` tambem vai preenchido porque faz parte do contrato e o Matrix
+# guarda o valor, mesmo sem ramificar por ele ainda.
+CORPO_VALIDAR_JA_CLIENTE = _corpo({
+    'resposta_correta': 'true',
+    'resposta_sem_erro_api': True,
+    'retorno_erro_api': '',
+    'needsReception': 'true',
+    'isAClient': True,
+    'cancelado': False,
+    'message': MSG_JA_E_CLIENTE,
+})
+
 # payload_recontato (contrato: apps.comercial.atendimento_ia.services.contrato)
 # `pergunta_id`/`tentativa` ecoam o que o Matrix mandou: a engine nova não
 # replica sessão persistida (mesma simplificação já assumida no ramo
@@ -434,10 +470,53 @@ def _grafo_bot_venda(agente_id):
             'pos': {'x': 950, 'y': 40},
             'label': 'Checklist: validar resposta (determinístico)',
         },
+        # ── Checagem de cliente HubSoft, so quando a resposta validada e o CPF ──
+        # Portado do que o N8N ja fazia: assim que o CPF chega, consulta o
+        # HubSoft e, se a pessoa ja for assinante, transborda em vez de seguir
+        # vendendo. Fecha o gap do `status_lead="cliente_ativo"`/`isAClient`,
+        # que ate aqui saia sempre negativo porque ninguem consultava nada.
+        'e_cpf': {
+            'tipo': 'if',
+            'config': {
+                'esquerda': '{{nodes.validar.chave}}',
+                'operador': 'igual',
+                'direita': 'cpf_cnpj',
+            },
+            'pos': {'x': 1250, 'y': 40},
+            'label': 'A resposta era o CPF?',
+        },
+        'consultar_cliente': {
+            'tipo': 'hubsoft_consultar_cliente',
+            # `valor_processado` e o CPF ja normalizado pela cascata de
+            # validacao (so digitos), que e o formato que o HubSoft espera.
+            'config': {'cpf_cnpj': '{{nodes.validar.valor_processado}}'},
+            'pos': {'x': 1550, 'y': -80},
+            'label': 'HubSoft: já é cliente?',
+        },
+        'e_cliente': {
+            'tipo': 'if',
+            # Cliente inexistente NAO da erro no HubSoft: volta
+            # `status=success` com `clientes` vazio (verificado contra a conta
+            # da Nuvyon em 20/07). Por isso o teste e de lista vazia, nao de
+            # branch de erro.
+            'config': {
+                'esquerda': '{{nodes.consultar_cliente.cliente.clientes}}',
+                'operador': 'nao_vazio',
+                'direita': '',
+            },
+            'pos': {'x': 1850, 'y': -80},
+            'label': 'Achou cliente?',
+        },
+        'resp_ja_cliente': {
+            'tipo': 'responder_webhook',
+            'config': {'status': 200, 'corpo': CORPO_VALIDAR_JA_CLIENTE},
+            'pos': {'x': 2150, 'y': -200},
+            'label': 'Responder: já é cliente, transborda',
+        },
         'resp_ok': {
             'tipo': 'responder_webhook',
             'config': {'status': 200, 'corpo': CORPO_VALIDAR_OK},
-            'pos': {'x': 1250, 'y': -100},
+            'pos': {'x': 2150, 'y': -80},
             'label': 'Responder: resposta válida',
         },
         'agente': {
@@ -550,8 +629,18 @@ def _grafo_bot_venda(agente_id):
         {'de': 'ja_respondeu', 'para': 'resp_pergunta_inicio', 'saida': 'false'},
 
         # validar
-        {'de': 'validar', 'para': 'resp_ok', 'saida': 'valida'},
+        # Resposta valida passa pela checagem de cliente antes de responder.
+        {'de': 'validar', 'para': 'e_cpf', 'saida': 'valida'},
         {'de': 'validar', 'para': 'resp_erro', 'saida': 'erro'},
+        # So o CPF dispara a consulta; qualquer outra pergunta responde direto.
+        {'de': 'e_cpf', 'para': 'consultar_cliente', 'saida': 'true'},
+        {'de': 'e_cpf', 'para': 'resp_ok', 'saida': 'false'},
+        {'de': 'consultar_cliente', 'para': 'e_cliente', 'saida': 'sucesso'},
+        # HubSoft fora do ar NAO pode travar a venda: segue o fluxo normal.
+        # Perder a checagem de cliente e menos grave que perder o atendimento.
+        {'de': 'consultar_cliente', 'para': 'resp_ok', 'saida': 'erro'},
+        {'de': 'e_cliente', 'para': 'resp_ja_cliente', 'saida': 'true'},
+        {'de': 'e_cliente', 'para': 'resp_ok', 'saida': 'false'},
         # Se a IA cair ou devolver algo que nao e JSON, o turno ainda responde
         # ao Matrix pelo caminho de erro, em vez de morrer sem resposta.
         {'de': 'agente', 'para': 'resp_erro', 'saida': 'erro'},
@@ -626,8 +715,10 @@ class Command(BaseCommand):
             '(integracao_ia=None) — sem uma IntegracaoAPI de IA ativa no tenant, a '
             'segunda opinião falha (branch "erro" do nó ia_agente).'))
         self.stdout.write(self.style.WARNING(
-            '  gap documentado (fora de escopo): `status_lead="cliente_ativo"` não é '
-            'produzido por este fluxo (dependeria de consulta ao HubSoft, não feita aqui).'))
+            '  checagem de cliente: o ramo "validar" consulta o HubSoft quando a resposta '
+            'é o CPF e transborda se a pessoa já for assinante. Exige uma IntegracaoAPI '
+            'HubSoft ativa no tenant; sem ela a consulta cai na saída "erro" e a venda '
+            'segue normalmente (sem a checagem).'))
         self.stdout.write(self.style.SUCCESS(
             'Seed concluído. Tudo nasce INATIVO, revisar no editor antes de ativar.'))
 

@@ -223,7 +223,8 @@ def test_grafo_ramo_validar_tem_nos_e_branches_esperados():
     assert nodes['json']['tipo'] == 'extrair_json'
 
     por_saida = {(c['de'], c['saida']): c['para'] for c in grafo['conexoes']}
-    assert por_saida[('validar', 'valida')] == 'resp_ok'
+    # Resposta valida passa pela checagem de cliente HubSoft antes de responder.
+    assert por_saida[('validar', 'valida')] == 'e_cpf'
     assert por_saida[('validar', 'erro')] == 'resp_erro'
     assert por_saida[('validar', 'invalida')] == 'agente'
     assert por_saida[('agente', 'sucesso')] == 'json'
@@ -401,7 +402,9 @@ def test_e2e_validar_resposta_valida_por_opcao_nao_chama_ia(mock_llm):
     assert resultado.status == 'completado', resultado.erro
     mock_llm.assert_not_called()
     corpo = _corpo_resposta(ctx)
-    assert corpo['resposta_correta'] is True
+    # TEXTO, nao booleano: o bot do Matrix nao compara booleano JSON cru
+    # na condicao do no de decisao (ver seed_fluxo_bot_venda).
+    assert corpo['resposta_correta'] == 'true'
     assert corpo['needsReception'] == 'false'
     passos = {p.handle: p for p in resultado.passos}
     assert passos['validar'].branch == 'valida'
@@ -436,7 +439,9 @@ def test_e2e_validar_ia_aceita_resposta_ambigua(mock_llm):
     assert passos['validar'].branch == 'invalida'
     assert passos['se_valido'].branch == 'true'
     corpo = _corpo_resposta(ctx)
-    assert corpo['resposta_correta'] is True
+    # TEXTO, nao booleano: o bot do Matrix nao compara booleano JSON cru
+    # na condicao do no de decisao (ver seed_fluxo_bot_venda).
+    assert corpo['resposta_correta'] == 'true'
     assert corpo['needsReception'] == 'false'
 
     # a mensagem que foi pro LLM carrega a pergunta original + a resposta do cliente
@@ -476,7 +481,9 @@ def test_e2e_validar_ia_detecta_desistencia_cai_no_transbordo(mock_llm):
     # needsReception é STRING "true"/"false" no contrato, não boolean
     assert corpo['needsReception'] == 'true'
     assert isinstance(corpo['needsReception'], str)
-    assert corpo['resposta_correta'] is False
+    # TEXTO, nao booleano: o bot do Matrix nao compara booleano JSON cru
+    # na condicao do no de decisao (ver seed_fluxo_bot_venda).
+    assert corpo['resposta_correta'] == 'false'
     assert 'transferir' in corpo['retorno_erro_api'].lower()
 
 
@@ -620,5 +627,121 @@ def test_e2e_gap_lead_sem_telefone_nem_criar_cai_no_erro_estrutural_sem_derrubar
 
     assert resultado.status == 'completado', resultado.erro
     corpo = _corpo_resposta(ctx)
-    assert corpo['resposta_correta'] is False
+    # TEXTO, nao booleano: o bot do Matrix nao compara booleano JSON cru
+    # na condicao do no de decisao (ver seed_fluxo_bot_venda).
+    assert corpo['resposta_correta'] == 'false'
     assert corpo['needsReception'] == 'true'
+
+
+# ──────────────────────────────────────────────
+# E2E: checagem de cliente HubSoft no ramo "validar"
+# ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+@mock.patch('apps.automacao.nodes.ia_agente.chamar_llm')
+@mock.patch('apps.automacao.nodes.hubsoft_consultar_cliente.consultar_cliente')
+def test_e2e_cpf_de_quem_ja_e_cliente_transborda(mock_consulta, mock_llm):
+    """CPF de assinante nao segue vendendo: transborda pro atendimento humano."""
+    tenant = TenantFactory()
+    _checklist, item_cpf, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    LeadProspectoFactory(tenant=tenant, telefone='5589999990010')
+    # Forma real da resposta do HubSoft quando ACHA (verificada em producao).
+    mock_consulta.return_value = {
+        'status': 'success', 'msg': 'Dados consultados com sucesso',
+        'clientes': [{'id_cliente': 123, 'nome_razaosocial': 'Fulano'}],
+    }
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990010',
+        'question_id': item_cpf.pk, 'answer': '111.444.777-35',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    mock_consulta.assert_called_once()
+    mock_llm.assert_not_called()
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['e_cpf'].branch == 'true'
+    assert passos['e_cliente'].branch == 'true'
+    corpo = _corpo_resposta(ctx)
+    # A resposta do cliente ESTAVA certa; o que muda e o destino do atendimento.
+    assert corpo['resposta_correta'] == 'true'
+    assert corpo['needsReception'] == 'true'
+    assert corpo['isAClient'] is True
+    assert corpo['message']
+
+
+@pytest.mark.django_db
+@mock.patch('apps.automacao.nodes.ia_agente.chamar_llm')
+@mock.patch('apps.automacao.nodes.hubsoft_consultar_cliente.consultar_cliente')
+def test_e2e_cpf_de_quem_nao_e_cliente_segue_a_venda(mock_consulta, mock_llm):
+    """HubSoft devolve `clientes` VAZIO pra quem nao e cliente, nao erro."""
+    tenant = TenantFactory()
+    _checklist, item_cpf, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    LeadProspectoFactory(tenant=tenant, telefone='5589999990011')
+    mock_consulta.return_value = {
+        'status': 'success', 'msg': 'Dados consultados com sucesso', 'clientes': [],
+    }
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990011',
+        'question_id': item_cpf.pk, 'answer': '111.444.777-35',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['e_cliente'].branch == 'false'
+    corpo = _corpo_resposta(ctx)
+    assert corpo['needsReception'] == 'false'
+    assert corpo['isAClient'] is False
+    mock_llm.assert_not_called()
+
+
+@pytest.mark.django_db
+@mock.patch('apps.automacao.nodes.hubsoft_consultar_cliente.consultar_cliente')
+def test_e2e_hubsoft_fora_do_ar_nao_trava_a_venda(mock_consulta):
+    """Integracao caida perde a checagem, nunca o atendimento."""
+    tenant = TenantFactory()
+    _checklist, item_cpf, _item2 = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    LeadProspectoFactory(tenant=tenant, telefone='5589999990012')
+    mock_consulta.side_effect = RuntimeError('HubSoft indisponivel')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990012',
+        'question_id': item_cpf.pk, 'answer': '111.444.777-35',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['consultar_cliente'].branch == 'erro'
+    corpo = _corpo_resposta(ctx)
+    assert corpo['resposta_correta'] == 'true'
+    assert corpo['needsReception'] == 'false'
+
+
+@pytest.mark.django_db
+@mock.patch('apps.automacao.nodes.hubsoft_consultar_cliente.consultar_cliente')
+def test_e2e_pergunta_que_nao_e_cpf_nao_consulta_o_hubsoft(mock_consulta):
+    """Uma chamada de API por resposta seria desperdicio e latencia (o bot tem
+    45s de teto por turno). So o CPF dispara a consulta."""
+    tenant = TenantFactory()
+    _checklist, _item_cpf, item_tipo = _checklist_minimo(tenant)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    LeadProspectoFactory(tenant=tenant, telefone='5589999990013')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990013',
+        'question_id': item_tipo.pk, 'answer': '1',
+    })
+
+    assert resultado.status == 'completado', resultado.erro
+    mock_consulta.assert_not_called()
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['e_cpf'].branch == 'false'
+    assert _corpo_resposta(ctx)['resposta_correta'] == 'true'

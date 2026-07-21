@@ -15,13 +15,31 @@ def _num(v):
         return None
 
 
+def _tem_conteudo(valor):
+    """Se `valor` tem conteúdo, pros operadores `vazio`/`nao_vazio`.
+
+    Coleção (lista/dict/tupla/set) responde pela PRÓPRIA emptiness, não pelo
+    texto: `str([])` é `'[]'`, que tem 2 caracteres e passaria como "não
+    vazio". Achado real montando a checagem de cliente HubSoft do bot de venda
+    (a consulta devolve `clientes: []` pra quem não é cliente, e o `if` dizia
+    que a lista vazia tinha conteúdo — todo NÃO cliente seria tratado como
+    cliente, exatamente o inverso do pretendido)."""
+    if valor is None:
+        return False
+    if isinstance(valor, (list, tuple, dict, set)):
+        return bool(valor)
+    if isinstance(valor, bool):
+        return valor
+    return bool(str(valor).strip())
+
+
 def _comparar(a, operador, b):
     txt_a = '' if a is None else str(a)
     txt_b = '' if b is None else str(b)
     if operador == 'vazio':
-        return not txt_a.strip()
+        return not _tem_conteudo(a)
     if operador == 'nao_vazio':
-        return bool(txt_a.strip())
+        return _tem_conteudo(a)
     if operador in ('maior', 'menor', 'maior_igual', 'menor_igual'):
         na, nb = _num(a), _num(b)
         if na is None or nb is None:
