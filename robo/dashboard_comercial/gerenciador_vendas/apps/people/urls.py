@@ -1,8 +1,8 @@
 from django.urls import path
 
 from apps.people.views import (
-    analises, board, cargos, colaboradores, configuracao, links, pipeline,
-    quadro, unidades, vagas,
+    analises, board, candidatos, cargos, colaboradores, configuracao, links,
+    pipeline, quadro, unidades, vagas,
 )
 
 app_name = 'people'
@@ -43,7 +43,8 @@ urlpatterns = [
     path('candidatos/<int:pk>/mover/', pipeline.api_mover, name='pipeline_mover'),
     path('candidatos/<int:pk>/saida/', pipeline.api_dar_saida,
          name='pipeline_saida'),
-    path('candidatos/<int:pk>/curriculo/', pipeline.curriculo,
+    path('candidatos/<int:pk>/', candidatos.detalhe, name='candidato_detalhe'),
+    path('candidatos/<int:pk>/curriculo/', candidatos.curriculo,
          name='candidato_curriculo'),
 
     # Recrutamento: quadro por unidade

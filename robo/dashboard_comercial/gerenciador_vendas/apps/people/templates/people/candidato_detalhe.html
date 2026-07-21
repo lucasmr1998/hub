@@ -1,0 +1,237 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Candidatos</p>
+        <h1 class="page-title">{{ candidato.nome_completo }}</h1>
+        <p class="page-subtitle">
+          {% if candidato.saida %}
+            {% include "components/badge.html" with variant="neutral" label=candidato.get_saida_display size="sm" %}
+          {% elif candidato.etapa %}
+            {% include "components/badge.html" with variant="info" label=candidato.etapa.nome size="sm" %}
+          {% else %}
+            {% include "components/badge.html" with variant="warning" label="Fora de etapa" size="sm" %}
+          {% endif %}
+          {% if candidato.vaga %}{{ candidato.vaga.nome_exibido }} · {% endif %}{{ candidato.unidade.nome }}
+        </p>
+      </div>
+      <a href="{% url 'people:pipeline_board' %}" class="btn btn-ghost">
+        <i class="bi bi-arrow-left"></i> Voltar ao board
+      </a>
+    </div>
+  </div>
+
+  {% include "components/tabs.html" with items=tabs %}
+
+  {# ── Aba: Perfil ── #}
+  <div id="tab-perfil" class="tabs-panel is-active">
+    {% if candidato.anonimizado_em %}
+      <div class="section-card section-card-warning" style="margin-bottom: var(--sp-4);">
+        <div class="section-card-body">
+          <p class="field-helper" style="margin: 0;">
+            <i class="bi bi-shield-check"></i>
+            Os dados pessoais deste candidato foram anonimizados em
+            {{ candidato.anonimizado_em|date:"d/m/Y" }}, ao vencer o prazo de
+            retenção declarado no consentimento. O registro fica só como número
+            para as análises de funil.
+          </p>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="form-grid-2">
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-card-title"><i class="bi bi-person"></i> Contato</h2>
+        </div>
+        <div class="section-card-body">
+          <dl class="dados-lista">
+            <div>
+              <dt>WhatsApp</dt>
+              <dd>{{ candidato.whatsapp|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>Email</dt>
+              <dd>{{ candidato.email|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>Nascimento</dt>
+              <dd>
+                {% if candidato.data_nascimento %}
+                  {{ candidato.data_nascimento|date:"d/m/Y" }}
+                  {% if candidato.idade_texto %}<span class="field-helper">· {{ candidato.idade_texto }}</span>{% endif %}
+                {% else %}—{% endif %}
+              </dd>
+            </div>
+            <div>
+              <dt>Onde mora</dt>
+              <dd>
+                {% if candidato.cidade or candidato.bairro %}
+                  {{ candidato.bairro|default:"" }}{% if candidato.bairro and candidato.cidade %}, {% endif %}{{ candidato.cidade|default:"" }}{% if candidato.estado %} ({{ candidato.estado }}){% endif %}
+                {% else %}—{% endif %}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-card-title"><i class="bi bi-briefcase"></i> Perfil</h2>
+        </div>
+        <div class="section-card-body">
+          <dl class="dados-lista">
+            <div>
+              <dt>Experiência prévia</dt>
+              <dd>{{ candidato.experiencia_previa|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>Disponibilidade</dt>
+              <dd>{{ candidato.disponibilidade_horario|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>Como chegou</dt>
+              <dd>
+                {% comment %}
+                  Sai do link de origem, nao de pergunta ao candidato: e medido,
+                  nao declarado, entao nao depende da memoria de quem preencheu.
+                {% endcomment %}
+                {% if candidato.canal_origem %}
+                  {{ candidato.canal_origem }}
+                  {% if candidato.link_origem.apelido_interno %}
+                    <span class="field-helper">· {{ candidato.link_origem.apelido_interno }}</span>
+                  {% endif %}
+                {% else %}—{% endif %}
+              </dd>
+            </div>
+            <div>
+              <dt>Candidatou-se em</dt>
+              <dd>{{ candidato.criado_em|date:"d/m/Y H:i" }}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" style="margin-top: var(--sp-4);">
+      <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-file-earmark-text"></i> Currículo</h2>
+      </div>
+      <div class="section-card-body">
+        {% if candidato.curriculo and not candidato.anonimizado_em %}
+          <div style="display: flex; gap: var(--sp-2); align-items: center;">
+            <a href="{% url 'people:candidato_curriculo' candidato.pk %}" target="_blank"
+               class="btn btn-secondary btn-sm">
+              <i class="bi bi-eye"></i> Visualizar
+            </a>
+            <a href="{% url 'people:candidato_curriculo' candidato.pk %}?download=1"
+               class="btn btn-ghost btn-sm">
+              <i class="bi bi-download"></i> Baixar
+            </a>
+          </div>
+          <p class="field-helper" style="margin-top: var(--sp-3);">
+            Arquivo em storage privado. Só quem tem acesso ao módulo consegue abrir.
+          </p>
+        {% else %}
+          {% include "components/empty_state.html" with icon="bi-file-earmark" text="Sem currículo" subtext="O candidato não anexou arquivo, ou a vaga não pedia." size="sm" %}
+        {% endif %}
+      </div>
+    </div>
+
+    {% if candidato.colaborador_id %}
+      <div class="section-card section-card-success" style="margin-top: var(--sp-4);">
+        <div class="section-card-header">
+          <h2 class="section-card-title"><i class="bi bi-person-check"></i> Já é colaborador</h2>
+        </div>
+        <div class="section-card-body">
+          <p class="field-helper" style="margin: 0;">
+            Esta candidatura virou o cadastro de
+            <a href="{% url 'people:colaborador_detalhe' candidato.colaborador_id %}">{{ candidato.colaborador.nome_completo }}</a>
+            no Departamento Pessoal.
+          </p>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="section-card" style="margin-top: var(--sp-4);">
+      <div class="section-card-header">
+        <h2 class="section-card-title"><i class="bi bi-shield-check"></i> Consentimento e retenção</h2>
+      </div>
+      <div class="section-card-body">
+        <dl class="dados-lista dados-lista-grid">
+          <div>
+            <dt>Autorizou o uso dos dados</dt>
+            <dd>
+              {% if candidato.consentimento_lgpd %}
+                Sim, em {{ candidato.consentimento_em|date:"d/m/Y H:i" }}
+              {% else %}Não registrado{% endif %}
+            </dd>
+          </div>
+          <div>
+            <dt>Versão do texto aceito</dt>
+            <dd>{{ candidato.consentimento_versao|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Guardado até</dt>
+            <dd>
+              {% if candidato.anonimizado_em %}
+                Anonimizado em {{ candidato.anonimizado_em|date:"d/m/Y" }}
+              {% elif candidato.retencao_ate %}
+                {{ candidato.retencao_ate|date:"d/m/Y" }}
+              {% else %}—{% endif %}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  {# ── Aba: Histórico ── #}
+  <div id="tab-historico" class="tabs-panel">
+    <p class="field-helper" style="margin-bottom: var(--sp-4);">
+      Cada movimento no processo entra aqui, com quem fez e o motivo. É desta
+      trilha que sai o tempo médio de cada etapa.
+    </p>
+
+    {% if historico %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Quando</th>
+              <th>De</th>
+              <th>Para</th>
+              <th>Motivo</th>
+              <th>Quem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in historico %}
+              <tr>
+                <td>{{ item.criado_em|date:"d/m/Y H:i" }}</td>
+                <td>{% if item.de_etapa %}{{ item.de_etapa }}{% else %}<em>entrada</em>{% endif %}</td>
+                <td>
+                  {% if item.para_saida %}
+                    <strong>{{ item.get_para_saida_display }}</strong>
+                  {% else %}
+                    <strong>{{ item.para_etapa }}</strong>
+                  {% endif %}
+                </td>
+                <td>{{ item.motivo|default:"—" }}</td>
+                <td>{{ item.usuario.username|default:"sistema" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% include "components/empty_state.html" with icon="bi-clock-history" text="Sem movimentos ainda" subtext="O histórico começa quando o candidato entra numa etapa." size="sm" %}
+    {% endif %}
+  </div>
+{% endblock %}

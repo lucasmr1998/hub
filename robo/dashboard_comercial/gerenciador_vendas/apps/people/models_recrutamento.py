@@ -641,6 +641,33 @@ class Candidato(TenantMixin):
         return not self.saida
 
     @property
+    def idade_texto(self):
+        """
+        Idade em anos e meses, como a tela de origem mostra.
+
+        Anos e meses, e nao so anos, porque em vaga de primeiro emprego a
+        diferenca entre 17 e 11 meses e 18 recem feitos e a diferenca entre
+        poder e nao poder contratar.
+        """
+        if not self.data_nascimento:
+            return ''
+
+        hoje = timezone.localdate()
+        anos = hoje.year - self.data_nascimento.year
+        meses = hoje.month - self.data_nascimento.month
+        if hoje.day < self.data_nascimento.day:
+            meses -= 1
+        if meses < 0:
+            anos -= 1
+            meses += 12
+
+        if anos < 0:
+            return ''
+        if not meses:
+            return f'{anos} anos'
+        return f'{anos} anos e {meses} {"mês" if meses == 1 else "meses"}'
+
+    @property
     def canal_origem(self):
         """De qual canal veio. Sobrevive a desativacao do link."""
         return self.link_origem.get_canal_display() if self.link_origem_id else ''
