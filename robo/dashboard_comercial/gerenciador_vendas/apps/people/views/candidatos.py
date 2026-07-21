@@ -46,6 +46,64 @@ def _respostas_custom(candidato):
             for campo in campos]
 
 
+def _abas_do_processo(candidato, historico):
+    """
+    As abas da ficha, GERADAS a partir das etapas configuradas do tenant.
+
+    A tela de origem tem abas fixas (Perfil comportamental, Entrevista RH, Teste
+    Pratico...), porque la o pipeline e fixo. Aqui etapa e DADO: o cliente cria,
+    renomeia e reordena em /people/fluxo/. Chumbar as abas quebraria isso no
+    primeiro cliente que mudar o fluxo, e ele muda: e a razao de a tela de fluxo
+    existir.
+
+    Devolve `(etapas, tabs)`. `etapas` carrega a anotacao e um marcador de onde
+    o candidato esta, pra o template so exibir.
+    """
+    from apps.people.models import AnotacaoEtapa, EtapaPipeline
+
+    escopo = EtapaPipeline.do_escopo(candidato.tenant, candidato.unidade)
+    lista = list(escopo.order_by('ordem', 'id'))
+
+    anotacoes = {a.etapa_id: a for a in AnotacaoEtapa.objects.filter(
+        candidato=candidato).select_related('atualizado_por')}
+
+    # Ate onde o candidato ja chegou. Etapa posterior a atual aparece, porem
+    # apagada: o RH ve o caminho inteiro, e nao so o pedaco andado.
+    ordem_atual = candidato.etapa.ordem if candidato.etapa_id else -1
+
+    etapas = []
+    for etapa in lista:
+        anotacao = anotacoes.get(etapa.pk)
+        etapas.append({
+            'etapa': etapa,
+            'anotacao': anotacao,
+            'atual': candidato.etapa_id == etapa.pk and not candidato.saida,
+            'passou': etapa.ordem < ordem_atual,
+            'tem_anotacao': bool(anotacao and anotacao.texto.strip()),
+        })
+
+    tabs = [{'id': 'tab-perfil', 'label': 'Perfil', 'icon': 'bi-person',
+             'active': True}]
+    for item in etapas:
+        tabs.append({
+            'id': f'tab-etapa-{item["etapa"].pk}',
+            'label': item['etapa'].nome,
+            # Bolinha na aba da etapa ATUAL: com sete abas, saber onde a pessoa
+            # esta sem ler todas e a informacao mais pedida da tela.
+            'icon': 'bi-record-circle' if item['atual'] else 'bi-circle',
+            'badge': '•' if item['tem_anotacao'] else '',
+        })
+    # "Movimentacoes", e nao "Historico": uma das etapas PADRAO se chama
+    # Historico, e duas abas com o mesmo rotulo significando coisas diferentes
+    # (a etapa versus o log de movimento) e confusao garantida. O nome tambem e
+    # mais preciso: aqui so entra transicao, nao conteudo de trabalho.
+    tabs.append({'id': 'tab-historico', 'label': 'Movimentações',
+                 'icon': 'bi-clock-history',
+                 'badge': str(historico.count()) if historico.exists() else ''})
+
+    return etapas, tabs
+
+
 @requer_people()
 def detalhe(request, pk):
     candidato = get_object_or_404(
@@ -58,12 +116,7 @@ def detalhe(request, pk):
                  .select_related('usuario')
                  .order_by('-criado_em'))
 
-    tabs = [
-        {'id': 'tab-perfil', 'label': 'Perfil', 'icon': 'bi-person',
-         'active': True},
-        {'id': 'tab-historico', 'label': 'Histórico', 'icon': 'bi-clock-history',
-         'badge': str(historico.count()) if historico.exists() else ''},
-    ]
+    etapas, tabs = _abas_do_processo(candidato, historico)
 
     return render(request, 'people/candidato_detalhe.html', {
         'pagetitle': candidato.nome_completo,
@@ -86,8 +139,12 @@ def detalhe(request, pk):
             and pode_acessar(request, 'people.gerir_vagas')),
         'historico': historico,
         'tabs': tabs,
+        'etapas': etapas,
         'saidas': [{'valor': v, 'rotulo': r} for v, r in estados_rs.SAIDAS],
         'pode_mover': pode_acessar(request, 'people.gerir_vagas'),
+        # Anotar e permissao PROPRIA: o supervisor que entrevista registra
+        # a impressao dele sem poder mover no pipeline nem admitir.
+        'pode_anotar': pode_acessar(request, 'people.avaliar'),
     })
 
 
@@ -193,4 +250,34 @@ def analisar(request, pk):
     messages.success(request,
                      f'Análise pronta: {analise.get_veredito_display()}. '
                      f'É sugestão, a decisão continua sua.')
+    return redirect('people:candidato_detalhe', pk=pk)
+
+
+@require_POST
+@requer_people('people.avaliar')
+def anotar_etapa(request, pk, etapa_pk):
+    """
+    Grava o que o RH anotou numa etapa.
+
+    Uma anotacao por etapa por candidato, sobrescrita a cada salvamento. Nao e
+    log: e o registro de trabalho daquela fase, e enquanto a pessoa esta nela o
+    texto muda. O `HistoricoCandidato` e que guarda movimento.
+    """
+    from apps.people.models import AnotacaoEtapa, EtapaPipeline
+
+    candidato = get_object_or_404(Candidato.objects, pk=pk)
+    etapa = get_object_or_404(EtapaPipeline.objects, pk=etapa_pk)
+    texto = (request.POST.get('texto') or '').strip()
+
+    if texto:
+        AnotacaoEtapa.all_tenants.update_or_create(
+            candidato=candidato, etapa=etapa,
+            defaults={'tenant': candidato.tenant, 'texto': texto,
+                      'atualizado_por': request.user})
+    else:
+        # Texto vazio apaga: anotacao em branco e indistinguivel de nao ter
+        # anotacao, e deixar as duas conviverem faria a bolinha da aba mentir.
+        AnotacaoEtapa.objects.filter(candidato=candidato, etapa=etapa).delete()
+
+    messages.success(request, f'Anotação de "{etapa.nome}" salva.')
     return redirect('people:candidato_detalhe', pk=pk)

@@ -48,6 +48,8 @@ urlpatterns = [
          name='candidato_admitir'),
     path('candidatos/<int:pk>/analisar/', candidatos.analisar,
          name='candidato_analisar'),
+    path('candidatos/<int:pk>/etapa/<int:etapa_pk>/anotar/',
+         candidatos.anotar_etapa, name='candidato_anotar_etapa'),
     path('candidatos/<int:pk>/', candidatos.detalhe, name='candidato_detalhe'),
     path('candidatos/<int:pk>/curriculo/', candidatos.curriculo,
          name='candidato_curriculo'),

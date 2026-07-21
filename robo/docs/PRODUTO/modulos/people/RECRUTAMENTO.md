@@ -420,6 +420,59 @@ saber que a sugestao saiu mais pobre.
 
 ---
 
+## A ficha e onde o processo acontece
+
+Decisao de produto de 21/07: a ficha do candidato passou a ter **uma aba por
+etapa**, e nao so Perfil e Historico. Antes o trabalho acontecia no board
+(arrastar o card) e a ficha era consulta.
+
+**As abas sao GERADAS das etapas configuradas.** E a diferenca em relacao a
+origem, que tem abas fixas (Perfil comportamental, Entrevista RH, Teste
+Pratico...) porque o pipeline la e fixo. Aqui etapa e DADO: o cliente cria,
+renomeia e reordena em `/people/fluxo/`. Chumbar as abas quebraria isso no
+primeiro cliente que mexer no fluxo, e ele mexe, que e a razao de a tela de
+fluxo existir.
+
+Etapa posterior a atual aparece marcada como "ainda nao chegou": o RH ve o
+caminho inteiro, e nao so o pedaco andado.
+
+**A aba fixa de movimentos se chama "Movimentacoes", e nao "Historico"**, porque
+uma das etapas padrao se chama Historico e duas abas com o mesmo rotulo
+significando coisas diferentes e confusao garantida.
+
+### Anotacao por etapa
+
+`AnotacaoEtapa` guarda o que o RH registrou NAQUELA fase. E o que faz a ficha por
+etapa valer a pena: sem isso, uma aba por etapa seria so um lugar diferente de
+ver os mesmos dados.
+
+Por etapa, e nao num campo unico de observacoes: numa contratacao contestada
+depois, "o que o entrevistador anotou na Selecao" e pergunta diferente de "o que
+o gestor anotou na Avaliacao". Um textarea so misturaria as duas e perderia quem
+escreveu o que.
+
+Nao confundir com `HistoricoCandidato`, que registra MOVIMENTO (saiu de A, foi
+pra B, por tal motivo). A anotacao registra CONTEUDO de trabalho dentro de uma
+etapa, e muda enquanto a pessoa esta nela.
+
+### Perfil Avaliador
+
+Funcionalidade `people.avaliar`: registra anotacao nas etapas, e so isso. Nao
+move no pipeline, nao abre vaga, nao admite.
+
+Existe **com usuario**, e nao como link publico sem login, que e como a origem
+faz. Decisao do Lucas, com tres motivos: a avaliacao decide contratacao e "quem
+avaliou" precisa ser identidade e nao nome digitado; link sem login exibindo
+dados e curriculo do candidato e superficie de vazamento LGPD; e na origem o
+avaliador e o gerente de loja de shopping, que roda toda hora, enquanto num
+provedor o supervisor tecnico e funcionario fixo com email.
+
+O principio que ficou: **link publico e pra quem esta FORA da empresa** (o
+candidato, o recem contratado preenchendo o proprio cadastro); quem esta dentro
+tem conta.
+
+---
+
 ## Regra de parada
 
 `Vaga.limite_aprovados` (default 50). Ao atingir, a triagem PARA e a captacao

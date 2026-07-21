@@ -57,6 +57,13 @@ FUNCIONALIDADES = [
                      'recrutamento, e definir os requisitos dela',
         'ordem': 60,
     },
+    {
+        'codigo': 'people.avaliar',
+        'nome': 'Avaliar candidato',
+        'descricao': 'Registrar anotacoes nas etapas do processo seletivo, sem '
+                     'poder mover, abrir vaga nem admitir',
+        'ordem': 70,
+    },
 ]
 
 # Quem ganha o que no back-fill. Perfil fora deste mapa nao e tocado: dar
@@ -67,8 +74,23 @@ PERFIL_DEFAULTS = {
     # Gestor abre vaga: na rede de franquia e o gerente de loja quem sabe que
     # esta faltando gente. Quem NAO entra e o Supervisor, que so acompanha.
     'Gestor': ['people.ver', 'people.criar_colaborador',
-               'people.mover_colaborador', 'people.gerir_vagas'],
+               'people.mover_colaborador', 'people.gerir_vagas',
+               'people.avaliar'],
     'Supervisor Comercial': ['people.ver'],
+}
+
+# Perfil de quem SO avalia: o supervisor tecnico que entrevista o candidato e
+# registra a impressao, sem poder mover no pipeline, abrir vaga nem admitir.
+#
+# Existe com USUARIO, e nao como link publico sem login como a origem faz. Tres
+# motivos: (a) a avaliacao decide contratacao, e "quem avaliou" precisa ser
+# identidade e nao nome digitado; (b) link sem login exibindo dados e curriculo
+# do candidato e superficie de vazamento LGPD; (c) na origem o avaliador e o
+# gerente de loja de shopping, que roda toda hora, enquanto num provedor o
+# supervisor tecnico e funcionario fixo com email.
+PERFIL_AVALIADOR = {
+    'nome': 'Avaliador de candidatos',
+    'funcionalidades': ['people.ver', 'people.avaliar'],
 }
 
 

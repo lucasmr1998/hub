@@ -1151,6 +1151,65 @@ class AnaliseCandidato(TenantMixin):
         return self.tokens_entrada + self.tokens_saida
 
 
+class AnotacaoEtapa(TenantMixin):
+    """
+    O que o RH registrou sobre o candidato NUMA etapa especifica.
+
+    E o que faz a ficha por etapa valer a pena. Sem isto, uma aba por etapa
+    seria so um lugar diferente pra ver os mesmos dados; com isto, cada etapa
+    guarda o que aconteceu nela: a impressao da entrevista, o resultado do
+    teste, a ressalva do gestor.
+
+    POR ETAPA, e nao um campo unico de observacoes: numa contratacao contestada
+    depois, "o que o entrevistador anotou na Selecao" e uma pergunta diferente de
+    "o que o gestor anotou na Avaliacao". Um textarea so misturaria as duas e
+    perderia quem escreveu o que, e quando.
+
+    NAO E O HISTORICO. `HistoricoCandidato` registra MOVIMENTO (saiu de A, foi
+    pra B, por tal motivo). Isto registra CONTEUDO de trabalho dentro de uma
+    etapa, que pode ser editado enquanto a pessoa esta nela.
+    """
+
+    candidato = models.ForeignKey(
+        'people.Candidato', on_delete=models.CASCADE, related_name='anotacoes',
+        verbose_name="Candidato",
+    )
+    etapa = models.ForeignKey(
+        'people.EtapaPipeline', on_delete=models.CASCADE,
+        related_name='anotacoes', verbose_name="Etapa",
+    )
+    texto = models.TextField(blank=True, default='', verbose_name="Anotações")
+    atualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='anotacoes_etapa',
+        verbose_name="Última edição de",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_anotacao_etapa'
+        verbose_name = 'Anotação de etapa'
+        verbose_name_plural = 'Anotações de etapa'
+        ordering = ['etapa__ordem']
+        indexes = [
+            models.Index(fields=['tenant', 'candidato'],
+                         name='people_anot_etapa_idx'),
+        ]
+        constraints = [
+            # Uma anotacao por etapa por candidato. Duas linhas pro mesmo par
+            # fariam a tela mostrar uma e salvar noutra, sem erro nenhum.
+            models.UniqueConstraint(
+                fields=['candidato', 'etapa'],
+                name='people_anotacao_uma_por_etapa',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Anotação de {self.candidato} em {self.etapa.nome}'
+
+
 class QuadroUnidade(TenantMixin):
     """
     Quantas posicoes de um cargo a unidade quer ter.

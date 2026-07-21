@@ -203,6 +203,73 @@
     </div>
   </div>
 
+  {% comment %}
+    Uma aba por ETAPA, geradas das etapas configuradas do tenant.
+
+    A tela de origem tem abas fixas porque la o pipeline e fixo. Aqui etapa e
+    dado: o cliente cria, renomeia e reordena em /people/fluxo/. Chumbar as abas
+    quebraria isso no primeiro cliente que mexer no fluxo.
+
+    Cada aba mostra a mensagem da etapa, a anotacao do RH e as acoes. Etapa
+    posterior a atual aparece, porem marcada: o RH ve o caminho inteiro, e nao
+    so o pedaco andado.
+  {% endcomment %}
+  {% for item in etapas %}
+    <div id="tab-etapa-{{ item.etapa.pk }}" class="tabs-panel">
+      <div style="display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3);">
+        <span style="width: 10px; height: 10px; border-radius: 50%; background: {{ item.etapa.cor_hex }};"></span>
+        <h2 class="form-section-title" style="margin: 0;">{{ item.etapa.nome }}</h2>
+        {% if item.atual %}
+          {% include "components/badge.html" with variant="info" label="Está aqui agora" size="sm" %}
+        {% elif item.passou %}
+          {% include "components/badge.html" with variant="neutral" label="Já passou" size="sm" %}
+        {% else %}
+          {% include "components/badge.html" with variant="neutral" label="Ainda não chegou" size="sm" %}
+        {% endif %}
+        {% if item.etapa.sla_dias %}
+          <span class="field-helper">Prazo de {{ item.etapa.sla_dias }} dias</span>
+        {% endif %}
+      </div>
+
+      {% if item.atual and candidato.esta_atrasado %}
+        <p class="field-error" style="margin-bottom: var(--sp-3);">
+          <i class="bi bi-exclamation-circle"></i>
+          {{ candidato.rotulo_atraso }} nesta etapa.
+        </p>
+      {% endif %}
+
+      <div class="section-card">
+        <div class="section-card-body">
+          {% if pode_anotar %}
+            <form method="post"
+                  action="{% url 'people:candidato_anotar_etapa' candidato.pk item.etapa.pk %}"
+                  class="form-stack">
+              {% csrf_token %}
+              {% include "components/textarea.html" with name="texto" label="Anotações desta etapa" value=item.anotacao.texto rows=5 placeholder="Impressões, o que foi combinado, pontos de atenção." helper="Fica registrado nesta etapa, e não se mistura com as outras." %}
+              <div class="form-actions">
+                <button type="submit" class="btn btn-secondary btn-sm">
+                  <i class="bi bi-check-lg"></i> Salvar anotação
+                </button>
+              </div>
+            </form>
+          {% elif item.anotacao.texto %}
+            <p class="field-label">Anotações desta etapa</p>
+            <p style="font-size: var(--fs-sm); white-space: pre-line;">{{ item.anotacao.texto }}</p>
+          {% else %}
+            <p class="field-helper" style="margin: 0;">Nada anotado nesta etapa.</p>
+          {% endif %}
+
+          {% if item.anotacao.atualizado_por %}
+            <p class="field-helper" style="margin-top: var(--sp-2);">
+              Última edição de {{ item.anotacao.atualizado_por.username }}
+              em {{ item.anotacao.atualizado_em|date:"d/m/Y H:i" }}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
   {# ── Aba: Histórico ── #}
   <div id="tab-historico" class="tabs-panel">
     <p class="field-helper" style="margin-bottom: var(--sp-4);">

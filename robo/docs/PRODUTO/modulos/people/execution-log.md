@@ -509,3 +509,15 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 - O teste `test_imagem_NAO_e_aceita` trava a decisao: se alguem reabrir, tem que decidir OCR junto.
 - O conserto do `ERR_UPLOAD_FILE_CHANGED` **continua valendo**: e independente do formato e resolve o erro que derrubou candidato real.
 - **Output**: 19 testes no arquivo de formatos.
+
+## 2026-07-21 — Ficha por etapa e perfil Avaliador (tarefa 218, itens 5 e 4)
+
+- **Acao**: o Lucas escolheu a opcao A (copiar a estrutura da Visio). A ficha deixou de ser consulta e passou a ser onde o processo acontece.
+
+- **Decisao que diferencia da origem**: as abas sao GERADAS das `EtapaPipeline` configuradas, e nao chumbadas. La o pipeline e fixo, aqui etapa e dado. Ha teste (`test_etapa_criada_pelo_cliente_vira_aba`) que existe justamente pra travar isso: se alguem chumbar as abas, a tela de fluxo vira mentira.
+- **Model novo `AnotacaoEtapa`**: uma anotacao por etapa por candidato, com constraint. Por etapa e nao num campo unico porque, numa contratacao contestada, "o que o entrevistador anotou na Selecao" e pergunta diferente de "o que o gestor anotou na Avaliacao". Guarda quem editou por ultimo, que e a primeira pergunta nesse cenario.
+- **Colisao achada no print**: a aba fixa "Historico" batia com a ETAPA padrao chamada "Historico". Renomeada pra "Movimentacoes", que tambem e mais preciso: ali so entra transicao, nao conteudo de trabalho.
+- **Perfil Avaliador** (`people.avaliar`): anota e so. Nao move, nao abre vaga, nao admite. Com USUARIO, contra o link sem login da origem, por decisao do Lucas. O principio que ficou registrado: link publico e pra quem esta FORA da empresa; quem esta dentro tem conta.
+
+- **Output**: migration 0022. 16 testes novos.
+- **Status**: completed em dev, nao pushado.
