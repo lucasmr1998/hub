@@ -204,6 +204,45 @@ em milissegundos.
 
 ---
 
+## Atraso por etapa
+
+`EtapaPipeline.sla_dias` existia desde o inicio e era CAMPO MORTO: o help_text do
+model e o helper da tela de fluxo prometiam "depois disso o candidato aparece
+como atrasado nesta etapa", e nada no modulo calculava atraso.
+
+O que faltava era saber DESDE QUANDO. `Candidato.etapa_desde` e preenchido por
+`mover_para_etapa`, e nao da pra usar `atualizado_em` no lugar: corrigir o
+telefone do candidato bumparia o campo e o zeraria sem ele ter andado no
+processo. A migration 0017 fez o back-fill a partir do `HistoricoCandidato`, com
+fallback pro `criado_em`; sem isso o recurso nasceria mostrando "sem atraso" pra
+todo mundo que ja estava no pipeline.
+
+Tres bordas, todas com teste:
+
+| Caso | Comportamento |
+|---|---|
+| Etapa sem `sla_dias` | NUNCA marca atraso. Prazo em branco e "sem prazo", nao "prazo zero" |
+| Candidato que saiu do processo | Nao conta. Parado numa saida terminal e o estado final esperado |
+| Exatamente no prazo | Ainda nao esta atrasado. Prazo de 3 dias significa que no terceiro dia esta em dia |
+
+---
+
+## Captacao continua (link sem vaga)
+
+`LinkCandidatura.vaga` sempre aceitou nulo, o help_text documentava, a view
+publica tratava o caso e havia testes cobrindo. **So nao existia botao que
+criasse um**: o unico caminho de criacao era de dentro de uma vaga, e ele sempre
+setava a vaga. Capacidade completa no backend, sem porta de entrada.
+
+`/people/captacao/` e a porta. Vale por si: um QR fixo no balcao capta o ano
+inteiro, sem depender de haver vaga aberta naquele dia, e quem chega cai direto
+no banco de talentos.
+
+A **unidade continua obrigatoria** mesmo sem vaga. Sem ela o candidato do banco
+nao fica ligado a loja nenhuma, e o RH daquela loja nao encontra ele.
+
+---
+
 ## Regra de parada
 
 `Vaga.limite_aprovados` (default 50). Ao atingir, a triagem PARA e a captacao
@@ -224,6 +263,7 @@ passar do teto seja consciente e nao descuido.
 | `/people/candidatos/<pk>/` | Ficha do candidato: Perfil, Historico, Curriculo |
 | `/people/fluxo/` | Configuracao das etapas do pipeline |
 | `/people/campos/` | Campos de candidatura que o tenant inventa |
+| `/people/captacao/` | Links de captacao continua, sem vaga, pro banco de talentos |
 | `/people/quadro/` | Faltam X de Y por cargo por unidade |
 | `/people/candidatura/<token>/` | Publica, sem login, mobile first |
 
@@ -271,6 +311,7 @@ python -m pytest tests/test_people_recrutamento_*.py tests/test_people_candidatu
 | `test_people_campos_custom.py` | Expurgo limpa o JSON, sem colisao com campo de sistema, campo novo nasce desligado, as guardas da tela |
 | `test_people_pipeline_board.py` | Mover livre, sair com motivo, etapa desativada nao some candidato, chips com contagem, saida clicavel, lote |
 | `test_people_fluxo_config.py` | Edicao do fluxo respeita escopo; as duas guardas que impedem perda de dado |
+| `test_people_atraso_e_captacao.py` | As bordas do atraso (etapa sem prazo, quem saiu, mover zera) e o link sem vaga ponta a ponta |
 | `test_people_quadro.py` | Ocupacao lida de dois lugares sem contar duas vezes; regra de parada avisa |
 | `test_people_expurgo.py` | Vencido anonimiza, dentro do prazo NAO e tocado, curriculo apagado |
 | `test_people_provisionamento.py` | Signal semeia o pipeline na ativacao, sem duplicar |

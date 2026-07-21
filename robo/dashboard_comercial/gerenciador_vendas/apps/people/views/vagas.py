@@ -14,6 +14,7 @@ from django.contrib import messages
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.people import estados_recrutamento as estados_rs
@@ -423,3 +424,116 @@ def link_qr(request, pk, link_pk):
     resposta['Content-Disposition'] = (
         f'attachment; filename="qr-{link.canal}-{link.pk}.svg"')
     return resposta
+
+
+@requer_people()
+def banco_talentos_links(request):
+    """
+    Links de captacao continua: sem vaga, alimentando o banco de talentos.
+
+    `LinkCandidatura.vaga` sempre aceitou nulo, o help_text documentava e a view
+    publica ja tratava o caso, com testes. So nao havia porta de entrada: o
+    unico caminho de criacao era de dentro de uma vaga, e ele sempre setava a
+    vaga. Capacidade completa no backend, sem botao. Esta tela e o botao.
+
+    Tem valor proprio: um QR fixo no balcao da loja capta o ano inteiro, sem
+    depender de haver vaga aberta naquele dia.
+    """
+    links = (LinkCandidatura.objects
+             .filter(vaga__isnull=True)
+             .select_related('unidade')
+             .order_by('-ativo', '-criado_em'))
+
+    return render(request, 'people/banco_talentos_links.html', {
+        'pagetitle': 'Captação contínua',
+        'links': [{'link': l, 'url': request.build_absolute_uri(l.caminho_publico)}
+                  for l in links],
+        'canais': CANAL_CHOICES,
+        'unidades_opcoes': list(
+            Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
+        'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
+    })
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def banco_talentos_link_criar(request):
+    """Cria um link sem vaga. Quem chega por ele cai no banco de talentos."""
+    canal = (request.POST.get('canal') or '').strip()
+    unidade_id = (request.POST.get('unidade') or '').strip()
+
+    if canal not in dict(CANAL_CHOICES):
+        messages.error(request, 'Escolha um canal para o link.')
+        return redirect('people:banco_talentos_links')
+
+    # A unidade e obrigatoria mesmo sem vaga: o candidato do banco precisa estar
+    # ligado a uma loja, senao nao ha como o RH daquela loja encontrar ele.
+    unidade = Unidade.objects.filter(pk=unidade_id).first() if unidade_id.isdigit() else None
+    if unidade is None:
+        messages.error(request, 'Escolha a unidade que vai receber os candidatos.')
+        return redirect('people:banco_talentos_links')
+
+    link = LinkCandidatura(
+        tenant=request.tenant,
+        vaga=None,
+        unidade=unidade,
+        canal=canal,
+        apelido_interno=(request.POST.get('apelido_interno') or '').strip(),
+        cta=(request.POST.get('cta') or '').strip(),
+        telefone_contato=(request.POST.get('telefone_contato') or '').strip(),
+        token=secrets.token_urlsafe(32),
+        criado_por=request.user,
+    )
+    link.texto_compartilhamento = link.texto_padrao()
+    link.save()
+
+    registrar_acao('people', 'criar', 'link_candidatura', link.pk,
+                   f'Link de captação contínua ({link.get_canal_display()}) '
+                   f'criado para {unidade.nome}.', request=request)
+    messages.success(request, f'Link de {link.get_canal_display()} criado.')
+    return redirect('people:banco_talentos_links')
+
+
+@requer_people()
+def banco_talentos_link_qr(request, link_pk):
+    """
+    QR do link de captacao continua.
+
+    Rota propria porque a de vaga exige a vaga na URL, e estes links nao tem
+    uma. Mesmo SVG, pelo mesmo motivo: o uso real e cartaz no balcao da loja.
+    """
+    import segno
+
+    link = get_object_or_404(LinkCandidatura.objects, pk=link_pk,
+                             vaga__isnull=True)
+    url = request.build_absolute_uri(link.caminho_publico)
+
+    buffer = io.BytesIO()
+    segno.make(url, error='m').save(buffer, kind='svg', scale=8, border=2)
+
+    resposta = HttpResponse(buffer.getvalue(), content_type='image/svg+xml')
+    resposta['Content-Disposition'] = (
+        f'attachment; filename="qr-captacao-{link.canal}-{link.pk}.svg"')
+    return resposta
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def banco_talentos_link_alternar(request, link_pk):
+    """
+    Liga e desliga o link de captacao.
+
+    Nao apaga: as candidaturas que chegaram por ele apontam pra ele, e apagar
+    destruiria a atribuicao de canal. Mesma regra dos links de vaga.
+    """
+    link = get_object_or_404(LinkCandidatura.objects, pk=link_pk,
+                             vaga__isnull=True)
+    link.ativo = not link.ativo
+    link.desativado_em = None if link.ativo else timezone.now()
+    link.save(update_fields=['ativo', 'desativado_em'])
+
+    estado = 'reativado' if link.ativo else 'desativado'
+    registrar_acao('people', 'editar', 'link_candidatura', link.pk,
+                   f'Link de captação contínua {estado}.', request=request)
+    messages.success(request, f'Link {estado}.')
+    return redirect('people:banco_talentos_links')

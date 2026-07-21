@@ -41,6 +41,13 @@ de etapa e na area "fora de etapa".
     {% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}Banco de talentos{% endif %} · {{ candidato.unidade.nome }}
   </p>
   <div class="kanban-card-tags">
+    {% comment %}
+      Atraso primeiro, porque e o unico item aqui que pede acao. Sai do prazo
+      da propria etapa (sla_dias); etapa sem prazo nunca marca.
+    {% endcomment %}
+    {% if candidato.esta_atrasado %}
+      {% include "components/badge.html" with variant="danger" label=candidato.rotulo_atraso size="sm" %}
+    {% endif %}
     {% if candidato.canal_origem %}
       {% include "components/badge.html" with variant="info" label=candidato.canal_origem size="sm" %}
     {% endif %}

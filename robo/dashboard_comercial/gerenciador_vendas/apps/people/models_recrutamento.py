@@ -712,6 +712,10 @@ class Candidato(TenantMixin):
         EtapaPipeline, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='candidatos', verbose_name="Etapa",
     )
+    etapa_desde = models.DateTimeField(
+        null=True, blank=True, verbose_name="Nesta etapa desde",
+        help_text="Quando entrou na etapa atual. Base do indicador de atraso.",
+    )
     saida = models.CharField(
         max_length=20, choices=estados_rs.SAIDAS, blank=True, default='',
         db_index=True, verbose_name="Saída",
@@ -819,6 +823,53 @@ class Candidato(TenantMixin):
     def canal_origem(self):
         """De qual canal veio. Sobrevive a desativacao do link."""
         return self.link_origem.get_canal_display() if self.link_origem_id else ''
+
+    @property
+    def dias_na_etapa(self):
+        """
+        Ha quantos dias esta parado na etapa atual. None se nao se aplica.
+
+        Sai de `etapa_desde`, e nao de `atualizado_em`: qualquer edicao do
+        candidato (corrigir um telefone) bumparia o atualizado_em e zeraria a
+        contagem sem ele ter andado no processo.
+        """
+        if not self.etapa_desde or self.saida or not self.etapa_id:
+            return None
+        return (timezone.now() - self.etapa_desde).days
+
+    @property
+    def esta_atrasado(self):
+        """
+        Passou do prazo da etapa.
+
+        Etapa sem `sla_dias` NUNCA marca atraso: prazo em branco significa "sem
+        prazo", e nao "prazo zero". Quem saiu do processo tambem nao: parado
+        numa saida terminal e o estado final esperado, nao demora.
+        """
+        dias = self.dias_na_etapa
+        if dias is None or not self.etapa.sla_dias:
+            return False
+        return dias > self.etapa.sla_dias
+
+    @property
+    def dias_de_atraso(self):
+        """Quantos dias ALEM do prazo. Zero quando nao ha atraso."""
+        if not self.esta_atrasado:
+            return 0
+        return self.dias_na_etapa - self.etapa.sla_dias
+
+    @property
+    def rotulo_atraso(self):
+        """
+        Texto do selo de atraso.
+
+        Fica no model, e nao no template, porque o board mostra em dois lugares
+        (lista e kanban) e texto duplicado em template diverge.
+        """
+        dias = self.dias_de_atraso
+        if not dias:
+            return ''
+        return f'{dias} dia atrasado' if dias == 1 else f'{dias} dias atrasado'
 
     def anonimizar(self):
         """

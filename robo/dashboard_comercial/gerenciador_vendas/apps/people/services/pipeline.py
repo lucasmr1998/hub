@@ -12,6 +12,7 @@ Pratico), e a unica regra dura e a SAIDA, que exige motivo e, no caso de
 admitido ja vinculado, trava. Ver estados_recrutamento.
 """
 from django.db import transaction
+from django.utils import timezone
 
 from apps.people import estados_recrutamento as estados_rs
 from apps.people.models import Candidato, EtapaPipeline, HistoricoCandidato
@@ -57,8 +58,12 @@ def mover_para_etapa(candidato, etapa, *, usuario=None, origem='painel'):
         travado.saida = ''
         travado.motivo_saida = ''
         travado.etapa = etapa
+        # Reinicia a contagem de tempo na etapa. So aqui: `atualizado_em` nao
+        # serve porque corrigir um telefone do candidato zeraria o relogio sem
+        # ele ter andado no processo.
+        travado.etapa_desde = timezone.now()
         travado.save(update_fields=['saida', 'motivo_saida', 'etapa',
-                                    'atualizado_em'])
+                                    'etapa_desde', 'atualizado_em'])
 
         HistoricoCandidato.all_tenants.create(
             tenant=travado.tenant, candidato=travado,

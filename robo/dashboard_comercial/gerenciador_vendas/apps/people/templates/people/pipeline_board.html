@@ -161,6 +161,7 @@
                 <th>Vaga</th>
                 <th>Unidade</th>
                 <th>Canal</th>
+                <th>Na etapa</th>
                 <th>Chegou em</th>
                 <th></th>
               </tr>
@@ -180,6 +181,15 @@
                   <td>{% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}<span class="field-helper">Banco de talentos</span>{% endif %}</td>
                   <td>{{ candidato.unidade.nome }}</td>
                   <td>{{ candidato.canal_origem|default:"—" }}</td>
+                  <td>
+                    {% if candidato.esta_atrasado %}
+                      {% include "components/badge.html" with variant="danger" label=candidato.rotulo_atraso size="sm" %}
+                    {% elif candidato.dias_na_etapa is not None %}
+                      <span class="field-helper">{{ candidato.dias_na_etapa }}d</span>
+                    {% else %}
+                      <span class="field-helper">—</span>
+                    {% endif %}
+                  </td>
                   <td>{{ candidato.criado_em|date:"d/m/Y" }}</td>
                   <td style="text-align: right; white-space: nowrap;">
                     {% if candidato.curriculo %}

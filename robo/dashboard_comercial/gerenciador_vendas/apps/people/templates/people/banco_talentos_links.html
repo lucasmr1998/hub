@@ -1,0 +1,155 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Recrutamento</p>
+        <h1 class="page-title">Captação contínua</h1>
+        <p class="page-subtitle">
+          Link e QR que funcionam o ano inteiro, sem depender de ter vaga aberta.
+          Quem se candidata por aqui entra direto no banco de talentos.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-info-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <div class="section-card" style="margin-bottom: var(--sp-4);">
+    <div class="section-card-body">
+      {% if links %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Canal</th>
+                <th>Unidade</th>
+                <th>Link</th>
+                <th>Candidaturas</th>
+                <th>Situação</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in links %}
+                <tr>
+                  <td>
+                    {% comment %}
+                      QR na propria linha, e nao so no botao de baixar: o RH
+                      confere o codigo antes de mandar imprimir o cartaz.
+                    {% endcomment %}
+                    <div style="display: flex; gap: var(--sp-2); align-items: center;">
+                      {% if item.link.ativo %}
+                        <img src="{% url 'people:banco_talentos_link_qr' item.link.pk %}"
+                             alt="QR do link de {{ item.link.get_canal_display }}"
+                             width="44" height="44"
+                             style="border: 1px solid var(--color-border); border-radius: 4px; background: #fff;">
+                      {% endif %}
+                      <span>
+                        {{ item.link.get_canal_display }}
+                        {% if item.link.apelido_interno %}
+                          <span class="field-helper" style="display: block;">{{ item.link.apelido_interno }}</span>
+                        {% endif %}
+                      </span>
+                    </div>
+                  </td>
+                  <td>{{ item.link.unidade.nome }}</td>
+                  <td>
+                    {% if item.link.ativo %}
+                      <input class="field-input" id="url-{{ item.link.pk }}" value="{{ item.url }}"
+                             readonly onclick="this.select()"
+                             style="max-width: 280px; font-size: var(--fs-xs);">
+                    {% else %}
+                      <span class="field-helper">Link desativado</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ item.link.candidaturas }}</td>
+                  <td>
+                    {% if item.link.ativo %}
+                      {% include "components/badge.html" with variant="success" label="Ativo" size="sm" dot=True %}
+                    {% else %}
+                      {% include "components/badge.html" with variant="neutral" label="Desativado" size="sm" %}
+                    {% endif %}
+                  </td>
+                  <td style="text-align: right; white-space: nowrap;">
+                    {% if item.link.ativo %}
+                      <button type="button" class="btn btn-ghost btn-sm"
+                              data-copiar="url-{{ item.link.pk }}" title="Copiar link">
+                        <i class="bi bi-clipboard"></i>
+                      </button>
+                      <a href="{{ item.url }}" target="_blank" rel="noopener"
+                         class="btn btn-ghost btn-sm" title="Abrir a página como o candidato vê">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                      </a>
+                      <a href="{% url 'people:banco_talentos_link_qr' item.link.pk %}"
+                         class="btn btn-ghost btn-sm" title="Baixar QR Code em SVG"
+                         download="qr-captacao-{{ item.link.canal }}.svg">
+                        <i class="bi bi-qr-code"></i>
+                      </a>
+                    {% endif %}
+                    {% if pode_gerir %}
+                      <form method="post" action="{% url 'people:banco_talentos_link_alternar' item.link.pk %}"
+                            style="display: inline;"
+                            {% if item.link.ativo %}onsubmit="return confirm('O link para de funcionar agora, e QR já impresso deixa de levar a lugar nenhum. As candidaturas que já chegaram por ele são preservadas.');"{% endif %}>
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-ghost btn-sm"
+                                title="{% if item.link.ativo %}Desativar{% else %}Reativar{% endif %}">
+                          <i class="bi {% if item.link.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+                        </button>
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {% include "components/empty_state.html" with icon="bi-qr-code" text="Nenhum link de captação contínua" subtext="Um QR fixo no balcão capta candidato o ano inteiro, mesmo sem vaga aberta. Quem chega por ele entra no banco de talentos." %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if pode_gerir %}
+    <div class="section-card" style="max-width: 620px;">
+      <div class="section-card-header">
+        <h2 class="section-card-title">Novo link de captação</h2>
+      </div>
+      <div class="section-card-body">
+        <form method="post" action="{% url 'people:banco_talentos_link_criar' %}" class="form-stack">
+          {% csrf_token %}
+          <div class="form-grid-2">
+            {% include "components/select.html" with name="canal" label="Canal" options=canais blank_label="Selecione" required=True helper="É o que permite saber depois qual canal trouxe candidato." %}
+            {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes blank_label="Selecione" required=True helper="Qual loja recebe estes candidatos." %}
+          </div>
+          {% include "components/input.html" with name="apelido_interno" label="Apelido interno" placeholder="Ex: QR do balcão, loja Centro" helper="Como você distingue este link dos outros. O candidato não vê." %}
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-plus-lg"></i> Criar link
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  <script>
+    document.querySelectorAll('[data-copiar]').forEach(function (botao) {
+      botao.addEventListener('click', function () {
+        var campo = document.getElementById(botao.dataset.copiar);
+        navigator.clipboard.writeText(campo.value).then(function () {
+          toast('Copiado', 'Link na área de transferência.', 'success');
+        });
+      });
+    });
+  </script>
+{% endblock %}

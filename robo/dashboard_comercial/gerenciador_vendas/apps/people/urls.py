@@ -65,6 +65,15 @@ urlpatterns = [
     path('campos/<int:pk>/mover/', campos.mover, name='campo_mover'),
     path('campos/<int:pk>/remover/', campos.remover, name='campo_remover'),
 
+    # Recrutamento: captacao continua (link sem vaga, alimenta o banco)
+    path('captacao/', vagas.banco_talentos_links, name='banco_talentos_links'),
+    path('captacao/novo/', vagas.banco_talentos_link_criar,
+         name='banco_talentos_link_criar'),
+    path('captacao/<int:link_pk>/qr.svg', vagas.banco_talentos_link_qr,
+         name='banco_talentos_link_qr'),
+    path('captacao/<int:link_pk>/alternar/', vagas.banco_talentos_link_alternar,
+         name='banco_talentos_link_alternar'),
+
     # Recrutamento: quadro por unidade
     path('quadro/', quadro.lista, name='quadro_lista'),
     path('quadro/salvar/', quadro.salvar, name='quadro_salvar'),
