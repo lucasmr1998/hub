@@ -477,3 +477,26 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 
 - **Output**: 595 testes no modulo, 17 novos. Migration 0020.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-21 — Ponte pro DP e triagem por IA (tarefa 218, itens 13 e 8)
+
+### Ponte pro Departamento Pessoal
+
+- **Acao**: fechada a ultima lacuna estrutural do corte B. A FK `Candidato.colaborador` existia desde o inicio esperando quem a preenchesse.
+- **Decisao**: COPIA, e nao vinculo. As condicoes da vaga sao copiadas no ato da admissao e nao ha ligacao viva depois. E requisito trabalhista, nao preferencia: o que valeu na contratacao tem que continuar valendo mesmo que a vaga seja reaproveitada e editada. O teste que protege isso e o mais importante do arquivo.
+- **Decisao**: entra em `em_admissao` e nasce `pendente_revisao=True`. Falta CPF, e a fase de admissao do DP existe justamente pra coletar. Entrar em experiencia pularia a coleta.
+- **Decisao**: `tipo_contratacao` da vaga (texto livre) so e copiado pro `regime_contratacao` do colaborador (choices) quando CASA com uma das opcoes. Copiar sem conferir gravaria valor que outras telas filtram e nunca encontrariam.
+- **Decisao**: conflito de dedup devolve `acao='conflito'` em vez de criar segunda linha. Ex funcionario voltando ja existe no DP, e quem decide se e a mesma pessoa e o RH.
+
+### Triagem por IA
+
+- **Decisao que corrige a minha propria proposta anterior**: SOB DEMANDA, por botao, e nao por cron. Eu tinha proposto fila e cron por causa do custo e do tempo de request; os prints mostraram que a origem faz por botao, e isso resolve os dois de uma vez. Sincrono e certo aqui: e um botao que o usuario apertou e esta esperando.
+- **Decisao**: NUNCA move o candidato. Ha teste garantindo que nem com veredito "inapto" ele sai do lugar. Automatizar a recusa seria decidir contratacao por LLM, sem ninguem pra responder por ela.
+- **Decisao**: RECUSA analisar sem requisito de triagem cadastrado. Sem criterio declarado a IA inventa o proprio, e a consistencia que ela promete vira arbitrariedade com cara de objetividade.
+- **Decisao de privacidade**: nome, WhatsApp, email e endereco de rua NAO vao pro prompt. Nao ajudam a avaliar aptidao e so aumentam a exposicao de dado pessoal a um terceiro. Cidade e bairro entram porque deslocamento e criterio real em vaga operacional.
+- **Decisao**: veredito inventado pelo modelo cai em "insuficiente", que e o lado seguro: nao afirma nada sobre a pessoa e pede olho humano. Aceitar a categoria gravaria lixo num campo que outras telas filtram.
+- **Instrumentado de proposito**: modelo e tokens gravados por analise. "Quanto custa" era discussao aberta, inclusive na origem, que registra o tema como pergunta de precificacao em aberto. Com o consumo gravado, a pergunta se responde com dado real em uma semana.
+- **DEPENDENCIA NOVA**: `pypdf==6.14.2` no requirements. Python puro, sem dependencia de sistema, mesmo criterio que escolheu o `segno`. **Atencao no proximo deploy**: o build do EasyPanel vai instalar. Imagem nao e lida (precisaria de OCR); quem manda foto e analisado pelo formulario, com `usou_curriculo=False` registrado.
+
+- **Output**: migrations 0020 e 0021. Testes novos: 16 da ponte, 16 da triagem.
+- **Status**: completed em dev, nao pushado.

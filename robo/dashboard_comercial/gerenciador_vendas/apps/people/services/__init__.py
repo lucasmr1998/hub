@@ -8,6 +8,7 @@ especial: nenhuma outra Tool escreve em `Colaborador` direto, porque o dedup
 Os nomes exportados sao poucos de proposito. Se voce precisou importar algo de
 um submodulo daqui, provavelmente esta faltando um servico.
 """
+from apps.people.services.admissao import admitir_candidato
 from apps.people.services.colaboradores import (
     Candidato,
     ResultadoCadastro,
@@ -33,6 +34,7 @@ __all__ = [
     'ResultadoCadastro',
     'buscar_colaborador',
     'config_efetiva',
+    'admitir_candidato',
     'criar_link',
     'desativar_link',
     'link_ativo',

@@ -355,6 +355,64 @@ abriria uma tela de erro do WhatsApp em vez de simplesmente nao aparecer.
 
 ---
 
+## A ponte pro Departamento Pessoal
+
+E o unico ponto do modulo onde um Candidato vira Colaborador, e era a ultima
+lacuna estrutural do corte B: a FK `Candidato.colaborador` existia desde o
+inicio esperando quem a preenchesse.
+
+**COPIA, E NAO VINCULO.** As condicoes da vaga sao copiadas pro colaborador no
+ato da admissao. Depois disso nao ha ligacao viva: mudar a vaga no mes que vem
+nao altera o que ficou registrado pra quem ja entrou. E requisito trabalhista,
+nao preferencia. A origem descreve a mesma semantica na propria tela.
+
+**Os dois registros coexistem.** O candidato nao "vira" colaborador nem some.
+Apagar destruiria a analise de canal, que responde de onde vieram os que ficaram.
+
+**Entra em `em_admissao`, e nao em experiencia**, e nasce com
+`pendente_revisao=True`: falta CPF, e e justamente isso que a fase de admissao do
+DP existe pra coletar. O formulario publico nao pede CPF de proposito (atrito de
+conversao), entao o caminho e o link de cadastro do DP.
+
+**Conflito de dedup nao cria segunda linha.** Ex funcionario voltando ja existe
+no DP; a R1 do modulo proibe a duplicata, e quem decide se e a mesma pessoa e o
+RH. O servico devolve o conflito em vez de escolher sozinho.
+
+---
+
+## Triagem por IA
+
+**Sob demanda**, por um botao na ficha. Nao roda na chegada da candidatura, por
+dois motivos: o `disparar_evento` executa a engine em tempo de request, e uma
+chamada de LLM ali faria o candidato esperar dez segundos no celular; e assim o
+custo fica sob controle do RH, que analisa quem interessa em vez dos 76 que
+chegaram.
+
+**Nunca move o candidato.** Devolve veredito sugerido, resumo, sinais de atencao
+e a avaliacao requisito a requisito. A decisao continua humana, e ha teste
+garantindo que nem com veredito "inapto" o candidato sai do lugar. A origem
+repete a mesma regra: "sempre precisa de revisao humana".
+
+**Recusa analisar sem requisito de triagem cadastrado.** Sem criterio declarado
+a IA inventaria o proprio, e a consistencia que ela promete viraria
+arbitrariedade com cara de objetividade.
+
+**O que NAO vai pro prompt**: nome, WhatsApp, email e endereco de rua. Nao
+ajudam a avaliar aptidao e so aumentam a exposicao de dado pessoal a um
+terceiro. Cidade e bairro entram porque deslocamento e criterio real em vaga
+operacional.
+
+Guarda modelo e tokens por analise. "Quanto custa" era discussao aberta
+inclusive na origem; com o consumo gravado, a pergunta se responde com dado real
+em uma semana em vez de continuar debate.
+
+Le PDF via `pypdf` (Python puro, sem dependencia de sistema). **Imagem nao e
+lida**: precisaria de OCR. Quem manda foto continua sendo analisado pelo que
+preencheu no formulario, e a analise registra `usou_curriculo=False` pra o RH
+saber que a sugestao saiu mais pobre.
+
+---
+
 ## Regra de parada
 
 `Vaga.limite_aprovados` (default 50). Ao atingir, a triagem PARA e a captacao

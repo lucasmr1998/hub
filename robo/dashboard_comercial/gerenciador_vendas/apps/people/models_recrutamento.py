@@ -1053,6 +1053,104 @@ class Candidato(TenantMixin):
         self.save()
 
 
+class AnaliseCandidato(TenantMixin):
+    """
+    O que a IA achou do candidato, contra os requisitos de triagem da vaga.
+
+    SOB DEMANDA, e nao automatica. Um botao "Analisar" na ficha, igual a origem
+    faz. Nao roda na chegada da candidatura por dois motivos: o `disparar_evento`
+    executa a engine em tempo de request, e uma chamada de LLM ali faria o
+    candidato esperar dez segundos no celular na porta da loja; e porque assim o
+    custo fica sob controle do RH, que analisa quem interessa, e nao os 76
+    automaticamente.
+
+    NUNCA MOVE O CANDIDATO. E sugestao, e a decisao continua sendo humana. A
+    origem e explicita: "sempre precisa de revisao humana", e a acao so termina
+    quando alguem move o card. Automatizar a recusa seria decidir contratacao
+    por LLM, com risco trabalhista e sem ninguem pra responder por ela.
+
+    GUARDA CUSTO E TOKENS de proposito. "Quanto isso custa" era discussao aberta,
+    inclusive na origem, que registra o tema como pergunta de precificacao em
+    aberto. Com o consumo gravado por analise, a pergunta se responde com dado
+    real em uma semana em vez de continuar debate.
+
+    HISTORICO, e nao registro unico: a vaga pode mudar de requisito e a mesma
+    pessoa ser reanalisada. Guardar so a ultima apagaria a base da decisao que
+    ja foi tomada.
+    """
+
+    VEREDITO_APTO = 'apto'
+    VEREDITO_ATENCAO = 'atencao'
+    VEREDITO_INAPTO = 'inapto'
+    VEREDITO_INSUFICIENTE = 'insuficiente'
+
+    VEREDITO_CHOICES = [
+        (VEREDITO_APTO,         'Apto'),
+        (VEREDITO_ATENCAO,      'Apto com ressalvas'),
+        (VEREDITO_INAPTO,       'Fora dos requisitos'),
+        # Nao e um julgamento do candidato, e do DADO: curriculo ilegivel ou
+        # formulario vazio nao dizem nada sobre a pessoa. Misturar com "inapto"
+        # faria o RH descartar quem so preencheu pouco.
+        (VEREDITO_INSUFICIENTE, 'Informação insuficiente'),
+    ]
+
+    candidato = models.ForeignKey(
+        'people.Candidato', on_delete=models.CASCADE, related_name='analises',
+        verbose_name="Candidato",
+    )
+    veredito = models.CharField(
+        max_length=20, choices=VEREDITO_CHOICES, verbose_name="Veredito sugerido",
+    )
+    resumo = models.TextField(
+        blank=True, default='', verbose_name="Resumo",
+        help_text="Duas ou tres linhas sobre o perfil.",
+    )
+    sinais_de_atencao = models.JSONField(
+        default=list, blank=True, verbose_name="Sinais de atenção",
+        help_text="Lista de pontos que o RH deve conferir na entrevista.",
+    )
+    requisitos_avaliados = models.JSONField(
+        default=list, blank=True, verbose_name="Requisitos avaliados",
+        help_text="Por requisito: texto, se atende e por que. É a "
+                  "rastreabilidade da sugestão.",
+    )
+
+    modelo = models.CharField(max_length=60, blank=True, default='',
+                              verbose_name="Modelo usado")
+    tokens_entrada = models.PositiveIntegerField(default=0)
+    tokens_saida = models.PositiveIntegerField(default=0)
+    usou_curriculo = models.BooleanField(
+        default=False, verbose_name="Leu o currículo",
+        help_text="Falso quando o arquivo não pôde ser lido (imagem, PDF "
+                  "protegido). A análise sai só com o formulário.",
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='analises_candidato',
+        verbose_name="Pedida por",
+    )
+
+    class Meta:
+        app_label = 'people'
+        db_table = 'people_analise_candidato'
+        verbose_name = 'Análise de candidato'
+        verbose_name_plural = 'Análises de candidato'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'candidato', '-criado_em'],
+                         name='people_analise_cand_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.get_veredito_display()} para {self.candidato}'
+
+    @property
+    def total_tokens(self):
+        return self.tokens_entrada + self.tokens_saida
+
+
 class QuadroUnidade(TenantMixin):
     """
     Quantas posicoes de um cargo a unidade quer ter.

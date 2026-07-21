@@ -11,12 +11,19 @@ respondido, que e diferente de nao ter sido perguntado.
 """
 import mimetypes
 
+from django.contrib import messages
 from django.http import FileResponse, Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from apps.people import estados_recrutamento as estados_rs
-from apps.people.models import CampoCandidatura, Candidato
+from apps.people.models import CampoCandidatura, Candidato, Cargo
 from apps.people.permissoes import pode_acessar, requer_people
+from apps.sistema.utils import registrar_acao
+from apps.people.services.admissao import AdmissaoInvalida, admitir_candidato
+from apps.people.services.triagem_ia import (
+    TriagemIndisponivel, analisar_candidato,
+)
 
 
 def _respostas_custom(candidato):
@@ -66,6 +73,17 @@ def detalhe(request, pk):
         # quando ninguem configurou mensagem pra esta fase, e ai o bloco some.
         'mensagem_sugerida': candidato.mensagem_sugerida(),
         'tem_whatsapp': bool(candidato.link_whatsapp()),
+        # Pares, e nao dicts: components/select.html desempacota.
+        'cargos_opcoes': list(
+            Cargo.objects.filter(ativo=True).values_list('pk', 'nome')),
+        # Ultima analise, e nao todas: a ficha mostra a atual. O historico
+        # fica no banco pra quando alguem precisar auditar a decisao.
+        'analise': candidato.analises.first(),
+        'pode_analisar': pode_acessar(request, 'people.gerir_vagas'),
+        'pode_admitir': (
+            not candidato.colaborador_id
+            and not candidato.anonimizado_em
+            and pode_acessar(request, 'people.gerir_vagas')),
         'historico': historico,
         'tabs': tabs,
         'saidas': [{'valor': v, 'rotulo': r} for v, r in estados_rs.SAIDAS],
@@ -106,3 +124,73 @@ def curriculo(request, pk):
     disposicao = 'attachment' if request.GET.get('download') else 'inline'
     resposta['Content-Disposition'] = f'{disposicao}; filename="{nome}"'
     return resposta
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def admitir(request, pk):
+    """
+    Envia o candidato pro Departamento Pessoal.
+
+    E o unico ponto do modulo onde um Candidato vira Colaborador. As condicoes
+    sao COPIADAS da vaga, e nao referenciadas: mudar a vaga depois nao altera o
+    que ficou registrado pra quem ja entrou.
+
+    Conflito de dedup NAO e erro: a pessoa pode ja existir no DP (ex-funcionario
+    voltando), e o certo e o RH decidir se e a mesma, nao o sistema criar uma
+    segunda linha por conta propria.
+    """
+    candidato = get_object_or_404(Candidato.objects, pk=pk)
+
+    cargo_id = (request.POST.get('cargo') or '').strip()
+    data_inicio = (request.POST.get('data_inicio') or '').strip() or None
+    cargo = Cargo.objects.filter(pk=cargo_id).first() if cargo_id.isdigit() else None
+
+    try:
+        resultado = admitir_candidato(
+            candidato, cargo=cargo, data_inicio=data_inicio,
+            usuario=request.user, request=request)
+    except AdmissaoInvalida as erro:
+        messages.error(request, str(erro))
+        return redirect('people:candidato_detalhe', pk=pk)
+
+    if not resultado.ok:
+        messages.error(
+            request,
+            f'Já existe alguém no Departamento Pessoal que pode ser esta '
+            f'pessoa ({resultado.motivo_conflito or "dados parecidos"}). '
+            f'Confira no cadastro antes de admitir, pra não criar duplicata.')
+        return redirect('people:candidato_detalhe', pk=pk)
+
+    messages.success(
+        request,
+        f'{candidato.nome_completo} enviado para o Departamento Pessoal. '
+        f'Falta o CPF e os documentos, que o formulário de cadastro coleta.')
+    return redirect('people:colaborador_detalhe', pk=resultado.colaborador.pk)
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def analisar(request, pk):
+    """
+    Pede a analise da IA. SOB DEMANDA, e NUNCA move o candidato.
+
+    Sincrono de proposito: e um botao que o usuario apertou e esta esperando, e
+    nao um evento de fundo. Fila aqui so acrescentaria complexidade sem
+    beneficio, ja que ninguem mais depende do resultado.
+    """
+    candidato = get_object_or_404(Candidato.objects, pk=pk)
+
+    try:
+        analise = analisar_candidato(candidato, usuario=request.user)
+    except TriagemIndisponivel as erro:
+        messages.error(request, str(erro))
+        return redirect('people:candidato_detalhe', pk=pk)
+
+    registrar_acao('people', 'analisar', 'candidato', candidato.pk,
+                   f'Triagem por IA de "{candidato.nome_completo}": '
+                   f'{analise.get_veredito_display()}.', request=request)
+    messages.success(request,
+                     f'Análise pronta: {analise.get_veredito_display()}. '
+                     f'É sugestão, a decisão continua sua.')
+    return redirect('people:candidato_detalhe', pk=pk)
