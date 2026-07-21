@@ -294,3 +294,141 @@ def test_anotacao_de_outro_tenant_nao_vaza(cenario):
         {'texto': 'x'})
 
     assert resposta.status_code == 404
+
+
+# ── Blocos por etapa: e o que faz cada aba ter conteudo proprio ──────────────
+#
+# A estrutura espelha a da origem (Entrevista RH com roteiro, Teste Pratico com
+# agendamento, Avaliacao Gestor com decisao), SEM chumbar o pipeline dela: as
+# sete etapas padrao ja nascem com os blocos certos, e o cliente reconfigura.
+
+@pytest.mark.django_db
+def test_cada_etapa_padrao_nasce_com_os_blocos_da_origem(cenario):
+    from apps.people import estados_recrutamento as estados_rs
+
+    por_nome = {e.nome: e for e in EtapaPipeline.do_escopo(cenario['tenant'])}
+
+    assert estados_rs.BLOCO_ROTEIRO in por_nome['Seleção'].blocos
+    assert estados_rs.BLOCO_AGENDAMENTO in por_nome['Teste prático'].blocos
+    assert estados_rs.BLOCO_DECISAO in por_nome['Avaliação Gestor'].blocos
+    assert estados_rs.BLOCO_ADMISSAO in por_nome['Admissão'].blocos
+
+
+@pytest.mark.django_db
+def test_abas_tem_conteudo_diferente(cenario):
+    """
+    O defeito que o Lucas viu: sete abas com a mesma coisa dentro. Cada uma
+    precisa mostrar o bloco da SUA etapa.
+    """
+    corpo = _ficha(cenario)
+
+    assert 'Roteiro da conversa' in corpo      # so na Seleção
+    assert 'Agendamento' in corpo              # so no Teste prático
+    assert 'Decisão' in corpo                  # so na Avaliação Gestor
+
+
+@pytest.mark.django_db
+def test_bloco_desconhecido_e_ignorado_em_vez_de_quebrar(cenario):
+    """
+    Bloco removido do codigo continuaria gravado nas etapas dos tenants. A tela
+    tem que ignorar, e nao procurar um template que nao existe mais.
+    """
+    cenario['etapa'].blocos = ['anotacao', 'bloco_que_nao_existe_mais']
+    cenario['etapa'].save()
+
+    assert cenario['etapa'].blocos_validos == ['anotacao']
+    assert 'Diego Melo' in _ficha(cenario)     # a pagina abre
+
+
+@pytest.mark.django_db
+def test_marca_item_do_roteiro(cenario):
+    selecao = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
+                                            nome='Seleção')
+    pergunta = selecao.roteiro[0]
+
+    _cliente(cenario).post(
+        reverse('people:candidato_anotar_etapa',
+                args=[cenario['candidato'].pk, selecao.pk]),
+        {'itens': [pergunta], 'texto': ''})
+
+    anotacao = AnotacaoEtapa.all_tenants.get(candidato=cenario['candidato'])
+    assert anotacao.itens_marcados == [pergunta]
+
+
+@pytest.mark.django_db
+def test_item_forjado_nao_entra(cenario):
+    """
+    POST nao inventa pergunta. Tambem protege de roteiro editado depois: item
+    que nao existe mais na etapa nao fica marcado como se existisse.
+    """
+    selecao = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
+                                            nome='Seleção')
+
+    _cliente(cenario).post(
+        reverse('people:candidato_anotar_etapa',
+                args=[cenario['candidato'].pk, selecao.pk]),
+        {'itens': ['Pergunta que ninguém cadastrou']})
+
+    assert not AnotacaoEtapa.all_tenants.exists()
+
+
+@pytest.mark.django_db
+def test_decisao_registra_sem_mover_o_candidato(cenario):
+    """
+    Registrar decisao NAO move: decisao errada e facil de corrigir, movimento
+    automatico ja teria disparado mensagem e historico.
+    """
+    gestor = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
+                                           nome='Avaliação Gestor')
+    etapa_antes = cenario['candidato'].etapa_id
+
+    _cliente(cenario).post(
+        reverse('people:candidato_anotar_etapa',
+                args=[cenario['candidato'].pk, gestor.pk]),
+        {'decisao': 'reprovado'})
+
+    cenario['candidato'].refresh_from_db()
+    assert AnotacaoEtapa.all_tenants.get(
+        candidato=cenario['candidato']).decisao == 'reprovado'
+    assert cenario['candidato'].etapa_id == etapa_antes
+    assert cenario['candidato'].saida == ''
+
+
+@pytest.mark.django_db
+def test_decisao_invalida_e_descartada(cenario):
+    gestor = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
+                                           nome='Avaliação Gestor')
+
+    _cliente(cenario).post(
+        reverse('people:candidato_anotar_etapa',
+                args=[cenario['candidato'].pk, gestor.pk]),
+        {'decisao': 'talvez', 'texto': 'algo'})
+
+    assert AnotacaoEtapa.all_tenants.get(
+        candidato=cenario['candidato']).decisao == ''
+
+
+@pytest.mark.django_db
+def test_etapa_nova_sem_bloco_nasce_com_o_minimo(cenario):
+    """Etapa sem bloco teria aba vazia, que e pior que aba generica."""
+    from apps.people import estados_recrutamento as estados_rs
+
+    _cliente(cenario).post(reverse('people:fluxo_etapa_salvar'),
+                           {'nome': 'Teste em campo'})
+
+    nova = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
+                                         nome='Teste em campo')
+    assert nova.blocos == [estados_rs.BLOCO_ANOTACAO, estados_rs.BLOCO_MENSAGEM]
+
+
+@pytest.mark.django_db
+def test_cliente_escolhe_os_blocos_da_etapa(cenario):
+    _cliente(cenario).post(reverse('people:fluxo_etapa_salvar'), {
+        'nome': 'Visita técnica',
+        'blocos': ['agendamento', 'anotacao'],
+        'roteiro': 'Pergunta A\nPergunta B'})
+
+    nova = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
+                                         nome='Visita técnica')
+    assert nova.blocos == ['agendamento', 'anotacao']
+    assert nova.roteiro == ['Pergunta A', 'Pergunta B']

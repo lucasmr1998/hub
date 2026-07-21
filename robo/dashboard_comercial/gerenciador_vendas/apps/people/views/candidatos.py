@@ -74,12 +74,30 @@ def _abas_do_processo(candidato, historico):
     etapas = []
     for etapa in lista:
         anotacao = anotacoes.get(etapa.pk)
+        marcados = set(anotacao.itens_marcados or []) if anotacao else set()
+
+        def _itens(lista):
+            # Resolve "marcado" aqui, e nao no template: filtro custom so pra
+            # testar pertinencia numa lista seria peca a mais pra manter.
+            return [{'texto': texto, 'marcado': texto in marcados}
+                    for texto in (lista or [])]
+
         etapas.append({
             'etapa': etapa,
             'anotacao': anotacao,
             'atual': candidato.etapa_id == etapa.pk and not candidato.saida,
             'passou': etapa.ordem < ordem_atual,
-            'tem_anotacao': bool(anotacao and anotacao.texto.strip()),
+            'blocos': etapa.blocos_validos,
+            'roteiro_itens': _itens(etapa.roteiro),
+            'checklist_itens': _itens(etapa.checklist),
+            # O input datetime-local exige este formato exato.
+            'agendado_em_input': (anotacao.agendado_em.strftime('%Y-%m-%dT%H:%M')
+                                  if anotacao and anotacao.agendado_em else ''),
+            # A bolinha da aba: qualquer trabalho registrado nesta etapa conta,
+            # e nao so texto. Marcar o roteiro inteiro tambem e trabalho.
+            'tem_anotacao': bool(anotacao and (
+                anotacao.texto.strip() or anotacao.itens_marcados
+                or anotacao.decisao or anotacao.agendado_em)),
         })
 
     tabs = [{'id': 'tab-perfil', 'label': 'Perfil', 'icon': 'bi-person',
@@ -269,14 +287,30 @@ def anotar_etapa(request, pk, etapa_pk):
     etapa = get_object_or_404(EtapaPipeline.objects, pk=etapa_pk)
     texto = (request.POST.get('texto') or '').strip()
 
-    if texto:
+    # So aceita item que a etapa realmente oferece: POST forjado nao inventa
+    # pergunta, e roteiro editado depois nao deixa item orfao marcado.
+    oferecidos = set(etapa.roteiro or []) | set(etapa.checklist or [])
+    marcados = [i for i in request.POST.getlist('itens') if i in oferecidos]
+
+    decisao = (request.POST.get('decisao') or '').strip()
+    if decisao not in ('aprovado', 'reprovado'):
+        decisao = ''
+
+    agendado = (request.POST.get('agendado_em') or '').strip() or None
+    local = (request.POST.get('agendado_local') or '').strip()[:200]
+
+    tem_conteudo = any([texto, marcados, decisao, agendado, local])
+
+    if tem_conteudo:
         AnotacaoEtapa.all_tenants.update_or_create(
             candidato=candidato, etapa=etapa,
             defaults={'tenant': candidato.tenant, 'texto': texto,
+                      'itens_marcados': marcados, 'decisao': decisao,
+                      'agendado_em': agendado, 'agendado_local': local,
                       'atualizado_por': request.user})
     else:
-        # Texto vazio apaga: anotacao em branco e indistinguivel de nao ter
-        # anotacao, e deixar as duas conviverem faria a bolinha da aba mentir.
+        # Tudo em branco apaga: registro vazio e indistinguivel de nao ter
+        # registro, e deixar os dois conviverem faria a bolinha da aba mentir.
         AnotacaoEtapa.objects.filter(candidato=candidato, etapa=etapa).delete()
 
     messages.success(request, f'Anotação de "{etapa.nome}" salva.')

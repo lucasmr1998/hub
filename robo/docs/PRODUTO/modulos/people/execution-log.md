@@ -521,3 +521,25 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 
 - **Output**: migration 0022. 16 testes novos.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-21 — Blocos por etapa: as abas passam a ter conteudo proprio
+
+- **Defeito que o Lucas viu**: as sete abas da ficha mostravam a mesma coisa. Nao era bug (cada painel tinha id e nome corretos), era o que eu tinha colocado dentro: titulo, selo e um campo de anotacao vazio. Eu construi o container sem o conteudo.
+- **Causa de fundo, e o meu erro**: na origem cada aba tem conteudo proprio porque o pipeline dela e FIXO e conhecido. As nossas etapas sao configuraveis, entao eu so tinha conteudo generico pra por. Isso eu deveria ter dito ANTES de codar, e nao depois de ele ver a tela. Mesmo erro do dia: portar a forma da Visio sem checar se o nosso desenho comporta.
+
+- **Solucao**: `EtapaPipeline.blocos`, e cada bloco FAZ alguma coisa (codigo), enquanto QUAL etapa usa QUAIS blocos e dado. Mesmo criterio que separa etapa de saida no modulo.
+- **As sete etapas padrao ja nascem com os blocos da origem**: Selecao com analise, roteiro, requisitos e notas (a "Entrevista RH" deles); Teste pratico com agendamento; Avaliacao Gestor com decisao; Admissao com a ponte pro DP. E o que permite copiar a ESTRUTURA sem herdar o PIPELINE.
+- **Back-fill na migration 0023**: sem ele, toda etapa existente ficaria com `blocos=[]` e a aba nasceria vazia, inclusive em prod. Casa pelo nome; etapa criada pelo cliente recebe o minimo util.
+- **Decisao**: `decisao` REGISTRA e nao move. Decisao errada e facil de corrigir; movimento automatico ja teria disparado mensagem e historico.
+- **Decisao**: bloco desconhecido e filtrado (`blocos_validos`) em vez de quebrar a tela. Bloco removido do codigo continuaria gravado nas etapas dos tenants.
+- Os blocos que ja existiam (analise IA, admissao, mensagem) sairam do fim da pagina, onde apareciam iguais em toda aba, e foram pra dentro da aba certa.
+
+**Tres armadilhas de template que apareceram:**
+
+1. Formulario aninhado: o bloco de IA tinha `<form>` proprio e passou a viver dentro do formulario da etapa. Trocado por `formaction` no botao.
+2. Id duplicado: o bloco de mensagem repete uma vez por aba, e `id="abrir-whatsapp"` faria todos os botoes controlarem o textarea da primeira. Id por etapa.
+3. `|join:"
+"` dentro de atributo HTML gera quebra de linha literal, e o markup e o JSON saem invalidos. Trocado por `json_script`, que e o jeito certo no Django.
+
+- **Output**: migration 0023. 652 testes no modulo, 25 no arquivo da ficha.
+- **Status**: completed em dev, nao pushado.

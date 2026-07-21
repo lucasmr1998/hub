@@ -1,0 +1,32 @@
+{% comment %}
+Decisao desta etapa: aprovar ou reprovar.
+
+REGISTRA, e nao move o candidato. Mover continua sendo acao explicita no board
+ou pelo botao de saida: uma decisao registrada por engano seria facil de
+corrigir, uma movimentacao automatica ja teria disparado mensagem e historico.
+{% endcomment %}
+<div class="section-card" style="margin-bottom: var(--sp-3);">
+  <div class="section-card-header">
+    <h3 class="section-card-title"><i class="bi bi-check2-square"></i> Decisão</h3>
+  </div>
+  <div class="section-card-body">
+    <div class="form-stack" style="gap: var(--sp-2);">
+      <label class="field-check">
+        <input type="radio" name="decisao" value="aprovado"
+               {% if item.anotacao.decisao == 'aprovado' %}checked{% endif %}
+               {% if nao_pode_anotar %}disabled{% endif %}>
+        <span class="field-check-text"><span class="field-check-label">Aprovado nesta etapa</span></span>
+      </label>
+      <label class="field-check">
+        <input type="radio" name="decisao" value="reprovado"
+               {% if item.anotacao.decisao == 'reprovado' %}checked{% endif %}
+               {% if nao_pode_anotar %}disabled{% endif %}>
+        <span class="field-check-text"><span class="field-check-label">Reprovado nesta etapa</span></span>
+      </label>
+    </div>
+    <p class="field-helper" style="margin-top: var(--sp-2);">
+      Isto <strong>registra</strong> a decisão. Mover o candidato continua sendo
+      ação sua, no board ou pelo botão de saída.
+    </p>
+  </div>
+</div>

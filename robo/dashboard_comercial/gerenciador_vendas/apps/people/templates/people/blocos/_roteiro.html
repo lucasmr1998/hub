@@ -1,0 +1,32 @@
+{% comment %}
+Roteiro da conversa: perguntas pra guiar a entrevista.
+
+Checkbox por pergunta, marcada conforme o entrevistador pergunta. Nao e
+formulario de resposta: a resposta vai nas anotacoes. E lembrete, e o valor
+dele e o entrevistador que nunca entrevistou nao esquecer o basico.
+
+As perguntas sao da ETAPA, e nao chumbadas: numa vaga de tecnico de campo elas
+sao outras. Editaveis em /people/fluxo/.
+{% endcomment %}
+<div class="section-card" style="margin-bottom: var(--sp-3);">
+  <div class="section-card-header">
+    <h3 class="section-card-title"><i class="bi bi-chat-left-text"></i> Roteiro da conversa</h3>
+  </div>
+  <div class="section-card-body">
+    {% if item.roteiro_itens %}
+      <p class="field-helper" style="margin-bottom: var(--sp-3);">
+        Marque conforme for perguntando. As respostas vão nas anotações.
+      </p>
+      <div class="form-stack" style="gap: var(--sp-2);">
+        {% for opcao in item.roteiro_itens %}
+          {% include "components/checkbox.html" with name="itens" value=opcao.texto label=opcao.texto checked=opcao.marcado disabled=nao_pode_anotar %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="field-helper" style="margin: 0;">
+        Nenhuma pergunta cadastrada. Configure em
+        <a href="{% url 'people:fluxo_config' %}">Fluxo do processo seletivo</a>.
+      </p>
+    {% endif %}
+  </div>
+</div>

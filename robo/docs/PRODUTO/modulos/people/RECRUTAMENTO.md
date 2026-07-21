@@ -440,6 +440,46 @@ caminho inteiro, e nao so o pedaco andado.
 uma das etapas padrao se chama Historico e duas abas com o mesmo rotulo
 significando coisas diferentes e confusao garantida.
 
+### Blocos: o que cada aba mostra
+
+Sem isto, as sete abas mostravam a mesma coisa (titulo mais um campo de
+anotacao vazio) e a ficha por etapa nao servia pra nada. Foi o defeito que o
+Lucas viu na primeira versao.
+
+Cada etapa escolhe seus BLOCOS, e cada bloco FAZ alguma coisa. E o mesmo
+criterio que separa etapa de saida neste modulo: comportamento fica em codigo,
+nomeacao e ordem ficam em tabela.
+
+| Bloco | O que faz |
+|---|---|
+| Analise por IA | Avalia contra os requisitos de triagem da vaga |
+| Roteiro da conversa | Perguntas pra guiar a entrevista, marcaveis |
+| Requisitos a validar | Itens objetivos que confirmam se a pessoa PODE ocupar a vaga |
+| Agendamento | Data e local, que alimentam a mensagem |
+| Decisao | Aprovar ou reprovar. REGISTRA, nao move |
+| Admissao | Cria o colaborador e encerra o processo |
+| Anotacoes | Texto livre da etapa |
+| Mensagem | Abre o WhatsApp com o texto da etapa |
+
+**As sete etapas padrao ja nascem com os blocos que a origem mostra em cada
+aba**: Selecao tem analise, roteiro, requisitos e notas (a "Entrevista RH"
+deles); Teste pratico tem agendamento; Avaliacao Gestor tem decisao; Admissao
+tem a ponte pro DP. E DEFAULT, e nao regra: o cliente muda em `/people/fluxo/`.
+
+E o que permite copiar a ESTRUTURA da origem sem herdar o PIPELINE dela.
+
+**Roteiro e checklist sao dado da etapa**, e nao chumbados: numa vaga de tecnico
+de campo as perguntas sao outras. O padrao vem preenchido pra a etapa nao nascer
+vazia.
+
+**Decisao registra e nao move.** Decisao errada e facil de corrigir; movimento
+automatico ja teria disparado mensagem e historico. Mover continua sendo acao
+explicita no board ou pelo botao de saida.
+
+**Bloco desconhecido e ignorado** em vez de quebrar: bloco removido do codigo
+continuaria gravado nas etapas dos tenants, e a tela procuraria um template que
+nao existe mais.
+
 ### Anotacao por etapa
 
 `AnotacaoEtapa` guarda o que o RH registrou NAQUELA fase. E o que faz a ficha por

@@ -1,0 +1,21 @@
+{% comment %}
+Agendamento: data e local desta etapa.
+
+A data alimenta o placeholder {{data}} da mensagem, que e como o candidato fica
+sabendo. Sem isto o RH digitava a data na mao em cada mensagem, e errava.
+{% endcomment %}
+<div class="section-card" style="margin-bottom: var(--sp-3);">
+  <div class="section-card-header">
+    <h3 class="section-card-title"><i class="bi bi-calendar-event"></i> Agendamento</h3>
+  </div>
+  <div class="section-card-body">
+    <div class="form-grid-2">
+      {% include "components/input.html" with name="agendado_em" label="Data e hora" type="datetime-local" value=item.agendado_em_input disabled=nao_pode_anotar %}
+      {% include "components/input.html" with name="agendado_local" label="Local" value=item.anotacao.agendado_local placeholder="Ex: Loja Centro, sede, campo" disabled=nao_pode_anotar %}
+    </div>
+    <p class="field-helper" style="margin-top: var(--sp-2);">
+      A data entra na mensagem de WhatsApp onde estiver escrito
+      {% verbatim %}<code>{{data}}</code>{% endverbatim %}.
+    </p>
+  </div>
+</div>

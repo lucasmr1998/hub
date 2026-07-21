@@ -1,0 +1,30 @@
+{% comment %}
+Requisitos a validar: itens objetivos que precisam ser confirmados.
+
+Diferente do roteiro: la sao perguntas abertas pra conhecer a pessoa, aqui sao
+verificacoes de sim ou nao que decidem se ela PODE ocupar a vaga (documentacao,
+locomocao, idade minima). Misturar os dois blocos faria o entrevistador tratar
+"me fale sobre voce" com o mesmo peso de "tem a documentacao".
+{% endcomment %}
+<div class="section-card" style="margin-bottom: var(--sp-3);">
+  <div class="section-card-header">
+    <h3 class="section-card-title"><i class="bi bi-list-check"></i> Requisitos a validar</h3>
+  </div>
+  <div class="section-card-body">
+    {% if item.checklist_itens %}
+      <p class="field-helper" style="margin-bottom: var(--sp-3);">
+        Serve para confirmar se a pessoa <strong>pode</strong> ocupar a vaga.
+      </p>
+      <div class="form-stack" style="gap: var(--sp-2);">
+        {% for opcao in item.checklist_itens %}
+          {% include "components/checkbox.html" with name="itens" value=opcao.texto label=opcao.texto checked=opcao.marcado disabled=nao_pode_anotar %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="field-helper" style="margin: 0;">
+        Nenhum requisito cadastrado. Configure em
+        <a href="{% url 'people:fluxo_config' %}">Fluxo do processo seletivo</a>.
+      </p>
+    {% endif %}
+  </div>
+</div>

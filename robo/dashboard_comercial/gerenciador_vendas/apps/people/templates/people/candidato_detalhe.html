@@ -238,35 +238,77 @@
         </p>
       {% endif %}
 
-      <div class="section-card">
-        <div class="section-card-body">
-          {% if pode_anotar %}
-            <form method="post"
-                  action="{% url 'people:candidato_anotar_etapa' candidato.pk item.etapa.pk %}"
-                  class="form-stack">
-              {% csrf_token %}
-              {% include "components/textarea.html" with name="texto" label="Anotações desta etapa" value=item.anotacao.texto rows=5 placeholder="Impressões, o que foi combinado, pontos de atenção." helper="Fica registrado nesta etapa, e não se mistura com as outras." %}
-              <div class="form-actions">
-                <button type="submit" class="btn btn-secondary btn-sm">
-                  <i class="bi bi-check-lg"></i> Salvar anotação
-                </button>
-              </div>
-            </form>
-          {% elif item.anotacao.texto %}
-            <p class="field-label">Anotações desta etapa</p>
-            <p style="font-size: var(--fs-sm); white-space: pre-line;">{{ item.anotacao.texto }}</p>
-          {% else %}
-            <p class="field-helper" style="margin: 0;">Nada anotado nesta etapa.</p>
-          {% endif %}
+      {% comment %}
+        Os blocos DESTA etapa. Quais aparecem sai de `etapa.blocos`, escolhido
+        em /people/fluxo/. E o que faz cada aba ter conteudo proprio sem chumbar
+        o pipeline: a estrutura espelha a da origem, e o cliente reconfigura.
 
-          {% if item.anotacao.atualizado_por %}
-            <p class="field-helper" style="margin-top: var(--sp-2);">
-              Última edição de {{ item.anotacao.atualizado_por.username }}
-              em {{ item.anotacao.atualizado_em|date:"d/m/Y H:i" }}
-            </p>
-          {% endif %}
-        </div>
-      </div>
+        Tudo num formulario so, com um Salvar so: sao facetas do mesmo trabalho
+        naquela etapa, e um botao por bloco faria o RH salvar tres vezes e
+        esquecer um.
+      {% endcomment %}
+      <form method="post"
+            action="{% url 'people:candidato_anotar_etapa' candidato.pk item.etapa.pk %}">
+        {% csrf_token %}
+
+        {% if 'analise_ia' in item.blocos %}
+          {% include "people/blocos/_analise_ia.html" %}
+        {% endif %}
+        {% if 'roteiro' in item.blocos %}
+          {% include "people/blocos/_roteiro.html" %}
+        {% endif %}
+        {% if 'checklist' in item.blocos %}
+          {% include "people/blocos/_checklist.html" %}
+        {% endif %}
+        {% if 'agendamento' in item.blocos %}
+          {% include "people/blocos/_agendamento.html" %}
+        {% endif %}
+        {% if 'decisao' in item.blocos %}
+          {% include "people/blocos/_decisao.html" %}
+        {% endif %}
+
+        {% if 'anotacao' in item.blocos %}
+          <div class="section-card" style="margin-bottom: var(--sp-3);">
+            <div class="section-card-body">
+              {% include "components/textarea.html" with name="texto" label="Anotações desta etapa" value=item.anotacao.texto rows=5 placeholder="Impressões, o que foi combinado, pontos de atenção." helper="Fica registrado nesta etapa, e não se mistura com as outras." disabled=nao_pode_anotar %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if pode_anotar and item.blocos %}
+          <div class="form-actions" style="margin-bottom: var(--sp-4);">
+            <button type="submit" class="btn btn-secondary">
+              <i class="bi bi-check-lg"></i> Salvar esta etapa
+            </button>
+            {% if item.anotacao.atualizado_por %}
+              <span class="field-helper">
+                Última edição de {{ item.anotacao.atualizado_por.username }}
+                em {{ item.anotacao.atualizado_em|date:"d/m/Y H:i" }}
+              </span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </form>
+
+      {% comment %}
+        Admissao e mensagem ficam FORA do formulario acima: um tem form proprio
+        (cargo e data), o outro nao salva nada, so abre o WhatsApp. Aninhar
+        formulario e HTML invalido.
+      {% endcomment %}
+      {% if 'admissao' in item.blocos %}
+        {% include "people/blocos/_admissao.html" %}
+      {% endif %}
+      {% if 'mensagem' in item.blocos %}
+        {% include "people/blocos/_mensagem.html" %}
+      {% endif %}
+
+      {% if not item.blocos %}
+        <p class="field-helper">
+          Esta etapa não tem nenhum bloco configurado. Escolha o que ela deve
+          mostrar em <a href="{% url 'people:fluxo_config' %}">Fluxo do processo
+          seletivo</a>.
+        </p>
+      {% endif %}
     </div>
   {% endfor %}
 
@@ -313,217 +355,4 @@
     {% endif %}
   </div>
 
-  {% comment %}
-    Analise por IA, SOB DEMANDA.
-
-    O botao fica sempre disponivel: reanalisar depois de mudar os requisitos da
-    vaga e caso real. Cada analise vira uma linha propria no banco, entao o
-    historico da decisao nao se perde.
-
-    O veredito e SUGESTAO e a tela diz isso com todas as letras. Nada aqui move
-    o candidato: quem decide continua sendo quem lê.
-  {% endcomment %}
-  {% if pode_analisar %}
-    <div class="section-card" style="margin-top: var(--sp-4);">
-      <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 class="section-card-title">
-          <i class="bi bi-stars"></i> Análise por IA
-        </h2>
-        <form method="post" action="{% url 'people:candidato_analisar' candidato.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-secondary btn-sm">
-            <i class="bi bi-stars"></i>
-            {% if analise %}Analisar de novo{% else %}Analisar{% endif %}
-          </button>
-        </form>
-      </div>
-      <div class="section-card-body">
-        {% if analise %}
-          <div style="display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-3);">
-            {% if analise.veredito == 'apto' %}
-              {% include "components/badge.html" with variant="success" label=analise.get_veredito_display %}
-            {% elif analise.veredito == 'atencao' %}
-              {% include "components/badge.html" with variant="warning" label=analise.get_veredito_display %}
-            {% elif analise.veredito == 'inapto' %}
-              {% include "components/badge.html" with variant="danger" label=analise.get_veredito_display %}
-            {% else %}
-              {% include "components/badge.html" with variant="neutral" label=analise.get_veredito_display %}
-            {% endif %}
-            <span class="field-helper">
-              É sugestão. A decisão continua sua.
-              {% if not analise.usou_curriculo %}
-                Não consegui ler o currículo, então isto saiu só do formulário.
-              {% endif %}
-            </span>
-          </div>
-
-          {% if analise.resumo %}
-            <p style="margin: 0 0 var(--sp-3); font-size: var(--fs-sm);">{{ analise.resumo }}</p>
-          {% endif %}
-
-          {% if analise.sinais_de_atencao %}
-            <p class="field-label">Confira na entrevista</p>
-            <ul style="margin: var(--sp-2) 0 var(--sp-3); padding-left: var(--sp-4); font-size: var(--fs-sm);">
-              {% for sinal in analise.sinais_de_atencao %}<li>{{ sinal }}</li>{% endfor %}
-            </ul>
-          {% endif %}
-
-          {% if analise.requisitos_avaliados %}
-            {% comment %}
-              Requisito a requisito e o que torna a sugestao auditavel: sem isto
-              o RH le "inapto" e nao tem como discordar com base em nada.
-            {% endcomment %}
-            <p class="field-label">Requisito a requisito</p>
-            <div class="table-wrap">
-              <table class="table">
-                <thead><tr><th>Requisito</th><th>Atende</th><th>Por quê</th></tr></thead>
-                <tbody>
-                  {% for item in analise.requisitos_avaliados %}
-                    <tr>
-                      <td>{{ item.requisito }}</td>
-                      <td>
-                        {% if item.atende == 'sim' %}
-                          {% include "components/badge.html" with variant="success" label="Sim" size="sm" %}
-                        {% elif item.atende == 'nao' %}
-                          {% include "components/badge.html" with variant="danger" label="Não" size="sm" %}
-                        {% else %}
-                          {% include "components/badge.html" with variant="neutral" label="Não dá pra saber" size="sm" %}
-                        {% endif %}
-                      </td>
-                      <td>{{ item.porque }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% endif %}
-
-          <p class="field-helper" style="margin-top: var(--sp-3);">
-            Analisado em {{ analise.criado_em|date:"d/m/Y H:i" }}
-            {% if analise.criado_por %}por {{ analise.criado_por.username }}{% endif %}
-            {% if analise.modelo %} · modelo {{ analise.modelo }}{% endif %}
-          </p>
-        {% else %}
-          <p class="field-helper" style="margin: 0;">
-            Clique em <strong>Analisar</strong> para avaliar este candidato
-            contra os requisitos de triagem da vaga. A IA sugere; nada é movido
-            automaticamente.
-          </p>
-        {% endif %}
-      </div>
-    </div>
-  {% endif %}
-
-  {% comment %}
-    Ponte pro Departamento Pessoal.
-
-    E o unico lugar do modulo onde um Candidato vira Colaborador. As condicoes
-    da vaga sao COPIADAS no ato: mudar a vaga depois nao altera o que ficou
-    registrado pra quem ja entrou.
-
-    Some quando ja foi admitido, e ai vira um link pra ficha do colaborador: um
-    botao "admitir" que nao admite mais e pior que botao nenhum.
-  {% endcomment %}
-  {% if candidato.colaborador_id %}
-    <div class="section-card" style="margin-top: var(--sp-4);">
-      <div class="section-card-body">
-        <p class="field-helper" style="margin: 0;">
-          <i class="bi bi-check-circle" style="color: var(--color-success);"></i>
-          Já está no Departamento Pessoal:
-          <a href="{% url 'people:colaborador_detalhe' candidato.colaborador_id %}">
-            ver ficha de colaborador</a>.
-        </p>
-      </div>
-    </div>
-  {% elif pode_admitir %}
-    <div class="section-card" style="margin-top: var(--sp-4);">
-      <div class="section-card-header">
-        <h2 class="section-card-title">
-          <i class="bi bi-send"></i> Enviar para o Departamento Pessoal
-        </h2>
-      </div>
-      <div class="section-card-body">
-        <p class="field-helper" style="margin-bottom: var(--sp-3);">
-          Cria a ficha de colaborador e encerra o processo seletivo desta pessoa
-          como <strong>admitida</strong>. As condições da vaga são
-          <strong>copiadas</strong> agora: alterações futuras na vaga não mudam
-          o que ficar registrado aqui. O CPF e os documentos vêm depois, pelo
-          formulário de cadastro do DP.
-        </p>
-        <form method="post" action="{% url 'people:candidato_admitir' candidato.pk %}"
-              class="form-stack">
-          {% csrf_token %}
-          <div class="form-grid-2">
-            {% include "components/select.html" with name="cargo" label="Cargo" options=cargos_opcoes blank_label="Selecione" required=True helper="Fica gravado no colaborador." %}
-            {% include "components/input.html" with name="data_inicio" label="Data de início" type="date" required=True %}
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-send"></i> Enviar para o Departamento Pessoal
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  {% endif %}
-
-  {% comment %}
-    Mensagem sugerida pra fase em que o candidato esta.
-
-    NADA E ENVIADO DAQUI. O botao ABRE o WhatsApp com o texto pronto, e o RH
-    manda com o proprio numero. E decisao de produto, nao limitacao: funciona
-    pra qualquer cliente, sem integracao contratada, sem custo por mensagem e
-    sem risco de bloqueio de numero.
-
-    Editar aqui NAO altera o padrao do fluxo. Quem quiser mudar pra todo mundo
-    edita em /people/fluxo/.
-  {% endcomment %}
-  {% if mensagem_sugerida %}
-    <div class="section-card" style="margin-top: var(--sp-4); border-color: var(--color-success);"
-         id="bloco-whatsapp">
-      <div class="section-card-header">
-        <h2 class="section-card-title">
-          <i class="bi bi-whatsapp" style="color: var(--color-success);"></i>
-          Mensagem de WhatsApp
-        </h2>
-      </div>
-      <div class="section-card-body form-stack">
-        <p class="field-helper" style="margin: 0;">
-          <i class="bi bi-info-circle"></i>
-          Segue o padrão configurado no
-          <a href="{% url 'people:fluxo_config' %}">Fluxo do processo seletivo</a>
-          para esta fase. Você pode ajustar só para este candidato antes de
-          enviar, sem alterar o padrão.
-        </p>
-
-        {% include "components/textarea.html" with name="mensagem_whatsapp" value=mensagem_sugerida rows=4 id="texto-whatsapp" %}
-
-        {% if tem_whatsapp %}
-          <div class="form-actions">
-            <button type="button" class="btn btn-secondary" id="abrir-whatsapp">
-              <i class="bi bi-whatsapp"></i> Abrir no WhatsApp
-            </button>
-          </div>
-        {% else %}
-          <p class="field-helper">
-            Este candidato não tem WhatsApp registrado, então não há para onde
-            enviar.
-          </p>
-        {% endif %}
-      </div>
-    </div>
-
-    {% if tem_whatsapp %}
-      <script>
-        // Monta o wa.me na hora do clique, e nao na renderizacao: o RH pode ter
-        // editado o texto, e o link precisa levar o que esta na tela AGORA.
-        document.getElementById('abrir-whatsapp').addEventListener('click', function () {
-          var texto = document.getElementById('texto-whatsapp').value;
-          var numero = '{{ candidato.whatsapp }}'.replace(/\D/g, '');
-          window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent(texto),
-                      '_blank', 'noopener');
-        });
-      </script>
-    {% endif %}
-  {% endif %}
 {% endblock %}

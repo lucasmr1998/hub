@@ -125,6 +125,19 @@ class EtapaPipeline(TenantMixin):
         null=True, blank=True, verbose_name="Prazo máximo (dias)",
         help_text="Depois disso o candidato aparece como atrasado nesta etapa.",
     )
+    blocos = models.JSONField(
+        default=list, blank=True, verbose_name="Blocos da ficha",
+        help_text="O que aparece na aba desta etapa. Ver BLOCOS em "
+                  "estados_recrutamento.py.",
+    )
+    roteiro = models.JSONField(
+        default=list, blank=True, verbose_name="Roteiro da conversa",
+        help_text="Perguntas do bloco de roteiro, uma por linha.",
+    )
+    checklist = models.JSONField(
+        default=list, blank=True, verbose_name="Requisitos a validar",
+        help_text="Itens objetivos do bloco de checklist, um por linha.",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
@@ -156,6 +169,26 @@ class EtapaPipeline(TenantMixin):
     def __str__(self):
         escopo = self.unidade.nome if self.unidade_id else 'todas as unidades'
         return f'{self.nome} ({escopo})'
+
+    @property
+    def blocos_validos(self):
+        """
+        Os blocos configurados que o codigo conhece, na ordem canonica.
+
+        Filtra desconhecido em vez de confiar no JSON: um bloco removido do
+        codigo continuaria gravado nas etapas dos tenants, e a tela quebraria
+        procurando um template que nao existe mais.
+
+        A ordem sai de BLOCOS, e nao do JSON, porque a sequencia dentro da aba
+        e decisao de produto (analise antes de roteiro, mensagem por ultimo) e
+        nao preferencia de quem configurou.
+        """
+        escolhidos = set(self.blocos or [])
+        return [chave for chave in estados_rs.VALORES_BLOCOS
+                if chave in escolhidos]
+
+    def tem_bloco(self, chave):
+        return chave in (self.blocos or [])
 
     @property
     def cor_hex(self):
@@ -200,6 +233,13 @@ class EtapaPipeline(TenantMixin):
         return cls.all_tenants.bulk_create([
             cls(tenant=tenant, unidade=unidade, nome=etapa['nome'],
                 ordem=etapa['ordem'], sla_dias=etapa['sla_dias'],
+                blocos=etapa.get('blocos', []),
+                roteiro=(estados_rs.ROTEIRO_PADRAO
+                         if estados_rs.BLOCO_ROTEIRO in etapa.get('blocos', [])
+                         else []),
+                checklist=(estados_rs.CHECKLIST_PADRAO
+                           if estados_rs.BLOCO_CHECKLIST in etapa.get('blocos', [])
+                           else []),
                 cor=etapa.get('cor', ''))
             for etapa in estados_rs.ETAPAS_PADRAO
         ])
@@ -1179,6 +1219,24 @@ class AnotacaoEtapa(TenantMixin):
         related_name='anotacoes', verbose_name="Etapa",
     )
     texto = models.TextField(blank=True, default='', verbose_name="Anotações")
+
+    # O trabalho dos demais blocos vive aqui, e nao em tabelas separadas: e
+    # tudo "o que aconteceu com este candidato nesta etapa", tem o mesmo ciclo
+    # de vida e e sempre lido junto. Tabela por bloco seria quatro joins pra
+    # montar uma aba.
+    itens_marcados = models.JSONField(
+        default=list, blank=True, verbose_name="Itens já verificados",
+        help_text="Perguntas do roteiro e requisitos do checklist ja cobertos.",
+    )
+    decisao = models.CharField(
+        max_length=20, blank=True, default='', verbose_name="Decisão",
+        choices=[('aprovado', 'Aprovado'), ('reprovado', 'Reprovado')],
+    )
+    agendado_em = models.DateTimeField(null=True, blank=True,
+                                       verbose_name="Agendado para")
+    agendado_local = models.CharField(max_length=200, blank=True, default='',
+                                      verbose_name="Local")
+
     atualizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='anotacoes_etapa',

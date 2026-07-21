@@ -1,0 +1,103 @@
+  {% comment %}
+    Analise por IA, SOB DEMANDA.
+
+    O botao fica sempre disponivel: reanalisar depois de mudar os requisitos da
+    vaga e caso real. Cada analise vira uma linha propria no banco, entao o
+    historico da decisao nao se perde.
+
+    O veredito e SUGESTAO e a tela diz isso com todas as letras. Nada aqui move
+    o candidato: quem decide continua sendo quem lê.
+  {% endcomment %}
+  {% if pode_analisar %}
+    <div class="section-card" style="margin-top: var(--sp-4);">
+      <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="section-card-title">
+          <i class="bi bi-stars"></i> Análise por IA
+        </h2>
+        {% comment %}
+          `formaction` em vez de um <form> proprio: este bloco vive DENTRO do
+          formulario da etapa, e formulario aninhado e HTML invalido. O botao
+          posta na rota da analise levando o CSRF que ja esta no form de fora.
+        {% endcomment %}
+        <button type="submit" class="btn btn-secondary btn-sm"
+                formaction="{% url 'people:candidato_analisar' candidato.pk %}">
+          <i class="bi bi-stars"></i>
+          {% if analise %}Analisar de novo{% else %}Analisar{% endif %}
+        </button>
+      </div>
+      <div class="section-card-body">
+        {% if analise %}
+          <div style="display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-3);">
+            {% if analise.veredito == 'apto' %}
+              {% include "components/badge.html" with variant="success" label=analise.get_veredito_display %}
+            {% elif analise.veredito == 'atencao' %}
+              {% include "components/badge.html" with variant="warning" label=analise.get_veredito_display %}
+            {% elif analise.veredito == 'inapto' %}
+              {% include "components/badge.html" with variant="danger" label=analise.get_veredito_display %}
+            {% else %}
+              {% include "components/badge.html" with variant="neutral" label=analise.get_veredito_display %}
+            {% endif %}
+            <span class="field-helper">
+              É sugestão. A decisão continua sua.
+              {% if not analise.usou_curriculo %}
+                Não consegui ler o currículo, então isto saiu só do formulário.
+              {% endif %}
+            </span>
+          </div>
+
+          {% if analise.resumo %}
+            <p style="margin: 0 0 var(--sp-3); font-size: var(--fs-sm);">{{ analise.resumo }}</p>
+          {% endif %}
+
+          {% if analise.sinais_de_atencao %}
+            <p class="field-label">Confira na entrevista</p>
+            <ul style="margin: var(--sp-2) 0 var(--sp-3); padding-left: var(--sp-4); font-size: var(--fs-sm);">
+              {% for sinal in analise.sinais_de_atencao %}<li>{{ sinal }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+
+          {% if analise.requisitos_avaliados %}
+            {% comment %}
+              Requisito a requisito e o que torna a sugestao auditavel: sem isto
+              o RH le "inapto" e nao tem como discordar com base em nada.
+            {% endcomment %}
+            <p class="field-label">Requisito a requisito</p>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Requisito</th><th>Atende</th><th>Por quê</th></tr></thead>
+                <tbody>
+                  {% for item in analise.requisitos_avaliados %}
+                    <tr>
+                      <td>{{ item.requisito }}</td>
+                      <td>
+                        {% if item.atende == 'sim' %}
+                          {% include "components/badge.html" with variant="success" label="Sim" size="sm" %}
+                        {% elif item.atende == 'nao' %}
+                          {% include "components/badge.html" with variant="danger" label="Não" size="sm" %}
+                        {% else %}
+                          {% include "components/badge.html" with variant="neutral" label="Não dá pra saber" size="sm" %}
+                        {% endif %}
+                      </td>
+                      <td>{{ item.porque }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+
+          <p class="field-helper" style="margin-top: var(--sp-3);">
+            Analisado em {{ analise.criado_em|date:"d/m/Y H:i" }}
+            {% if analise.criado_por %}por {{ analise.criado_por.username }}{% endif %}
+            {% if analise.modelo %} · modelo {{ analise.modelo }}{% endif %}
+          </p>
+        {% else %}
+          <p class="field-helper" style="margin: 0;">
+            Clique em <strong>Analisar</strong> para avaliar este candidato
+            contra os requisitos de triagem da vaga. A IA sugere; nada é movido
+            automaticamente.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}

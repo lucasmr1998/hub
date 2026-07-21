@@ -57,8 +57,24 @@ def configurar(request):
     por_etapa = {m.etapa_id: m for m in mensagens if m.etapa_id}
     por_saida = {m.saida: m for m in mensagens if m.saida}
 
-    linhas = [{'etapa': e, 'candidatos': ocupacao.get(e.pk, 0),
-               'mensagem': por_etapa.get(e.pk)} for e in etapas]
+    # `dados_edicao` sai pro template via json_script, e nao num atributo
+    # data-*: roteiro e checklist tem QUEBRA DE LINHA, e newline dentro de
+    # atributo HTML gera markup e JSON invalidos. O json_script escapa certo.
+    linhas = [{
+        'etapa': e,
+        'candidatos': ocupacao.get(e.pk, 0),
+        'mensagem': por_etapa.get(e.pk),
+        'id_json': f'etapa-dados-{e.pk}',
+        'dados_edicao': {
+            'pk': str(e.pk),
+            'nome': e.nome,
+            'cor': e.cor,
+            'sla': str(e.sla_dias or ''),
+            'blocos': list(e.blocos or []),
+            'roteiro': chr(10).join(e.roteiro or []),
+            'checklist': chr(10).join(e.checklist or []),
+        },
+    } for e in etapas]
 
     # A unidade esta herdando o fluxo do tenant, ou ja tem o proprio?
     herda = bool(unidade) and not EtapaPipeline.all_tenants.filter(
@@ -72,6 +88,7 @@ def configurar(request):
         'unidades_opcoes': list(
             Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
         'cores': estados_rs.CORES_ETAPA,
+        'blocos_disponiveis': estados_rs.BLOCOS,
         'saidas': [
             {'valor': v, 'rotulo': r, 'cor': estados_rs.COR_DA_SAIDA.get(v, ''),
              'mensagem': por_saida.get(v)}
@@ -104,10 +121,27 @@ def etapa_salvar(request):
         messages.error(request, f'Já existe uma etapa chamada "{nome}" neste fluxo.')
         return _voltar(unidade)
 
+    # So aceita bloco que o codigo conhece: POST forjado nao inventa bloco, e
+    # bloco removido do codigo nao fica gravado esperando quebrar a tela.
+    blocos = [b for b in request.POST.getlist('blocos')
+              if b in estados_rs.VALORES_BLOCOS]
+
+    def _linhas(campo):
+        """Uma por linha, sem vazias e sem repetida."""
+        vistas = []
+        for linha in (request.POST.get(campo) or '').splitlines():
+            texto = ' '.join(linha.split())
+            if texto and texto not in vistas:
+                vistas.append(texto)
+        return vistas
+
     dados = {
         'nome': nome,
         'cor': cor if cor in estados_rs.HEX_POR_COR else '',
         'sla_dias': int(sla) if sla.isdigit() else None,
+        'blocos': blocos,
+        'roteiro': _linhas('roteiro'),
+        'checklist': _linhas('checklist'),
     }
 
     if pk.isdigit():
@@ -120,6 +154,11 @@ def etapa_salvar(request):
         ultima = (EtapaPipeline.all_tenants
                   .filter(tenant=request.tenant, unidade=unidade)
                   .order_by('-ordem').first())
+        if not dados['blocos']:
+            # Etapa sem bloco teria aba vazia. O minimo util serve pra qualquer
+            # coisa e nao inventa comportamento que ninguem pediu.
+            dados['blocos'] = [estados_rs.BLOCO_ANOTACAO,
+                               estados_rs.BLOCO_MENSAGEM]
         etapa = EtapaPipeline.all_tenants.create(
             tenant=request.tenant, unidade=unidade,
             ordem=(ultima.ordem + 1) if ultima else 1, ativa=True, **dados)

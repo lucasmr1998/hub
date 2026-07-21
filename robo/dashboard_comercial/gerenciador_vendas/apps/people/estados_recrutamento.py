@@ -86,14 +86,93 @@ SAIDA_QUE_VINCULA_COLABORADOR = SAIDA_ADMITIDO
 # admissao esta acontecendo, e nao se confunde com a saida `admitido`, que e o
 # desfecho. Mesma distincao que o DP faz entre `em_admissao` e estar contratado.
 
+# ── Blocos que uma etapa pode ter na ficha do candidato ──────────────────────
+#
+# Cada bloco FAZ alguma coisa, e por isso e codigo e nao dado. E o mesmo criterio
+# que separa etapa de saida neste modulo: comportamento fica em codigo, nomeacao
+# e ordem ficam em tabela.
+#
+# QUAL etapa usa QUAIS blocos e escolha do cliente (EtapaPipeline.blocos), e e o
+# que permite copiar a estrutura da origem sem chumbar o pipeline dela: as sete
+# etapas padrao ja nascem com os blocos que a Visio mostra em cada aba, e quem
+# criar uma etapa nova escolhe os dela.
+BLOCO_ANALISE_IA = 'analise_ia'
+BLOCO_ROTEIRO = 'roteiro'
+BLOCO_CHECKLIST = 'checklist'
+BLOCO_AGENDAMENTO = 'agendamento'
+BLOCO_DECISAO = 'decisao'
+BLOCO_ADMISSAO = 'admissao'
+BLOCO_ANOTACAO = 'anotacao'
+BLOCO_MENSAGEM = 'mensagem'
+
+BLOCOS = [
+    (BLOCO_ANALISE_IA,   'Análise por IA',
+     'Avalia o candidato contra os requisitos de triagem da vaga.'),
+    (BLOCO_ROTEIRO,      'Roteiro da conversa',
+     'Perguntas para guiar a entrevista, marcadas conforme você pergunta.'),
+    (BLOCO_CHECKLIST,    'Requisitos a validar',
+     'Itens objetivos que precisam ser confirmados com o candidato.'),
+    (BLOCO_AGENDAMENTO,  'Agendamento',
+     'Data e local, que alimentam a mensagem enviada ao candidato.'),
+    (BLOCO_DECISAO,      'Decisão',
+     'Aprovar ou reprovar, com comentário.'),
+    (BLOCO_ADMISSAO,     'Admissão',
+     'Cria a ficha de colaborador e encerra o processo seletivo.'),
+    (BLOCO_ANOTACAO,     'Anotações',
+     'Texto livre sobre o que aconteceu nesta etapa.'),
+    (BLOCO_MENSAGEM,     'Mensagem de WhatsApp',
+     'Abre o WhatsApp com a mensagem configurada para esta etapa.'),
+]
+
+VALORES_BLOCOS = [chave for chave, _, _ in BLOCOS]
+ROTULOS_BLOCO = {chave: rotulo for chave, rotulo, _ in BLOCOS}
+
+
 ETAPAS_PADRAO = [
-    {'nome': 'Triagem',             'ordem': 1, 'sla_dias': 3, 'cor': 'ambar'},
-    {'nome': 'Histórico',           'ordem': 2, 'sla_dias': 3, 'cor': 'azul'},
-    {'nome': 'Teste Comportamental', 'ordem': 3, 'sla_dias': 5, 'cor': 'ciano'},
-    {'nome': 'Seleção',             'ordem': 4, 'sla_dias': 5, 'cor': 'laranja'},
-    {'nome': 'Teste prático',       'ordem': 5, 'sla_dias': 5, 'cor': 'azul'},
-    {'nome': 'Avaliação Gestor',    'ordem': 6, 'sla_dias': 3, 'cor': 'roxo'},
-    {'nome': 'Admissão',            'ordem': 7, 'sla_dias': 5, 'cor': 'verde'},
+    # Os `blocos` de cada etapa espelham o que a origem mostra em cada aba. Sao
+    # DEFAULT, e nao regra: o cliente muda em /people/fluxo/.
+    {'nome': 'Triagem', 'ordem': 1, 'sla_dias': 3, 'cor': 'ambar',
+     'blocos': [BLOCO_ANALISE_IA, BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
+
+    {'nome': 'Histórico', 'ordem': 2, 'sla_dias': 3, 'cor': 'azul',
+     'blocos': [BLOCO_CHECKLIST, BLOCO_ANOTACAO]},
+
+    {'nome': 'Teste Comportamental', 'ordem': 3, 'sla_dias': 5, 'cor': 'ciano',
+     'blocos': [BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
+
+    # A "Entrevista RH" da origem: analise da IA, roteiro da conversa,
+    # requisitos a validar e notas, tudo numa aba so.
+    {'nome': 'Seleção', 'ordem': 4, 'sla_dias': 5, 'cor': 'laranja',
+     'blocos': [BLOCO_ANALISE_IA, BLOCO_ROTEIRO, BLOCO_CHECKLIST,
+                BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
+
+    {'nome': 'Teste prático', 'ordem': 5, 'sla_dias': 5, 'cor': 'azul',
+     'blocos': [BLOCO_AGENDAMENTO, BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
+
+    {'nome': 'Avaliação Gestor', 'ordem': 6, 'sla_dias': 3, 'cor': 'roxo',
+     'blocos': [BLOCO_DECISAO, BLOCO_ANOTACAO]},
+
+    {'nome': 'Admissão', 'ordem': 7, 'sla_dias': 5, 'cor': 'verde',
+     'blocos': [BLOCO_ADMISSAO, BLOCO_MENSAGEM]},
+]
+
+# Roteiro que a origem usa na entrevista. Vem preenchido pra a etapa nao nascer
+# vazia, e e EDITAVEL: numa vaga de tecnico de campo as perguntas sao outras.
+ROTEIRO_PADRAO = [
+    'Me fale um pouco sobre você (quem é, rotina, família)',
+    'Quais foram suas duas últimas experiências de trabalho? Por que saiu?',
+    'Está trabalhando atualmente?',
+    'Onde mora? Qual o tempo de deslocamento até o trabalho?',
+    'Tem compromissos que podem impactar o horário de trabalho?',
+    'Pretensão salarial',
+    'Disponibilidade de horário (turnos, fins de semana, feriados)',
+]
+
+CHECKLIST_PADRAO = [
+    'Disponibilidade para a escala da vaga',
+    'Locomoção até o local de trabalho',
+    'Idade mínima exigida para a função',
+    'Documentação básica para admissão',
 ]
 
 # Paleta das etapas. Chave em vez de hex no banco: se a identidade visual mudar,
