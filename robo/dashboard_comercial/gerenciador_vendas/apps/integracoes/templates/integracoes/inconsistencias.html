@@ -41,10 +41,10 @@
   .inc-cobertura strong { font-size: 20px; }
   .inc-nota { font-size: 12px; color: var(--color-text-muted, #64748B); margin: 6px 0 0; line-height: 1.5; }
   .inc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-  .inc-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 999px; font-size: 12.5px; cursor: pointer; color: inherit; }
-  .inc-chip:hover { border-color: var(--color-primary, #2563EB); }
-  .inc-chip.ativo { background: var(--color-primary, #2563EB); border-color: var(--color-primary, #2563EB); color: #fff; }
-  .inc-chip .n { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .inc-chip, .oport-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 999px; font-size: 12.5px; cursor: pointer; color: inherit; }
+  .inc-chip:hover, .oport-chip:hover { border-color: var(--color-primary, #2563EB); }
+  .inc-chip.ativo, .oport-chip.ativo { background: var(--color-primary, #2563EB); border-color: var(--color-primary, #2563EB); color: #fff; }
+  .inc-chip .n, .oport-chip .n { font-weight: 700; font-variant-numeric: tabular-nums; }
   .inc-chip.perigo { border-left: 3px solid var(--color-danger, #DC2626); }
   .inc-chip.cinza { opacity: .7; }
   .inc-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
@@ -319,165 +319,88 @@
       </p>
     </div>
 
-    {% if oport.divergentes %}
-      <div class="oport-sec">Divergências ({{ oport.total_divergentes }})</div>
+    {% if oport.problemas %}
+      <div class="oport-sec">Inconsistências ({{ oport.total_problemas }})</div>
+      {% comment %}
+        Mesma estrutura da aba Vendas: chips escrevem no campo de busca de UMA
+        datatable, em vez de tabelas separadas. Um caminho de filtro so, entao
+        contador, paginacao e CSV saem coerentes com o chip.
+      {% endcomment %}
+      <div class="inc-chips">
+        <button type="button" class="oport-chip ativo" data-filtro="">
+          Todas <span class="n">{{ oport.total_problemas }}</span>
+        </button>
+        {% for c in oport.chips %}
+          <button type="button" class="oport-chip" data-filtro="{{ c.slug }}">
+            {{ c.slug }} <span class="n">{{ c.total }}</span>
+          </button>
+        {% endfor %}
+      </div>
+
       <table class="dt"
-             data-busca="Buscar por cliente, etapa, tag ou vendedor..."
+             id="tbl-oport"
+             data-busca="Buscar por cliente, categoria, etapa, tag ou vendedor..."
              data-por-pagina="25"
-             data-exportar="divergencias-funil"
-             data-vazio="Nenhuma divergência com esse filtro.">
+             data-exportar="oportunidades-inconsistentes"
+             data-vazio="Nenhuma inconsistência com esse filtro.">
         <thead>
           <tr>
             <th>Cliente</th>
             <th data-tipo="numero">id_prospecto</th>
+            <th>Categoria</th>
             <th>Etapa deles</th>
-            <th>Situação deles</th>
-            <th>Nosso estágio</th>
-            <th>Situação nossa</th>
-            <th>Tag</th>
+            <th>Detalhe (nosso lado)</th>
+            <th>Tag / Equipe</th>
             <th>Vendedor</th>
           </tr>
         </thead>
         <tbody>
-          {% for v in oport.divergentes %}
+          {% for v in oport.problemas %}
             <tr>
-              <td data-ordem="{{ v.nome_cartao|default:v.nome_prospecto }}">
-                {% if v.lead_id %}<a href="/crm/leads/{{ v.lead_id }}/"><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></a>
-                {% else %}<strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong>{% endif %}
+              <td data-ordem="{{ v.nome }}">
+                {% if v.lead_id %}<a href="/crm/leads/{{ v.lead_id }}/"><strong>{{ v.nome }}</strong></a>
+                {% else %}<strong>{{ v.nome }}</strong>{% endif %}
               </td>
               <td>{{ v.id_prospecto }}</td>
+              <td>
+                <span class="inc-pill
+                  {% if v.categoria == 'Divergência' %}falha
+                  {% elif v.categoria == 'Duplicado' %}naovenda
+                  {% elif v.categoria == 'Sem prospecto' %}aberto
+                  {% else %}fora{% endif %}">{{ v.categoria }}</span>
+              </td>
               <td>{{ v.crm_etapa }}</td>
-              <td><span class="inc-pill {{ v.situacao }}">{{ v.situacao }}</span></td>
-              <td>{{ v.nosso_estagio }}</td>
-              <td><span class="inc-pill {{ v.nossa_situacao }}">{{ v.nossa_situacao }}</span></td>
+              <td>{{ v.detalhe }}</td>
               <td>{{ v.tag }}</td>
               <td>{{ v.usuario }}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
-    {% endif %}
-
-    {% if oport.duplicados %}
-      <div class="oport-sec">Cards duplicados ({{ oport.total_duplicados }})</div>
-      <p class="inc-nota" style="margin:-4px 0 10px;">
-        A pessoa existe aqui como lead (casou por CPF ou telefone), mas o card da planilha tem
-        <strong>outro id_prospecto</strong>. É prospecto criado em dobro, os dois sistemas ao mesmo tempo.
+      <p class="inc-nota" style="margin-top:10px;">
+        <strong>Divergência:</strong> casou por id_prospecto, mas a situação difere (a maior é eles negociando / nós perdido).
+        &nbsp;·&nbsp;
+        <strong>Duplicado:</strong> a pessoa existe aqui com outro id_prospecto (prospecto em dobro).
+        &nbsp;·&nbsp;
+        <strong>Só existe lá:</strong> card sem par aqui; canal integrado deveria ter virado lead.
+        &nbsp;·&nbsp;
+        <strong>Sem prospecto:</strong> card com id_prospecto = 0, aberto direto no CRM (o Detalhe mostra a equipe).
       </p>
-      <table class="dt"
-             data-busca="Buscar por cliente, tag ou etapa..."
-             data-por-pagina="25"
-             data-exportar="cards-duplicados"
-             data-vazio="Nenhum duplicado com esse filtro.">
-        <thead>
-          <tr>
-            <th>Cliente (card)</th>
-            <th data-tipo="numero">id_prospecto deles</th>
-            <th>Nosso lead</th>
-            <th data-tipo="numero">Nosso id_hubsoft</th>
-            <th>Tag</th>
-            <th>Etapa deles</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for v in oport.duplicados %}
-            <tr>
-              <td><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></td>
-              <td>{{ v.id_prospecto }}</td>
-              <td data-ordem="{{ v.lead_id }}"><a href="/crm/leads/{{ v.lead_id }}/">{{ v.nosso_nome|default:v.lead_id }}</a></td>
-              <td>{{ v.nosso_id_hubsoft }}</td>
-              <td>{{ v.tag }}</td>
-              <td>{{ v.crm_etapa }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% endif %}
-
-    {% if oport.so_deles %}
-      <div class="oport-sec">Só existem lá ({{ oport.total_so_deles }})</div>
-      <p class="inc-nota" style="margin:-4px 0 10px;">
-        Cards que não casaram por id_prospecto nem por pessoa. Canal integrado aqui (tag WhatsApp Empresa / Matrix)
-        deveria ter virado lead sozinho.
-      </p>
-      <table class="dt"
-             data-busca="Buscar por cliente, tag, etapa ou vendedor..."
-             data-por-pagina="25"
-             data-exportar="so-existem-la"
-             data-vazio="Nenhum com esse filtro.">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th data-tipo="numero">id_prospecto</th>
-            <th>Tag</th>
-            <th>Etapa deles</th>
-            <th>Telefone</th>
-            <th>Vendedor</th>
-            <th data-tipo="data">Cadastro</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for v in oport.so_deles %}
-            <tr>
-              <td><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></td>
-              <td>{{ v.id_prospecto }}</td>
-              <td>{{ v.tag }}</td>
-              <td>{{ v.crm_etapa }}</td>
-              <td>{{ v.telefone }}</td>
-              <td>{{ v.usuario }}</td>
-              <td>{{ v.data_cadastro_cartao }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% endif %}
-
-    {% if oport.sem_prospecto %}
-      <div class="oport-sec">Cards sem prospecto vinculado ({{ oport.total_sem_prospecto }})</div>
-      <p class="inc-nota" style="margin:-4px 0 10px;">
-        Cards abertos direto no CRM com <strong>id_prospecto = 0</strong>: nunca linkaram um prospecto no HubSoft
-        (CPF "Não Possui", sem telefone). Não têm chave pra casar com a gente, então ficam de fora da matriz e
-        da cobertura. Filtre por equipe ou vendedor pra ver quem está abrindo card solto.
-      </p>
-      <table class="dt"
-             data-busca="Buscar por cliente, equipe, etapa ou vendedor..."
-             data-por-pagina="25"
-             data-exportar="cards-sem-prospecto"
-             data-vazio="Nenhum com esse filtro.">
-        <thead>
-          <tr>
-            <th>Cliente (card)</th>
-            <th>Equipe / Board</th>
-            <th>Etapa</th>
-            <th>Vendedor</th>
-            <th data-tipo="data">Cadastro</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for v in oport.sem_prospecto %}
-            <tr>
-              <td><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></td>
-              <td>{{ v.crm }}</td>
-              <td>{{ v.crm_etapa }}</td>
-              <td>{{ v.usuario }}</td>
-              <td>{{ v.data_cadastro_cartao }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
     {% endif %}
   {% endif %}
 </div>
 
 <script>
-  // Os chips escrevem no campo de busca da datatable de vendas em vez de filtrar
-  // por conta propria: um caminho de filtro so, entao contador, paginacao e o
-  // CSV exportado ja saem coerentes com o chip ativo, de graca.
-  document.addEventListener('DOMContentLoaded', function () {
-    var chips = document.querySelectorAll('.inc-chip');
-    var tabela = document.getElementById('tbl-fora');
+  // Chips escrevem no campo de busca de uma datatable, em vez de filtrar por
+  // conta propria: um caminho de filtro so, entao contador, paginacao e o CSV
+  // saem coerentes com o chip ativo, de graca. Mesmo comportamento nas duas
+  // abas (origem nas Vendas, categoria nas Oportunidades).
+  function ligarChips(seletorChips, idTabela) {
+    var chips = document.querySelectorAll(seletorChips);
+    var tabela = document.getElementById(idTabela);
     if (!chips.length || !tabela) { return; }
-    var busca = tabela.closest('.dt-wrap').querySelector('.dt-busca input');
+    var wrap = tabela.closest('.dt-wrap');
+    var busca = wrap && wrap.querySelector('.dt-busca input');
     if (!busca) { return; }
 
     chips.forEach(function (chip) {
@@ -490,11 +413,16 @@
     });
 
     busca.addEventListener('input', function () {
-      var atual = document.querySelector('.inc-chip.ativo');
+      var atual = document.querySelector(seletorChips + '.ativo');
       if (atual && busca.value !== atual.dataset.filtro) {
         atual.classList.remove('ativo');
       }
     });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    ligarChips('.inc-chip', 'tbl-fora');       // aba Vendas, por origem
+    ligarChips('.oport-chip', 'tbl-oport');    // aba Oportunidades, por categoria
   });
 </script>
 {% endblock %}

@@ -224,6 +224,16 @@ def montar_aba(tenant) -> dict:
     # concordancia = diagonal da matriz
     concordam = sum(n for (d, nn), n in matriz.items() if d == nn)
 
+    # Uma lista unica de problemas, com a categoria por linha, pra a tela usar UMA
+    # datatable com chips (mesmo padrao da aba Vendas) em vez de 4 tabelas.
+    problemas = _unificar(divergentes, duplicados, so_deles, sem_prospecto)
+    chips = [
+        {'slug': 'Divergência', 'total': len(divergentes)},
+        {'slug': 'Duplicado', 'total': len(duplicados)},
+        {'slug': 'Só existe lá', 'total': len(so_deles)},
+        {'slug': 'Sem prospecto', 'total': len(sem_prospecto)},
+    ]
+
     return {
         'tem_import': True,
         'enviado_em': imp.enviado_em,
@@ -232,19 +242,52 @@ def montar_aba(tenant) -> dict:
         'total': total,
         'casados': casados,
         'cobertura_pct': round(100.0 * casados / total) if total else 0,
-        'so_deles': so_deles,
         'total_so_deles': len(so_deles),
-        'duplicados': duplicados,
         'total_duplicados': len(duplicados),
-        'sem_prospecto': sem_prospecto,
         'total_sem_prospecto': len(sem_prospecto),
         'so_nossos': so_nossos,
         'concordam': concordam,
         'concordancia_pct': round(100.0 * concordam / casados) if casados else 0,
-        'divergentes': divergentes,
         'total_divergentes': len(divergentes),
         'matriz': _matriz_para_template(matriz),
+        'problemas': problemas,
+        'total_problemas': len(problemas),
+        'chips': [c for c in chips if c['total']],
     }
+
+
+def _linha(card, categoria, detalhe='', lead_id=None, tag=None):
+    return {
+        'categoria': categoria,
+        'nome': card.get('nome_cartao') or card.get('nome_prospecto') or '',
+        'id_prospecto': card['id_prospecto'],
+        'crm_etapa': card['crm_etapa'],
+        'detalhe': detalhe,
+        'tag': card.get('tag', '') if tag is None else tag,
+        'usuario': card.get('usuario', ''),
+        'lead_id': lead_id,
+    }
+
+
+def _unificar(divergentes, duplicados, so_deles, sem_prospecto) -> list:
+    """Achata os quatro baldes numa lista so, cada linha com sua categoria e um
+    campo `detalhe` que carrega o que e especifico de cada tipo (nosso estagio,
+    nosso lead, telefone ou equipe)."""
+    linhas = []
+    for d in divergentes:
+        linhas.append(_linha(d, 'Divergência', detalhe=f"Nosso: {d['nosso_estagio']}",
+                             lead_id=d.get('lead_id')))
+    for x in duplicados:
+        linhas.append(_linha(x, 'Duplicado',
+                             detalhe=f"Nosso lead #{x['lead_id']} (id_hs {x['nosso_id_hubsoft']})",
+                             lead_id=x.get('lead_id')))
+    for x in so_deles:
+        linhas.append(_linha(x, 'Só existe lá',
+                             detalhe=f"tel {x['telefone']}" if x.get('telefone') else ''))
+    for x in sem_prospecto:
+        # sem prospecto nao tem tag util; a equipe (board) e o que importa
+        linhas.append(_linha(x, 'Sem prospecto', detalhe=x.get('crm', ''), tag=x.get('crm', '')))
+    return linhas
 
 
 _ROTULO = {GANHO: 'Ganho', ABERTO: 'Aberto', PERDIDO: 'Perdido'}

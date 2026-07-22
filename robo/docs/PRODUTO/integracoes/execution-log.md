@@ -501,3 +501,18 @@ e compara em memoria.
   cards, 382 com id=0). A feature rodou ponta a ponta.
 - **Output:** 27 testes (1 novo cobrindo o bucket); render das abas ok.
 - **Status:** completed
+
+## 2026-07-22 — Aba Oportunidades: tabela unica com chips (paridade com Vendas)
+
+- **Acao:** as 4 tabelas empilhadas da aba Oportunidades (Divergencias,
+  Duplicados, So existem la, Sem prospecto) viraram UMA datatable com chips de
+  categoria em cima, mesmo padrao da aba Vendas (chips de origem).
+- **Motivo:** pedido do dono ("oportunidades deveria utilizar o mesmo datatable
+  de vendas"). Um caminho de filtro so: contador, paginacao e CSV saem coerentes
+  com o chip ativo.
+- **Como:** service ganhou `_unificar` que achata os quatro baldes numa lista
+  `problemas`, cada linha com `categoria` e um campo `detalhe` que carrega o que
+  e especifico (nosso estagio / nosso lead / telefone / equipe). O JS dos chips
+  virou funcao `ligarChips` reusada nas duas abas.
+- **Output:** 27 testes (1 checando a lista unificada e as categorias); render ok.
+- **Status:** completed

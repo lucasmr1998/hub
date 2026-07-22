@@ -171,6 +171,10 @@ class TestMontarAba:
         assert d['concordam'] == 1                 # so o ganho/ganho
         assert d['concordancia_pct'] == 50
         assert d['matriz']['perda_prematura'] == 1
+        # lista unificada: 1 divergente + 1 duplicado + 1 so deles = 3 (concordantes nao entram)
+        assert d['total_problemas'] == 3
+        cats = {p['categoria'] for p in d['problemas']}
+        assert cats == {'Divergência', 'Duplicado', 'Só existe lá'}
 
     def test_casa_por_telefone_quando_sem_cpf(self, cenario):
         cenario['lead'](id_hubsoft='500', cpf='', tel='11977776666', situacao='ganho')
