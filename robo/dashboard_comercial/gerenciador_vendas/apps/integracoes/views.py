@@ -548,7 +548,7 @@ def inconsistencias_view(request):
         {'id': 'aba-vendas', 'label': 'Vendas', 'icon': 'bi-cart-check',
          'badge': dados.get('total_sem_nada') or None, 'active': aba != 'oportunidades'},
         {'id': 'aba-oportunidades', 'label': 'Oportunidades', 'icon': 'bi-diagram-3',
-         'badge': dados['oport'].get('total_divergentes') or None if dados['oport'].get('tem_import') else None,
+         'badge': dados['oport'].get('total_problemas') or None if dados['oport'].get('tem_import') else None,
          'active': aba == 'oportunidades'},
     ]
     return render(request, 'integracoes/inconsistencias.html', dados)

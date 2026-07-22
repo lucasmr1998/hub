@@ -66,13 +66,6 @@
   .oport-kpi .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .oport-kpi .l { font-size: 11px; color: var(--color-text-muted, #64748B); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
   .oport-kpi.destaque { border-left: 4px solid var(--color-danger, #DC2626); }
-  .mtx { border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-  .mtx th, .mtx td { border: 1px solid var(--color-border); padding: 9px 14px; text-align: center; font-variant-numeric: tabular-nums; }
-  .mtx th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted, #64748B); font-weight: 600; background: var(--color-bg-subtle, #F8FAFC); }
-  .mtx td.rowh { font-weight: 700; text-transform: none; letter-spacing: 0; color: inherit; text-align: left; }
-  .mtx td.concorda { background: #D1FAE5; color: #065F46; font-weight: 700; }
-  .mtx td.perda { background: #FEE2E2; color: #991B1B; font-weight: 700; }
-  .mtx td.tot { background: var(--color-bg-subtle, #F8FAFC); font-weight: 600; }
   .oport-sec { font-size: 16px; font-weight: 700; margin: 26px 0 10px; }
 </style>
 
@@ -257,18 +250,16 @@
       </form>
     </div>
 
+    {% comment %}
+      A comparacao de situacao (matriz funil x funil, concordancia) saiu: a
+      Nuvyon opera no NOSSO CRM, entao o card do HubSoft e retrato congelado e
+      "divergencia" virava so defasagem. Ficou o que independe de qual CRM usam:
+      cobertura de captura e qualidade de dado (duplicado, sem prospecto).
+    {% endcomment %}
     <div class="oport-kpis">
       <div class="oport-kpi">
         <div class="v">{{ oport.casados }} <span style="font-size:15px;color:var(--color-text-muted);">/ {{ oport.total }}</span></div>
         <div class="l">Estão aqui ({{ oport.cobertura_pct }}%)</div>
-      </div>
-      <div class="oport-kpi">
-        <div class="v">{{ oport.concordancia_pct }}%</div>
-        <div class="l">Concordância de situação</div>
-      </div>
-      <div class="oport-kpi {% if oport.perda_prematura %}destaque{% endif %}">
-        <div class="v">{{ oport.matriz.perda_prematura }}</div>
-        <div class="l">Eles negociando, nós perdido</div>
       </div>
       <div class="oport-kpi">
         <div class="v">{{ oport.total_duplicados }}</div>
@@ -282,41 +273,6 @@
         <div class="v">{{ oport.total_sem_prospecto }}</div>
         <div class="l">Sem prospecto vinculado</div>
       </div>
-    </div>
-
-    {% comment %} Matriz de concordancia: linha = situacao deles, coluna = a nossa. {% endcomment %}
-    <div class="inc-funil">
-      <div class="inc-sub" style="margin-bottom:12px;">Matriz funil x funil ({{ oport.matriz.total }} cards casados por id_prospecto)</div>
-      <table class="mtx">
-        <thead>
-          <tr>
-            <th style="text-align:left;">Deles ↓ / Nosso →</th>
-            {% for c in oport.matriz.colunas %}<th>{{ c }}</th>{% endfor %}
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for linha in oport.matriz.linhas %}
-            <tr>
-              <td class="rowh">{{ linha.deles_label }}</td>
-              {% for cel in linha.celulas %}
-                <td class="{% if cel.concorda %}concorda{% elif cel.perda_prematura %}perda{% endif %}">{{ cel.valor }}</td>
-              {% endfor %}
-              <td class="tot">{{ linha.total }}</td>
-            </tr>
-          {% endfor %}
-          <tr>
-            <td class="rowh tot">Total</td>
-            {% for t in oport.matriz.col_total %}<td class="tot">{{ t }}</td>{% endfor %}
-            <td class="tot">{{ oport.matriz.total }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p class="inc-nota">
-        Verde = os dois sistemas concordam. Vermelho = <strong>{{ oport.matriz.perda_prematura }} que eles ainda
-        negociam e nós já demos como perdido</strong>, a maior divergência.
-        &nbsp;·&nbsp; Só nossos (sem card na planilha): {{ oport.so_nossos }}.
-      </p>
     </div>
 
     {% if oport.problemas %}
@@ -364,8 +320,7 @@
               <td>{{ v.id_prospecto }}</td>
               <td>
                 <span class="inc-pill
-                  {% if v.categoria == 'Divergência' %}falha
-                  {% elif v.categoria == 'Duplicado' %}naovenda
+                  {% if v.categoria == 'Duplicado' %}naovenda
                   {% elif v.categoria == 'Sem prospecto' %}aberto
                   {% else %}fora{% endif %}">{{ v.categoria }}</span>
               </td>
@@ -378,8 +333,6 @@
         </tbody>
       </table>
       <p class="inc-nota" style="margin-top:10px;">
-        <strong>Divergência:</strong> casou por id_prospecto, mas a situação difere (a maior é eles negociando / nós perdido).
-        &nbsp;·&nbsp;
         <strong>Duplicado:</strong> a pessoa existe aqui com outro id_prospecto (prospecto em dobro).
         &nbsp;·&nbsp;
         <strong>Só existe lá:</strong> card sem par aqui; canal integrado deveria ter virado lead.

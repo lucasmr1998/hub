@@ -21,9 +21,10 @@ que CPF (casou 763 contra 232), porque a maioria dos cards nao tem CPF.
 from __future__ import annotations
 
 import re
-from collections import Counter
 
-# Situacoes canonicas dos dois lados
+# Situacoes canonicas da etapa do HubSoft (usadas em situacao_deles). A
+# comparacao de situacao funil x funil saiu (a Nuvyon opera no nosso CRM), mas o
+# mapa fica: a etapa ainda e util pra rotular o card e pode voltar a servir.
 GANHO, ABERTO, PERDIDO = 'ganho', 'aberto', 'perdido'
 
 # Colunas que o parser aproveita da planilha. As demais (email, valor, plano,
@@ -59,14 +60,6 @@ def situacao_deles(crm_etapa: str) -> str:
     if e == 'CADASTRO APROVADO':
         return GANHO
     if e.startswith('DESIST') or e in _PERDIDO_EXATO:
-        return PERDIDO
-    return ABERTO
-
-
-def _situacao_nossa(estagio) -> str:
-    if estagio and estagio.is_final_ganho:
-        return GANHO
-    if estagio and estagio.is_final_perdido:
         return PERDIDO
     return ABERTO
 
@@ -132,46 +125,42 @@ def _importacao_atual(tenant):
 
 
 def _indices_nossos(tenant):
-    """Nossos indices, lidos uma vez: oportunidade por id_hubsoft do lead
-    (situacao ao vivo), e lead por cpf/telefone (pra achar duplicata) com o
-    id_hubsoft. O id_hubsoft do lead E o id do prospecto que criamos, entao ele
-    casa direto com o id_prospecto do card."""
-    from apps.comercial.leads.models import LeadProspecto
+    """Nossos indices, lidos uma vez: o conjunto de id_hubsoft das nossas
+    oportunidades (o id_hubsoft do lead E o id do prospecto que criamos, entao
+    casa direto com o id_prospecto do card), e lead por cpf/telefone pra achar
+    duplicata."""
     from apps.comercial.crm.models import OportunidadeVenda
+    from apps.comercial.leads.models import LeadProspecto
 
-    op_por_prosp = {}
+    op_ids = set()
     for o in (OportunidadeVenda.all_tenants
-              .filter(tenant=tenant)
-              .select_related('estagio', 'lead')):
-        idp = _norm_id(o.lead.id_hubsoft) if o.lead_id else ''
+              .filter(tenant=tenant).values_list('lead__id_hubsoft', flat=True)):
+        idp = _norm_id(o)
         if idp:
-            op_por_prosp[idp] = {
-                'situacao': _situacao_nossa(o.estagio),
-                'lead_id': o.lead_id,
-                'estagio': o.estagio.nome if o.estagio else '',
-                'nome': (o.lead.nome_razaosocial or '') if o.lead_id else '',
-            }
+            op_ids.add(idp)
 
     lead_por_cpf, lead_por_tel = {}, {}
-    for l in LeadProspecto.all_tenants.filter(tenant=tenant):
-        info = {
-            'lead_id': l.pk,
-            'nome': l.nome_razaosocial or '',
-            'id_hubsoft': _norm_id(l.id_hubsoft),
-            'status_api': l.status_api,
-        }
-        cpf = _digitos(l.cpf_cnpj)
+    for lead in LeadProspecto.all_tenants.filter(tenant=tenant):
+        info = {'lead_id': lead.pk, 'nome': lead.nome_razaosocial or '',
+                'id_hubsoft': _norm_id(lead.id_hubsoft)}
+        cpf = _digitos(lead.cpf_cnpj)
         if cpf:
             lead_por_cpf.setdefault(cpf, info)
-        tel = _digitos(l.telefone)
+        tel = _digitos(lead.telefone)
         if len(tel) >= 10:
             lead_por_tel.setdefault(tel[-8:], info)
-    return op_por_prosp, lead_por_cpf, lead_por_tel
+    return op_ids, lead_por_cpf, lead_por_tel
 
 
 def montar_aba(tenant) -> dict:
     """Tudo que a aba Oportunidades precisa. Sem cache: e leitura local (DB +
-    JSON), rapida, e o valor e justamente refletir o CRM ao vivo."""
+    JSON), rapida, e o valor e refletir o nosso funil ao vivo.
+
+    Nao compara mais situacao (matriz funil x funil): a Nuvyon opera no NOSSO
+    CRM, entao os cards do CRM do HubSoft sao retrato congelado e "divergencia"
+    virava so defasagem. Sobrou o que independe de qual CRM usam: qualidade de
+    dado (prospecto duplicado, card sem prospecto) e cobertura de captura.
+    """
     imp = _importacao_atual(tenant)
     if imp is None:
         return {'tem_import': False}
@@ -185,22 +174,14 @@ def montar_aba(tenant) -> dict:
     sem_prospecto = [c for c in todos if c['id_prospecto'] in ('', '0')]
     cards = [c for c in todos if c['id_prospecto'] not in ('', '0')]
 
-    op_por_prosp, lead_por_cpf, lead_por_tel = _indices_nossos(tenant)
+    op_ids, lead_por_cpf, lead_por_tel = _indices_nossos(tenant)
 
-    matriz = Counter()          # (situacao_deles, situacao_nossa) -> n
-    divergentes, duplicados, so_deles = [], [], []
+    duplicados, so_deles = [], []
     casados = 0
 
     for c in cards:
-        nosso = op_por_prosp.get(c['id_prospecto'])
-        if nosso:
+        if c['id_prospecto'] in op_ids:
             casados += 1
-            matriz[(c['situacao'], nosso['situacao'])] += 1
-            if c['situacao'] != nosso['situacao']:
-                divergentes.append({**c,
-                                    'nossa_situacao': nosso['situacao'],
-                                    'nosso_estagio': nosso['estagio'],
-                                    'lead_id': nosso['lead_id']})
             continue
 
         # nao casou por id_prospecto: a pessoa existe aqui com OUTRO id (duplicata)?
@@ -218,17 +199,12 @@ def montar_aba(tenant) -> dict:
     # cobertura sobre os cards REAIS (com prospecto), nao sobre os 1226 crus, pra
     # os 382 sem_prospecto nao derrubarem o percentual
     total = len(cards)
-    so_nossos = sum(1 for idp in op_por_prosp
-                    if idp not in {c['id_prospecto'] for c in cards})
-
-    # concordancia = diagonal da matriz
-    concordam = sum(n for (d, nn), n in matriz.items() if d == nn)
+    so_nossos = len(op_ids - {c['id_prospecto'] for c in cards})
 
     # Uma lista unica de problemas, com a categoria por linha, pra a tela usar UMA
-    # datatable com chips (mesmo padrao da aba Vendas) em vez de 4 tabelas.
-    problemas = _unificar(divergentes, duplicados, so_deles, sem_prospecto)
+    # datatable com chips (mesmo padrao da aba Vendas).
+    problemas = _unificar(duplicados, so_deles, sem_prospecto)
     chips = [
-        {'slug': 'Divergência', 'total': len(divergentes)},
         {'slug': 'Duplicado', 'total': len(duplicados)},
         {'slug': 'Só existe lá', 'total': len(so_deles)},
         {'slug': 'Sem prospecto', 'total': len(sem_prospecto)},
@@ -246,10 +222,6 @@ def montar_aba(tenant) -> dict:
         'total_duplicados': len(duplicados),
         'total_sem_prospecto': len(sem_prospecto),
         'so_nossos': so_nossos,
-        'concordam': concordam,
-        'concordancia_pct': round(100.0 * concordam / casados) if casados else 0,
-        'total_divergentes': len(divergentes),
-        'matriz': _matriz_para_template(matriz),
         'problemas': problemas,
         'total_problemas': len(problemas),
         'chips': [c for c in chips if c['total']],
@@ -269,14 +241,11 @@ def _linha(card, categoria, detalhe='', lead_id=None, tag=None):
     }
 
 
-def _unificar(divergentes, duplicados, so_deles, sem_prospecto) -> list:
-    """Achata os quatro baldes numa lista so, cada linha com sua categoria e um
-    campo `detalhe` que carrega o que e especifico de cada tipo (nosso estagio,
-    nosso lead, telefone ou equipe)."""
+def _unificar(duplicados, so_deles, sem_prospecto) -> list:
+    """Achata os tres baldes numa lista so, cada linha com sua categoria e um
+    campo `detalhe` que carrega o que e especifico de cada tipo (nosso lead,
+    telefone ou equipe)."""
     linhas = []
-    for d in divergentes:
-        linhas.append(_linha(d, 'Divergência', detalhe=f"Nosso: {d['nosso_estagio']}",
-                             lead_id=d.get('lead_id')))
     for x in duplicados:
         linhas.append(_linha(x, 'Duplicado',
                              detalhe=f"Nosso lead #{x['lead_id']} (id_hs {x['nosso_id_hubsoft']})",
@@ -288,35 +257,3 @@ def _unificar(divergentes, duplicados, so_deles, sem_prospecto) -> list:
         # sem prospecto nao tem tag util; a equipe (board) e o que importa
         linhas.append(_linha(x, 'Sem prospecto', detalhe=x.get('crm', ''), tag=x.get('crm', '')))
     return linhas
-
-
-_ROTULO = {GANHO: 'Ganho', ABERTO: 'Aberto', PERDIDO: 'Perdido'}
-
-
-def _matriz_para_template(matriz: Counter) -> dict:
-    """Serializa a matriz 3x3 num formato que o template le sem logica: cada
-    celula ja vem com o que destacar (diagonal = concordancia; deles ABERTO /
-    nos PERDIDO = perda prematura, a divergencia que importa)."""
-    ordem = (GANHO, ABERTO, PERDIDO)
-    linhas = []
-    for d in ordem:
-        celulas = []
-        for n in ordem:
-            v = matriz.get((d, n), 0)
-            celulas.append({
-                'valor': v,
-                'concorda': d == n,
-                'perda_prematura': d == ABERTO and n == PERDIDO and v > 0,
-            })
-        linhas.append({
-            'deles': d, 'deles_label': _ROTULO[d],
-            'celulas': celulas, 'total': sum(c['valor'] for c in celulas),
-        })
-    col_total = [sum(matriz.get((d, n), 0) for d in ordem) for n in ordem]
-    return {
-        'colunas': [_ROTULO[n] for n in ordem],
-        'linhas': linhas,
-        'col_total': col_total,
-        'total': sum(matriz.values()),
-        'perda_prematura': matriz.get((ABERTO, PERDIDO), 0),
-    }

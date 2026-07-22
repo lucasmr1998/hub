@@ -145,13 +145,13 @@ class TestMontarAba:
     def test_sem_import(self, cenario):
         assert svc.montar_aba(cenario['tenant']) == {'tem_import': False}
 
-    def test_matriz_duplicado_e_so_deles(self, cenario):
-        # A: casa e concorda (ganho/ganho)
-        cenario['lead'](id_hubsoft='100', cpf='11111111111', tel='11988887777', situacao='ganho')
-        # B: casa e DIVERGE (eles aberto / nos perdido) -> perda prematura
-        cenario['lead'](id_hubsoft='200', cpf='22222222222', tel='11988886666', situacao='perdido')
+    def test_casado_duplicado_e_so_deles(self, cenario):
+        # A: casa por id_prospecto (id_hubsoft do lead == card) -> so conta cobertura
+        cenario['lead'](id_hubsoft='100', cpf='11111111111', tel='11988887777')
+        # B: casa tambem -> cobertura
+        cenario['lead'](id_hubsoft='200', cpf='22222222222', tel='11988886666')
         # C: pessoa existe com id_hubsoft 301, mas o card dela e 300 -> duplicado
-        cenario['lead'](id_hubsoft='301', cpf='33333333333', tel='11988885555', situacao='aberto')
+        cenario['lead'](id_hubsoft='301', cpf='33333333333', tel='11988885555')
 
         cenario['importar']([
             card('100', 'CADASTRO APROVADO', cpf='11111111111'),
@@ -163,18 +163,17 @@ class TestMontarAba:
         d = svc.montar_aba(cenario['tenant'])
         assert d['tem_import'] is True
         assert d['total'] == 4
-        assert d['casados'] == 2
-        assert d['total_duplicados'] == 1
-        assert d['total_so_deles'] == 1
-        assert d['so_nossos'] == 1                 # o lead C (301) nao esta na planilha
-        assert d['total_divergentes'] == 1
-        assert d['concordam'] == 1                 # so o ganho/ganho
-        assert d['concordancia_pct'] == 50
-        assert d['matriz']['perda_prematura'] == 1
-        # lista unificada: 1 divergente + 1 duplicado + 1 so deles = 3 (concordantes nao entram)
-        assert d['total_problemas'] == 3
+        assert d['casados'] == 2                    # 100 e 200
+        assert d['total_duplicados'] == 1           # o card 300
+        assert d['total_so_deles'] == 1             # o card 999
+        assert d['so_nossos'] == 1                  # o lead C (301) nao esta na planilha
+        # matriz/divergencia sairam: a comparacao de situacao morreu
+        assert 'matriz' not in d
+        assert 'concordancia_pct' not in d
+        # lista unificada: 1 duplicado + 1 so deles = 2 (os casados nao entram)
+        assert d['total_problemas'] == 2
         cats = {p['categoria'] for p in d['problemas']}
-        assert cats == {'Divergência', 'Duplicado', 'Só existe lá'}
+        assert cats == {'Duplicado', 'Só existe lá'}
 
     def test_casa_por_telefone_quando_sem_cpf(self, cenario):
         cenario['lead'](id_hubsoft='500', cpf='', tel='11977776666', situacao='ganho')
@@ -226,11 +225,14 @@ class TestUploadEView:
     def test_pagina_mostra_a_aba_oportunidades(self, logado, cenario):
         cenario['lead'](id_hubsoft='100', cpf='11111111111', situacao='ganho')
         cenario['importar']([card('100', 'CADASTRO APROVADO', cpf='11111111111')])
+        cenario['importar']([card('301', 'ASSUNTOS COMERCIAIS', cpf='11111111111')])  # duplicado
         with patch_vendas():
             html = logado.get(reverse('integracoes:inconsistencias'),
                               {'tab': 'oportunidades'}).content.decode()
         assert 'aba-oportunidades' in html
-        assert 'Matriz funil x funil' in html
+        assert 'Inconsistências' in html
+        assert 'Estão aqui' in html          # KPI de cobertura
+        assert 'Matriz funil x funil' not in html   # a matriz saiu
 
 
 def patch_vendas():

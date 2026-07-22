@@ -516,3 +516,22 @@ e compara em memoria.
   virou funcao `ligarChips` reusada nas duas abas.
 - **Output:** 27 testes (1 checando a lista unificada e as categorias); render ok.
 - **Status:** completed
+
+## 2026-07-22 — Aba Oportunidades: remove matriz funil x funil (Nuvyon migrou pro nosso CRM)
+
+- **Contexto:** o dono avisou que a Nuvyon **nao usa mais o CRM do HubSoft**,
+  opera no nosso. Com isso o card do HubSoft virou retrato congelado e
+  "divergencia" (situacao deles x nossa) deixou de significar discordancia,
+  virou defasagem.
+- **Acao:** removida a comparacao de situacao inteira: matriz funil x funil, KPI
+  de concordancia, KPI "eles negociando / nos perdido", categoria Divergencia da
+  tabela. Codigo morto apagado (`_matriz_para_template`, `_situacao_nossa`,
+  `_ROTULO`, import Counter, CSS `.mtx`).
+- **Ficou** o que independe de qual CRM usam: **cobertura de captura** (quantos
+  cards estao aqui) e **qualidade de dado** (Duplicado, So existe la, Sem
+  prospecto). A aba agora tem 3 chips em vez de 4.
+- **Pendencia de escopo (aberta):** se o HubSoft CRM esta 100% morto, a aba vira
+  reconciliacao unica daquele export (nao ha planilha nova). Decidir se aposenta
+  a aba depende de: a Nuvyon ainda cria prospecto no HubSoft (camada ERP)?
+- **Output:** 27 testes (ajustados: matriz/divergencia fora), ruff limpo, render ok.
+- **Status:** completed
