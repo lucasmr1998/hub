@@ -13,6 +13,16 @@
       <p class="page-subtitle">Gerencie conexoes com sistemas externos (ERP, WhatsApp, automacao).</p>
     </div>
     <div class="page-actions">
+      {% comment %}
+        Sem estes dois links as paginas ficam inalcancaveis pela navegacao. A de
+        saude existia ha meses sem nenhuma entrada apontando pra ela.
+      {% endcomment %}
+      <a href="{% url 'integracoes:reconciliacao' %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-arrow-left-right"></i> Reconciliacao
+      </a>
+      <a href="{% url 'integracoes:saude_integracoes' %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-activity"></i> Saude
+      </a>
       <button type="button" id="btnNovaIntegracao" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nova integracao</button>
     </div>
   </div>

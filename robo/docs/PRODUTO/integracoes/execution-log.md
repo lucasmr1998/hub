@@ -149,3 +149,57 @@ Registro cronológico do que foi executado no módulo de integrações (ação, 
 - **RESSALVA**: guardamos o nome do arquivo da gravacao, mas TOCAR o audio depende do endpoint de download do Talk (pendente com a Matrix do Brasil) — fast-follow.
 - **PENDENTE**: rodar o backfill (--dias grande, 1x) pras ligacoes ja importadas; agendar no cron (--dias curto). Deploy pendente.
 - **Status**: completed (dev).
+
+## 2026-07-22 — Pagina de reconciliacao Hubtrix x HubSoft (tarefa 219)
+
+- **Acao:** criar `/configuracoes/integracoes/reconciliacao/`, pagina recorrente
+  que compara o funil do Hubtrix com o que veio do HubSoft.
+- **Motivacao:** a Nuvyon questionou varios numeros em sequencia (276 vendas no
+  HubSoft x 240 no painel, 1226 leads x 1111, "Mococa tem 2") e **cada resposta
+  exigiu investigacao manual no banco**. A pagina troca isso por uma tela.
+- **Decisao de arquitetura:** le **so dado local**. O HubSoft tem timeout de 30s
+  com ate 3 tentativas (pior caso ~94s), o que tornaria a pagina inutilizavel.
+  Como contrapartida obrigatoria, `confiabilidade_espelho()` mede o quanto o
+  espelho esta defasado e a tela mostra isso **antes** dos numeros: sem esse
+  aviso a pagina passaria a impressao de que o lado HubSoft esta completo,
+  quando lead parado em rascunho nunca chega la.
+- **Onde ficou:** irma de `/integracoes/saude/`. Aquela olha a saude das
+  CHAMADAS (latencia, taxa de sucesso); esta olha a consistencia dos DADOS.
+- **Output:**
+  - `apps/integracoes/services/reconciliacao.py`: dataclass `Divergencia` +
+    `comparar_vendas`, `comparar_leads`, `comparar_espelho`, `qualidade_campos`,
+    `confiabilidade_espelho` e `montar_reconciliacao`.
+  - `apps/integracoes/views.py`: `reconciliacao_view`, com janela de dias
+    saneada (1 a 365, lixo cai no default 30).
+  - `apps/integracoes/templates/integracoes/reconciliacao.html`.
+  - `tests/test_integracoes_reconciliacao.py`.
+- **Dois bugs meus, achados rodando contra os dados reais antes de commitar:**
+  1. `comparar_espelho` usava o total do espelho como intersecao. Como o espelho
+     tambem recebe cliente da sync em massa (1006 orfaos sem lead), a intersecao
+     ficava MAIOR que um dos lados e a tela exibia "so nossos: **-153**". Passou
+     a contar so cliente com lead vinculado, e o dataclass ganhou um
+     `__post_init__` que **levanta ValueError** se a intersecao for incoerente:
+     falhar e melhor que exibir numero impossivel.
+  2. `qualidade_campos` media "vendas ganhas sem plano" contra o total de LEADS.
+     Dava 3,1%, um numero bonito e errado. Cada linha passou a ter seu proprio
+     denominador (`base` + `universo`); o valor certo e **11,9%**, que bate com a
+     estimativa de 12 a 14% de receita subcontada apurada em 21/07.
+- **Numeros reais da Nuvyon no dia da entrega (22/07):** espelho `incompleto`,
+  843 leads presos em rascunho, 1236 clientes espelhados. Vendas 30d: 312 ganhas
+  no CRM x 207 clientes novos, com intersecao de apenas 166. Espelho: 1083 leads
+  enviados x 230 que viraram cliente. Qualidade: 69,5% sem cidade, 52,2% sem CPF,
+  11,9% das vendas sem plano.
+- **Status:** completed
+
+### Adendo: as duas paginas estavam inalcancaveis
+
+Ao ser perguntado "como eu acesso essa pagina?", descobri que tinha construido a
+reconciliacao **sem nenhuma entrada de navegacao apontando pra ela** — so por
+URL digitada. E pior: a pagina de **saude das integracoes ja estava assim havia
+meses**, tambem sem link nenhum, provavelmente nunca usada.
+
+Os dois botoes entraram no cabecalho de `/configuracoes/integracoes/`, com
+comentario no template explicando por que estao ali.
+
+Fica a licao pro checklist de feature (secao 14): **pagina sem rota de navegacao
+nao esta entregue**, mesmo com view, template e teste prontos.

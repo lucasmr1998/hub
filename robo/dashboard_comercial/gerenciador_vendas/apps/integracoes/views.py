@@ -490,6 +490,33 @@ def saude_integracoes_view(request):
 
 
 @login_required
+def reconciliacao_view(request):
+    """Compara o funil do Hubtrix com o que veio do HubSoft.
+
+    Irma da pagina de saude: aquela olha a saude das CHAMADAS (latencia, taxa de
+    sucesso), esta olha a consistencia dos DADOS. Nasceu porque cada vez que o
+    cliente questionava um numero ("o HubSoft mostra 276 vendas e o painel 240")
+    a resposta exigia investigacao manual no banco.
+
+    Le so dado local: o HubSoft tem timeout de 30s com ate 3 tentativas, o que
+    tornaria a pagina inutilizavel. Por isso a tela mostra `confiabilidade`
+    junto — sem dizer o quanto o espelho esta defasado, os numeros mentiriam
+    por omissao.
+    """
+    from apps.integracoes.services.reconciliacao import montar_reconciliacao
+
+    try:
+        dias = int(request.GET.get('dias', 30))
+    except (TypeError, ValueError):
+        dias = 30
+    dias = max(1, min(dias, 365))
+
+    dados = montar_reconciliacao(request.tenant, dias=dias)
+    dados['opcoes_dias'] = [7, 30, 90]
+    return render(request, 'integracoes/reconciliacao.html', dados)
+
+
+@login_required
 @require_http_methods(["POST"])
 def api_integracao_criar(request):
     """Criar nova integração."""

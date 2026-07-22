@@ -1,0 +1,129 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Reconciliação Hubtrix x HubSoft, Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-eyebrow">Integrações</div>
+  <h1 class="page-title">Reconciliação Hubtrix x HubSoft</h1>
+  <p class="page-subtitle">Compara o que passou pelo nosso funil com o que existe do lado do HubSoft, e mostra onde os dois divergem.</p>
+  <div class="page-actions">
+    {% for d in opcoes_dias %}
+      <a href="?dias={{ d }}" class="btn btn-{% if d == dias %}primary{% else %}secondary{% endif %} btn-sm">{{ d }} dias</a>
+    {% endfor %}
+    <a href="{% url 'integracoes:integracoes' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  </div>
+</div>
+
+<style>
+  .rec-aviso { border-radius: var(--radius); padding: 14px 18px; margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
+  .rec-aviso i { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .rec-aviso.ok { background: #D1FAE5; color: #065F46; }
+  .rec-aviso.incompleto, .rec-aviso.defasado { background: #FEF3C7; color: #92400E; }
+  .rec-aviso.sem_dados { background: #F1F5F9; color: #475569; }
+  .rec-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .rec-card.sev-critico { border-left: 4px solid var(--color-danger, #DC2626); }
+  .rec-card.sev-atencao { border-left: 4px solid var(--color-warning, #F59E0B); }
+  .rec-card.sev-info { border-left: 4px solid var(--color-border); }
+  .rec-card h3 { margin: 0 0 14px; font-size: 16px; font-weight: 700; }
+  .rec-lados { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .rec-lado { text-align: center; padding: 12px; background: var(--color-bg, #F8FAFC); border-radius: var(--radius-sm, 6px); }
+  .rec-lado strong { display: block; font-size: 26px; font-weight: 700; color: var(--color-text, #0F172A); line-height: 1.2; }
+  .rec-lado span { font-size: 11px; color: var(--color-text-muted, #64748B); text-transform: uppercase; letter-spacing: 0.04em; }
+  .rec-lado.destaque { background: #EFF6FF; }
+  .rec-explicacao { font-size: 13px; color: var(--color-text-muted, #64748B); line-height: 1.55; margin-bottom: 12px; }
+  .rec-detalhes { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--color-border); }
+  .rec-detalhes li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+  .rec-detalhes li:last-child { border-bottom: none; }
+  .rec-detalhes b { font-variant-numeric: tabular-nums; }
+  .rec-tabela { width: 100%; border-collapse: collapse; }
+  .rec-tabela th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--color-border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; }
+  .rec-tabela td { padding: 10px 12px; border-bottom: 1px solid var(--color-border); font-size: 13px; vertical-align: top; }
+  .rec-tabela .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rec-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .rec-pill.critico { background: #FEE2E2; color: #991B1B; }
+  .rec-pill.atencao { background: #FEF3C7; color: #92400E; }
+  .rec-pill.ok { background: #D1FAE5; color: #065F46; }
+  @media (max-width: 720px) { .rec-lados { grid-template-columns: 1fr; } }
+</style>
+
+{% comment %}
+  A confiabilidade vem ANTES dos numeros de proposito: o lado "HubSoft" sai do
+  espelho local, e lead parado em rascunho nunca entra nele. Sem esse aviso a
+  pagina passaria a impressao de que os numeros estao completos.
+{% endcomment %}
+<div class="rec-aviso {{ confiabilidade.estado }}">
+  <i class="bi bi-{% if confiabilidade.estado == 'ok' %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+  <div>
+    {% if confiabilidade.estado == 'sem_dados' %}
+      <strong>Sem espelho do HubSoft.</strong> Nenhum cliente foi sincronizado ainda, então o lado HubSoft aparece zerado. Os números do Hubtrix seguem válidos.
+    {% elif confiabilidade.estado == 'defasado' %}
+      <strong>Espelho defasado.</strong> A última sincronização foi há {{ confiabilidade.horas_desde_sync }} horas. O lado HubSoft pode estar desatualizado.
+    {% elif confiabilidade.estado == 'incompleto' %}
+      <strong>O lado HubSoft está incompleto.</strong>
+      {{ confiabilidade.leads_presos_em_rascunho }} leads estão parados em <code>rascunho_hubsoft</code>: o prospecto existe lá, mas o cadastro nunca foi completado aqui, então eles nunca viram cliente no espelho.
+      Espere ver o lado HubSoft menor do que a realidade.
+    {% else %}
+      <strong>Espelho em dia.</strong> {{ confiabilidade.clientes_espelhados }} clientes sincronizados, última leitura há {{ confiabilidade.horas_desde_sync }} horas.
+    {% endif %}
+  </div>
+</div>
+
+{% for d in divergencias %}
+  <div class="rec-card sev-{{ d.severidade }}">
+    <h3>{{ d.titulo }}</h3>
+    <div class="rec-lados">
+      <div class="rec-lado">
+        <strong>{{ d.nossos }}</strong>
+        <span>{{ d.rotulo_nossos }}</span>
+      </div>
+      {% if d.intersecao is not None %}
+        <div class="rec-lado destaque">
+          <strong>{{ d.intersecao }}</strong>
+          <span>Nos dois</span>
+        </div>
+      {% endif %}
+      <div class="rec-lado">
+        <strong>{{ d.deles }}</strong>
+        <span>{{ d.rotulo_deles }}</span>
+      </div>
+    </div>
+    <p class="rec-explicacao">{{ d.explicacao }}</p>
+    {% if d.detalhes %}
+      <ul class="rec-detalhes">
+        {% for rotulo, valor in d.detalhes %}
+          <li><span>{{ rotulo }}</span> <b>{{ valor }}</b></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endfor %}
+
+<div class="rec-card">
+  <h3>Qualidade dos campos</h3>
+  <p class="rec-explicacao">
+    Campo vazio não aparece como erro em lugar nenhum, ele só faz o relatório contar menos.
+    Cada linha tem seu próprio denominador.
+  </p>
+  <table class="rec-tabela">
+    <thead>
+      <tr>
+        <th>Campo</th>
+        <th class="num">Vazios</th>
+        <th class="num">Do total</th>
+        <th>O que isso causa</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in qualidade %}
+        <tr>
+          <td><strong>{{ q.rotulo }}</strong></td>
+          <td class="num">{{ q.quantidade }} <span style="color:var(--color-text-muted);">de {{ q.base }}</span></td>
+          <td class="num"><span class="rec-pill {{ q.severidade }}">{{ q.percentual }}%</span></td>
+          <td>{{ q.impacto }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
