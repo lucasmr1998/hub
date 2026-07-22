@@ -176,7 +176,15 @@ def montar_aba(tenant) -> dict:
     if imp is None:
         return {'tem_import': False}
 
-    cards = imp.cards or []
+    todos = imp.cards or []
+
+    # id_prospecto = 0 e o card aberto direto no CRM sem nunca linkar um prospecto
+    # no HubSoft (cpf "Nao Possui prospecto", sem telefone). Nao tem chave nenhuma
+    # pra casar, entao vira bucket proprio em vez de inchar "so existem la" e a
+    # cobertura. Na planilha de 21/07 eram 382 dos 1226.
+    sem_prospecto = [c for c in todos if c['id_prospecto'] in ('', '0')]
+    cards = [c for c in todos if c['id_prospecto'] not in ('', '0')]
+
     op_por_prosp, lead_por_cpf, lead_por_tel = _indices_nossos(tenant)
 
     matriz = Counter()          # (situacao_deles, situacao_nossa) -> n
@@ -207,6 +215,8 @@ def montar_aba(tenant) -> dict:
         else:
             so_deles.append(c)
 
+    # cobertura sobre os cards REAIS (com prospecto), nao sobre os 1226 crus, pra
+    # os 382 sem_prospecto nao derrubarem o percentual
     total = len(cards)
     so_nossos = sum(1 for idp in op_por_prosp
                     if idp not in {c['id_prospecto'] for c in cards})
@@ -218,6 +228,7 @@ def montar_aba(tenant) -> dict:
         'tem_import': True,
         'enviado_em': imp.enviado_em,
         'nome_arquivo': imp.nome_arquivo,
+        'total_cards': len(todos),
         'total': total,
         'casados': casados,
         'cobertura_pct': round(100.0 * casados / total) if total else 0,
@@ -225,6 +236,8 @@ def montar_aba(tenant) -> dict:
         'total_so_deles': len(so_deles),
         'duplicados': duplicados,
         'total_duplicados': len(duplicados),
+        'sem_prospecto': sem_prospecto,
+        'total_sem_prospecto': len(sem_prospecto),
         'so_nossos': so_nossos,
         'concordam': concordam,
         'concordancia_pct': round(100.0 * concordam / casados) if casados else 0,

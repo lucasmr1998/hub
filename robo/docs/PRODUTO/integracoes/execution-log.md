@@ -485,3 +485,19 @@ e compara em memoria.
   (cobertura 62%); so a janela de julho dava 90%. Quem define o recorte e o
   export.
 - **Status:** completed
+
+## 2026-07-22 — Aba Oportunidades: bucket "sem prospecto vinculado" (id=0)
+
+- **Acao:** os cards com `id_prospecto = 0` viraram bucket proprio e filtravel na
+  aba Oportunidades, com KPI e datatable (busca por equipe/vendedor + CSV).
+- **Motivo:** na planilha de 21/07 sao **382 dos 1226**. Sao cards abertos direto
+  no CRM sem nunca linkar prospecto (CPF "Nao Possui", sem telefone), quase todos
+  em VENDAS EQUIPE MOCOCA / ASSUNTOS COMERCIAIS. Nao tem chave pra casar.
+- **Correcao junto:** antes eles caiam em "so existem la" (inflava de ~31 pra 413)
+  e derrubavam a cobertura (1226 no denominador = 62%). Agora saem da matriz e da
+  cobertura, que passa a ser sobre os 844 com prospecto (~91%, bate com os 90% da
+  sessao anterior).
+- **Prod:** o Lucas ja subiu a planilha em prod (admin_nuvyon, 22/07 23:07, 1226
+  cards, 382 com id=0). A feature rodou ponta a ponta.
+- **Output:** 27 testes (1 novo cobrindo o bucket); render das abas ok.
+- **Status:** completed

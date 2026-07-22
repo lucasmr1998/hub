@@ -180,6 +180,21 @@ class TestMontarAba:
         assert d['total_duplicados'] == 1
         assert d['total_so_deles'] == 0
 
+    def test_id_zero_vira_bucket_e_nao_infla_a_matriz(self, cenario):
+        cenario['lead'](id_hubsoft='100', cpf='11111111111', situacao='ganho')
+        cenario['importar']([
+            card('100', 'CADASTRO APROVADO', cpf='11111111111'),
+            card('0', 'ASSUNTOS COMERCIAIS', nome='MARCIA 5511'),   # sem prospecto
+            card('0', 'ASSUNTOS COMERCIAIS', nome='SANDRA ??'),     # sem prospecto
+        ])
+        d = svc.montar_aba(cenario['tenant'])
+        assert d['total_sem_prospecto'] == 2
+        assert d['total'] == 1              # cobertura so sobre os com prospecto
+        assert d['total_cards'] == 3        # o cru inclui os id=0
+        assert d['casados'] == 1
+        assert d['total_so_deles'] == 0     # os id=0 NAO caem aqui
+        assert d['cobertura_pct'] == 100
+
 
 class TestUploadEView:
     @pytest.fixture

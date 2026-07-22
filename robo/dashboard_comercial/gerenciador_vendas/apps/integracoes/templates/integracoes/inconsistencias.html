@@ -247,7 +247,8 @@
     <div class="oport-envio">
       <span class="meta">
         <i class="bi bi-clock-history"></i>
-        Planilha enviada em {{ oport.enviado_em|date:"d/m/Y H:i" }} · {{ oport.total }} cards{% if oport.nome_arquivo %} · {{ oport.nome_arquivo }}{% endif %}
+        Planilha enviada em {{ oport.enviado_em|date:"d/m/Y H:i" }} · {{ oport.total_cards }} cards
+        ({{ oport.total }} com prospecto, {{ oport.total_sem_prospecto }} sem){% if oport.nome_arquivo %} · {{ oport.nome_arquivo }}{% endif %}
       </span>
       <form method="post" action="{% url 'integracoes:oportunidades_upload' %}" enctype="multipart/form-data" class="oport-up">
         {% csrf_token %}
@@ -276,6 +277,10 @@
       <div class="oport-kpi">
         <div class="v">{{ oport.total_so_deles }}</div>
         <div class="l">Só existem lá</div>
+      </div>
+      <div class="oport-kpi {% if oport.total_sem_prospecto %}destaque{% endif %}">
+        <div class="v">{{ oport.total_sem_prospecto }}</div>
+        <div class="l">Sem prospecto vinculado</div>
       </div>
     </div>
 
@@ -419,6 +424,41 @@
               <td>{{ v.tag }}</td>
               <td>{{ v.crm_etapa }}</td>
               <td>{{ v.telefone }}</td>
+              <td>{{ v.usuario }}</td>
+              <td>{{ v.data_cadastro_cartao }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+    {% if oport.sem_prospecto %}
+      <div class="oport-sec">Cards sem prospecto vinculado ({{ oport.total_sem_prospecto }})</div>
+      <p class="inc-nota" style="margin:-4px 0 10px;">
+        Cards abertos direto no CRM com <strong>id_prospecto = 0</strong>: nunca linkaram um prospecto no HubSoft
+        (CPF "Não Possui", sem telefone). Não têm chave pra casar com a gente, então ficam de fora da matriz e
+        da cobertura. Filtre por equipe ou vendedor pra ver quem está abrindo card solto.
+      </p>
+      <table class="dt"
+             data-busca="Buscar por cliente, equipe, etapa ou vendedor..."
+             data-por-pagina="25"
+             data-exportar="cards-sem-prospecto"
+             data-vazio="Nenhum com esse filtro.">
+        <thead>
+          <tr>
+            <th>Cliente (card)</th>
+            <th>Equipe / Board</th>
+            <th>Etapa</th>
+            <th>Vendedor</th>
+            <th data-tipo="data">Cadastro</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in oport.sem_prospecto %}
+            <tr>
+              <td><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></td>
+              <td>{{ v.crm }}</td>
+              <td>{{ v.crm_etapa }}</td>
               <td>{{ v.usuario }}</td>
               <td>{{ v.data_cadastro_cartao }}</td>
             </tr>
