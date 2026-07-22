@@ -572,3 +572,24 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 
 - **Output**: migration 0024 (motivo_saida_codigo). 652 testes. Vinte e poucos testes ajustados por causa dos nomes de etapa.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-21 — Board com paridade visual com a origem
+
+- **Acao**: o Lucas mandou os dois prints do board real (lista e pipeline) e pediu paridade. Cinco diferencas fechadas.
+
+1. **A lista virou GRADE DE CARDS**, e nao tabela. A tabela dava mais densidade, porem obrigava a abrir a ficha pra qualquer acao; com 82 candidatos numa etapa, abrir e voltar 82 vezes e o que faz o RH desistir da tela.
+2. **Card unico pras duas vistas**, de proposito: card diferente por vista faria a acao rapida existir num lugar e nao no outro. Ganhou telefone, dias na etapa com aviso de prazo, e acoes rapidas (avancar, tirar do processo, reativar, curriculo).
+3. **Saidas viraram coluna no kanban**, com limite de 20 cards e link "ver todos": o banco de talentos da origem tem 423 pessoas, e renderizar tudo travaria a tela. Coluna de saida NAO aceita soltar, porque toda saida exige motivo e o arrasto nao tem onde perguntar.
+4. **Chips inline, numa linha so.** A versao anterior usava caixa por chip com o numero grande embaixo e ocupava tres vezes mais altura. Num board a lista e o conteudo, e o filtro nao pode empurrar ela pra baixo da dobra.
+5. **Rotas num elemento que existe nas duas vistas** (`#pipeline-dados`). Antes viviam no `.kanban-board`, entao a acao do card nao funcionava na lista.
+
+**ERRO GRAVE MEU NO PROCESSO, que vale registrar:**
+
+Editei o template com `s.index(ancora_inicio)` e `s.index(ancora_fim)` por string. A ancora de fim (`{% if vista == 'kanban' %}`) aparecia ANTES no arquivo, no link de alternar vista. O slice virou string vazia, e `s.replace('', novo)` inseriu o bloco entre CADA CARACTERE: o arquivo foi de 14 KB pra **25 MB**, com 15.462 copias.
+
+Recuperado com `git checkout HEAD --` (o commit anterior salvou) e refeito com a ferramenta de edicao, que exige ancora unica e falha alto quando ha ambiguidade. Onde precisei recortar um trecho grande, usei NUMERO DE LINHA achado por ancora unica, e nao index de string.
+
+**A licao**: `str.index` numa ancora que se repete nao avisa, so devolve a errada. Editor com verificacao de unicidade existe justamente pra isso, e eu tinha um a mao.
+
+- **Output**: 652 testes. Sem migration.
+- **Status**: completed em dev, nao pushado.

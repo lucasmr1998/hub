@@ -25,6 +25,8 @@
   let cardDaSaida = null;
   let idsDoLote = [];
 
+  const dados = document.getElementById('pipeline-dados');
+
   function post(url, corpo) {
     return fetch(url, {
       method: 'POST',
@@ -132,11 +134,11 @@
         return;
       }
 
-      // Modo card unico (kanban)
-      const tabuleiro = document.querySelector('.kanban-board');
-      if (!cardDaSaida || !tabuleiro) return;
+      // Modo card unico. Le do #pipeline-dados, e nao do .kanban-board, pra
+      // funcionar tambem na vista lista, onde nao ha tabuleiro.
+      if (!cardDaSaida || !dados) return;
       const id = cardDaSaida.dataset.candidatoId;
-      post(tabuleiro.dataset.urlSaida.replace('0', id),
+      post(dados.dataset.urlSaida.replace('0', id),
            { saida: saida, motivo: motivo, motivo_codigo: motivoCodigo })
         .then(function (resp) {
         if (resp.status === 200) {
@@ -166,6 +168,48 @@
       if (e.target.closest('a, button, form, input')) return;
       const destino = card.dataset.detalhe;
       if (destino) window.location.href = destino;
+    });
+  });
+
+  // ── Acoes rapidas do card, nas duas vistas ──────────────────────────────
+  //
+  // Existem porque com 82 candidatos numa etapa, abrir a ficha e voltar 82
+  // vezes e o que faz o RH desistir da tela.
+  document.querySelectorAll('[data-avancar]').forEach(function (botao) {
+    botao.addEventListener('click', function (evento) {
+      evento.stopPropagation();   // nao abre a ficha junto
+      const card = botao.closest('.kanban-card');
+      if (!dados || !card) return;
+      botao.disabled = true;
+      post(dados.dataset.urlMover.replace('0', card.dataset.candidatoId),
+           { etapa_id: botao.dataset.avancar }).then(function (resp) {
+        if (resp.status === 200) { window.location.reload(); }
+        else {
+          botao.disabled = false;
+          toast('Nao consegui mover', resp.corpo.erro || 'Tente de novo.', 'danger');
+        }
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-reabrir]').forEach(function (botao) {
+    botao.addEventListener('click', function (evento) {
+      evento.stopPropagation();
+      const card = botao.closest('.kanban-card');
+      const primeira = dados && dados.dataset.primeiraEtapa;
+      if (!primeira || !card) {
+        toast('Sem etapa', 'O fluxo nao tem etapa pra onde reativar.', 'warning');
+        return;
+      }
+      botao.disabled = true;
+      post(dados.dataset.urlMover.replace('0', card.dataset.candidatoId),
+           { etapa_id: primeira }).then(function (resp) {
+        if (resp.status === 200) { window.location.reload(); }
+        else {
+          botao.disabled = false;
+          toast('Nao consegui reativar', resp.corpo.erro || 'Tente de novo.', 'danger');
+        }
+      });
     });
   });
 

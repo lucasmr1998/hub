@@ -47,8 +47,12 @@ TR Carrion antes de construir mais coisa especifica de vertical.
 | 10 | Taxa de conversao por link | meio dia | RESOLVIDO |
 | 11 | Etapas alinhadas ao produto rodando | 2h | RESOLVIDO |
 | 12 | Board: filtro por canal e periodo, dias no card | 2h | RESOLVIDO |
+| 26 | Lista como grade de cards, e nao tabela | 2h | RESOLVIDO |
+| 27 | Card com telefone, dias e acoes rapidas | 2h | RESOLVIDO |
+| 28 | Saidas como coluna no kanban | 1h | RESOLVIDO |
+| 29 | Chips inline, numa linha so | 1h | RESOLVIDO |
+| 30 | Botao "Reativar" no card de saida | 1h | RESOLVIDO |
 | **13** | **Campos do Perfil que faltam** | **4h** | **ABERTO** |
-| **14** | **Botao "Reativar" no card de saida** | **1h** | **ABERTO** |
 | **15** | **"Selecionar varios" no kanban** | **3h** | **ABERTO** |
 | **16** | **Requisicao de vaga com aprovacao** | **2 dias** | **ABERTO** |
 | **17** | **Perfil comportamental (teste + perfil por IA)** | **2 dias** | **ABERTO** |

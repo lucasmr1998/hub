@@ -140,29 +140,69 @@ def board(request):
         chip['ativo'] = (chip['tipo'] == selecao['tipo']
                          and chip['chave'] == selecao['chave'])
 
+    def _com_proxima(candidatos):
+        """
+        Anexa a proxima etapa do fluxo em cada candidato, pro card poder
+        oferecer "avancar" sem arrastar.
+
+        Resolvido aqui, e nao no template: procurar o vizinho numa lista e
+        trabalho de view. Candidato na ultima etapa, ou fora de etapa, ou que ja
+        saiu, fica sem proxima e o botao nao aparece.
+        """
+        seguinte = {}
+        for anterior, posterior in zip(etapas, etapas[1:]):
+            seguinte[anterior.pk] = posterior
+
+        lista_final = list(candidatos)
+        for candidato in lista_final:
+            candidato.proxima_etapa = (
+                seguinte.get(candidato.etapa_id) if not candidato.saida else None)
+        return lista_final
+
     # ── Vista kanban (opcional) ─────────────────────────────────────────────
     vista = 'kanban' if request.GET.get('vista') == 'kanban' else 'lista'
     colunas = []
     if vista == 'kanban':
         por_etapa_cards = {e.pk: [] for e in etapas}
-        soltos = []
         for candidato in base.filter(saida='').order_by('-criado_em'):
             if candidato.etapa_id in por_etapa_cards:
                 por_etapa_cards[candidato.etapa_id].append(candidato)
-            else:
-                soltos.append(candidato)
+
         colunas = [
-            {'etapa': e, 'cards': por_etapa_cards[e.pk],
-             'total': len(por_etapa_cards[e.pk])}
+            {'etapa': e, 'cards': _com_proxima(por_etapa_cards[e.pk]),
+             'total': len(por_etapa_cards[e.pk]), 'saida': ''}
             for e in etapas
         ]
+
+        # As SAIDAS tambem viram coluna, como no board da origem. Antes elas
+        # eram so chip: dava pra ver o total e clicar, mas nao dava pra
+        # arrastar alguem pra dentro nem enxergar quem esta la sem trocar de
+        # tela. Admitidos e Banco de talentos sao justamente as duas que o RH
+        # mais olha de relance.
+        #
+        # Limite por coluna: o banco de talentos da origem tem 423 pessoas, e
+        # renderizar tudo isso no kanban travaria a tela. Quem quiser a lista
+        # inteira clica no chip, que abre a vista de lista paginada.
+        LIMITE_SAIDA = 20
+        for valor, rotulo in estados_rs.SAIDAS:
+            cards = list(base.filter(saida=valor).order_by('-atualizado_em')
+                         [:LIMITE_SAIDA])
+            colunas.append({
+                'etapa': None,
+                'saida': valor,
+                'rotulo': rotulo,
+                'cor': estados_rs.COR_DA_SAIDA.get(valor, '#6B7280'),
+                'cards': _com_proxima(cards),
+                'total': por_saida.get(valor, 0),
+                'truncada': por_saida.get(valor, 0) > LIMITE_SAIDA,
+            })
 
     return render(request, 'people/pipeline_board.html', {
         'pagetitle': 'Candidatos',
         'chips': chips,
         'chips_saida': chips_saida,
         'selecao': selecao,
-        'lista': lista.order_by('-criado_em'),
+        'lista': _com_proxima(lista.order_by('-criado_em')),
         'colunas': colunas,
         'vista': vista,
         'etapas': etapas,

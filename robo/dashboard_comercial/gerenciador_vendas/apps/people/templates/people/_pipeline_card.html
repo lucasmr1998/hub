@@ -1,68 +1,131 @@
 {% comment %}
-Card de candidato no board. Extraido porque aparece em dois lugares: nas colunas
-de etapa e na area "fora de etapa".
-{% endcomment %}
-{% comment %}
-  O card inteiro abre a ficha, e nao so o nome: alvo de clique pequeno num
-  kanban e um jeito de fazer o usuario mirar. Quem navega e o JS (ver
-  pipeline.js), porque envolver tudo num <a> seria HTML invalido, ja que o card
-  tem link e botao dentro, e ainda brigaria com o arrasto.
+Card de candidato. Usado nas DUAS vistas (lista em grade e kanban), como no
+board da origem: la a lista tambem e grade de cards, e nao tabela.
 
-  O nome continua sendo um <a> de verdade pra o teclado alcancar, e pra ctrl
-  clique e clique do meio abrirem em aba nova, coisa que handler de JS nao da.
+Um card so pros dois lugares e deliberado. Card diferente por vista faria a
+acao rapida existir num e nao no outro, e foi assim que o "mover em lote" ficou
+so na lista por um dia.
+
+O card inteiro abre a ficha, e nao so o nome: alvo de clique pequeno num board e
+um jeito de fazer o usuario mirar. Quem navega e o JS (ver pipeline.js), porque
+envolver tudo num <a> seria HTML invalido, ja que o card tem link e botao
+dentro, e ainda brigaria com o arrasto.
+
+O nome continua sendo um <a> de verdade pra o teclado alcancar, e pra ctrl
+clique e clique do meio abrirem em aba nova, coisa que handler de JS nao da.
 {% endcomment %}
 <div class="kanban-card" data-candidato-id="{{ candidato.pk }}"
      data-detalhe="{% url 'people:candidato_detalhe' candidato.pk %}"
      style="cursor: pointer;">
+
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-2);">
     <p class="kanban-card-title">
       <a href="{% url 'people:candidato_detalhe' candidato.pk %}"
          style="color: inherit; text-decoration: none;">{{ candidato.nome_completo }}</a>
     </p>
+
     {% comment %}
-      Dias na etapa no canto do card, como no board da origem. Com 80
-      candidatos numa coluna, "ha quanto tempo esta parado" e o que decide quem
-      olhar primeiro, e ficava so na lista.
+      Dias na etapa, com aviso quando estoura o prazo. O numero sozinho nao
+      diz se e muito: "26d" e normal no banco de talentos e grave na triagem.
+      O alerta sai do sla_dias da propria etapa.
     {% endcomment %}
-    <span style="display: flex; gap: 2px; margin: -4px -4px 0 0; align-items: center;">
-      {% if candidato.dias_na_etapa is not None %}
-        <span class="field-helper" style="white-space: nowrap; {% if candidato.esta_atrasado %}color: var(--color-danger); font-weight: var(--fw-semibold);{% endif %}">
+    {% if candidato.dias_na_etapa is not None %}
+      <span style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;"
+            {% if candidato.esta_atrasado %}title="{{ candidato.rotulo_atraso }}"{% endif %}>
+        {% if candidato.esta_atrasado %}
+          <i class="bi bi-exclamation-triangle-fill" style="color: var(--color-warning); font-size: 11px;"></i>
+        {% endif %}
+        <span class="badge badge-sm {% if candidato.esta_atrasado %}badge-danger{% else %}badge-neutral{% endif %}">
           {{ candidato.dias_na_etapa }}d
         </span>
-      {% endif %}
-      {% if candidato.curriculo %}
-        {% comment %}
-          Abre em aba nova porque o board nao pode perder o estado do arrasto.
-          A rota e auth-gated: o arquivo nao vive em /media/.
-        {% endcomment %}
-        <a href="{% url 'people:candidato_curriculo' candidato.pk %}" target="_blank"
-           class="btn btn-ghost btn-sm" title="Abrir currículo"
-           style="padding: 2px 6px;" onclick="event.stopPropagation();">
-          <i class="bi bi-file-earmark-text"></i>
-        </a>
-      {% endif %}
-      <button type="button" class="btn btn-ghost btn-sm" data-abrir-saida
-              title="Tirar do processo" style="padding: 2px 6px;">
-        <i class="bi bi-box-arrow-right"></i>
-      </button>
-    </span>
-  </div>
-  <p class="kanban-card-sub">
-    {% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}Banco de talentos{% endif %} · {{ candidato.unidade.nome }}
-  </p>
-  <div class="kanban-card-tags">
-    {% comment %}
-      Atraso primeiro, porque e o unico item aqui que pede acao. Sai do prazo
-      da propria etapa (sla_dias); etapa sem prazo nunca marca.
-    {% endcomment %}
-    {% if candidato.esta_atrasado %}
-      {% include "components/badge.html" with variant="danger" label=candidato.rotulo_atraso size="sm" %}
+      </span>
     {% endif %}
+  </div>
+
+  {% comment %}
+    Telefone no card, como na origem. Num board de recrutamento o contato e a
+    acao mais frequente depois de ler o nome, e obrigar a abrir a ficha pra
+    ver o numero e atrito puro.
+  {% endcomment %}
+  {% if candidato.whatsapp %}
+    <p class="kanban-card-sub" style="display: flex; align-items: center; gap: 4px;">
+      <i class="bi bi-whatsapp" style="color: var(--color-success);"></i>
+      {{ candidato.whatsapp }}
+    </p>
+  {% endif %}
+
+  <p class="kanban-card-sub">
+    {% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}Banco de talentos{% endif %}
+    · {{ candidato.unidade.nome }}
+  </p>
+
+  {% if candidato.saida and candidato.motivo_saida_texto %}
+    <p class="kanban-card-sub" style="color: var(--color-danger);">
+      {{ candidato.motivo_saida_texto|truncatechars:50 }}
+    </p>
+  {% endif %}
+
+  <div class="kanban-card-tags">
     {% if candidato.canal_origem %}
       {% include "components/badge.html" with variant="info" label=candidato.canal_origem size="sm" %}
     {% endif %}
     {% if candidato.colaborador_id %}
-      {% include "components/badge.html" with variant="success" label="Admitido" size="sm" %}
+      {% include "components/badge.html" with variant="success" label="No DP" size="sm" %}
     {% endif %}
   </div>
+
+  {% comment %}
+    Acoes rapidas no rodape, como na origem: resolver o caso comum sem abrir a
+    ficha. Com 82 candidatos numa etapa, abrir e voltar 82 vezes e o que faz o
+    RH desistir da tela.
+
+    So aparecem pra quem pode mover. Quem so ve enxerga o card sem elas, e nao
+    um botao que devolve 403.
+  {% endcomment %}
+  {% if pode_mover %}
+    <div style="display: flex; justify-content: space-between; align-items: center;
+                margin-top: var(--sp-2); padding-top: var(--sp-2);
+                border-top: 1px solid var(--color-border);">
+      <span style="display: flex; gap: 2px;">
+        {% if candidato.curriculo %}
+          <a href="{% url 'people:candidato_curriculo' candidato.pk %}" target="_blank"
+             class="btn btn-ghost btn-sm" title="Abrir currículo"
+             style="padding: 2px 6px;" onclick="event.stopPropagation();">
+            <i class="bi bi-file-earmark-text"></i>
+          </a>
+        {% endif %}
+        {% if not candidato.saida %}
+          <button type="button" class="btn btn-ghost btn-sm" data-abrir-saida
+                  title="Tirar do processo" style="padding: 2px 6px;">
+            <i class="bi bi-hand-thumbs-down"></i>
+          </button>
+        {% else %}
+          {% comment %}
+            Reativar devolve pro pipeline. Existe porque clique errado
+            acontece, e a alternativa e o RH cadastrar a pessoa de novo, que e
+            a duplicata que a constraint de WhatsApp existe pra impedir.
+          {% endcomment %}
+          <button type="button" class="btn btn-ghost btn-sm" data-reabrir
+                  title="Reativar no processo" style="padding: 2px 6px;">
+            <i class="bi bi-arrow-counterclockwise"></i>
+          </button>
+        {% endif %}
+      </span>
+
+      {% if candidato.proxima_etapa %}
+        {% comment %}
+          Avancar sem arrastar. O arrasto continua existindo, e e melhor pra
+          quem quer escolher o destino; este botao serve pro caminho comum, que
+          e "passou, vai pra proxima". A proxima e resolvida na view, e nao
+          aqui: template nao deve procurar o vizinho numa lista.
+        {% endcomment %}
+        <button type="button" class="btn btn-ghost btn-sm"
+                data-avancar="{{ candidato.proxima_etapa.pk }}"
+                title="Avançar para {{ candidato.proxima_etapa.nome }}"
+                style="padding: 2px 6px;">
+          <i class="bi bi-arrow-right"></i>
+        </button>
+      {% endif %}
+    </div>
+  {% endif %}
 </div>
