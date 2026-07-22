@@ -1,23 +1,31 @@
-"""Pagina de inconsistencias Hubtrix x HubSoft (tarefa 221).
+"""Inconsistencias entre as vendas do HubSoft e o nosso funil (tarefa 221).
 
-Lista as vendas que existem no HubSoft e nunca viraram lead aqui, agrupadas por
-origem. O que importa nos testes: o agrupamento por origem separa falha nossa de
-canal descoberto, e a tela nunca deixa "lista vazia" passar por "esta tudo certo"
-quando o espelho esta parado.
+O que importa nos testes:
+  - o cruzamento tenta CPF e depois telefone, e diz por qual casou
+  - venda com lead mas sem oportunidade ganha e RECUPERAVEL, nao "fora"
+  - transferencia de titularidade nao conta como venda perdida
+  - canal integrado que escapa e marcado como anomalia e vem primeiro
 """
-from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
-from django.utils import timezone
 
-from apps.integracoes.models import ClienteHubsoft
 from apps.integracoes.services import inconsistencias as svc
 from apps.sistema.middleware import set_current_tenant
+from apps.comercial.crm.models import Pipeline, PipelineEstagio, OportunidadeVenda
 from tests.factories import (
     TenantFactory, UserFactory, PerfilFactory, ConfigEmpresaFactory,
     LeadProspectoFactory,
 )
+
+
+def venda(cpf='', tel='', origem='INDICAÇÃO', nome='Fulano', cod=1):
+    return svc.Venda(
+        codigo_cliente=cod, nome=nome, cpf_cnpj=cpf, telefone=tel,
+        origem=origem, plano='NUVYON 500MB', data_venda='01/07/2026',
+        status_servico='Serviço Habilitado',
+    )
 
 
 @pytest.fixture
@@ -28,113 +36,140 @@ def cenario(db):
     ConfigEmpresaFactory(tenant=tenant)
     set_current_tenant(tenant)
 
-    seq = {'n': 1000}
+    pipeline = Pipeline.all_tenants.create(
+        tenant=tenant, nome='Vendas', slug='vendas', tipo='vendas', padrao=True)
+    e_novo = PipelineEstagio.all_tenants.create(
+        tenant=tenant, pipeline=pipeline, nome='Novo', slug='novo', tipo='novo', ordem=1)
+    e_ganho = PipelineEstagio.all_tenants.create(
+        tenant=tenant, pipeline=pipeline, nome='Ganho', slug='ganho', tipo='cliente',
+        ordem=2, is_final_ganho=True)
 
-    def cliente(origem='', com_lead=False, dias_atras=1, nome='Fulano'):
-        seq['n'] += 1
-        lead = None
-        if com_lead:
-            lead = LeadProspectoFactory.build(tenant=tenant)
-            lead._skip_crm_signal = True
-            lead._skip_automacao = True
-            lead.save()
-        c = ClienteHubsoft.all_tenants.create(
-            tenant=tenant, lead=lead, id_cliente=seq['n'], codigo_cliente=seq['n'],
-            nome_razaosocial=nome, cpf_cnpj='52998224725', origem_cliente=origem,
-        )
-        quando = timezone.now() - timedelta(days=dias_atras)
-        ClienteHubsoft.all_tenants.filter(pk=c.pk).update(
-            data_cadastro_hubsoft=quando, data_sync=timezone.now())
-        return c
+    def lead(cpf='', tel='', ganhou=False):
+        l = LeadProspectoFactory.build(tenant=tenant, cpf_cnpj=cpf, telefone=tel)
+        l._skip_crm_signal = True
+        l._skip_automacao = True
+        l.save()
+        OportunidadeVenda.all_tenants.create(
+            tenant=tenant, pipeline=pipeline, lead=l,
+            estagio=e_ganho if ganhou else e_novo,
+            titulo=f'Op {l.pk}', responsavel=user)
+        return l
 
-    return {'tenant': tenant, 'user': user, 'cliente': cliente}
+    return {'tenant': tenant, 'user': user, 'lead': lead}
 
 
-class TestVendasSemCard:
-    def test_lista_so_cliente_sem_lead(self, cenario):
+class TestClassificacao:
+    def test_casa_por_cpf(self, cenario):
         c = cenario
-        c['cliente'](origem='INDICAÇÃO', com_lead=False)
-        c['cliente'](origem='INDICAÇÃO', com_lead=True)   # tem lead: nao entra
+        l = c['lead'](cpf='52998224725', ganhou=True)
+        r = svc._classificar(c['tenant'], [venda(cpf='52998224725')])
 
-        grupos = svc.vendas_sem_card(c['tenant'])
-        assert len(grupos) == 1
-        assert grupos[0].quantidade == 1
+        assert len(r['com_venda']) == 1
+        assert r['com_venda'][0].casou_por == 'cpf'
+        assert r['com_venda'][0].lead_id == l.pk
 
-    def test_agrupa_por_origem(self, cenario):
+    def test_cai_pro_telefone_quando_nao_ha_cpf(self, cenario):
         c = cenario
-        for _ in range(3):
-            c['cliente'](origem='WHATSAPP ATIVO')
-        c['cliente'](origem='PRESENCIAL LOJA')
+        c['lead'](cpf='', tel='19998887766', ganhou=True)
+        r = svc._classificar(c['tenant'], [venda(cpf='', tel='19998887766')])
 
-        grupos = {g.origem: g.quantidade for g in svc.vendas_sem_card(c['tenant'])}
-        assert grupos == {'WHATSAPP ATIVO': 3, 'PRESENCIAL LOJA': 1}
+        assert len(r['com_venda']) == 1
+        assert r['com_venda'][0].casou_por == 'telefone'
 
-    def test_origem_vazia_ganha_rotulo_proprio(self, cenario):
-        """Origem em branco foi 22%% dos casos reais. Nao pode virar string vazia
-        na tela nem sumir do agrupamento."""
-        cenario['cliente'](origem='')
-        grupos = svc.vendas_sem_card(cenario['tenant'])
-        assert grupos[0].origem == svc.ORIGEM_VAZIA
-
-    def test_canal_integrado_e_marcado_como_anomalia(self, cenario):
-        """"WhatsApp Empresa (Matrix)" alimenta o Hubtrix: venda que entra por
-        ali e nao vira lead e falha nossa, nao canal descoberto."""
+    def test_lead_sem_venda_ganha_e_RECUPERAVEL_nao_fora(self, cenario):
+        """A distincao que importa: a venda existe dos dois lados, so nao foi
+        marcada aqui. Contar isso como 'fora do funil' acusaria o time por algo
+        que e um clique."""
         c = cenario
-        c['cliente'](origem='WHATSAPP EMPRESA (MATRIX)')
-        c['cliente'](origem='PRESENCIAL LOJA')
+        c['lead'](cpf='52998224725', ganhou=False)
+        r = svc._classificar(c['tenant'], [venda(cpf='52998224725')])
 
-        por_origem = {g.origem: g.anomalia for g in svc.vendas_sem_card(c['tenant'])}
-        assert por_origem['WHATSAPP EMPRESA (MATRIX)'] is True
-        assert por_origem['PRESENCIAL LOJA'] is False
+        assert len(r['so_lead']) == 1
+        assert len(r['sem_nada']) == 0
 
-    def test_anomalia_vem_primeiro(self, cenario):
-        """Ordem importa: o que exige acao nossa nao pode ficar embaixo de uma
-        lista longa de canal descoberto."""
+    def test_sem_lead_nenhum_vai_pra_fora(self, cenario):
+        r = svc._classificar(cenario['tenant'], [venda(cpf='11144477735')])
+        assert len(r['sem_nada']) == 1
+        assert r['sem_nada'][0].casou_por == ''
+
+    def test_cpf_tem_prioridade_sobre_telefone(self, cenario):
+        """Telefone compartilhado (casa, familia) nao pode vencer o documento."""
         c = cenario
-        for _ in range(5):
-            c['cliente'](origem='PRESENCIAL LOJA')
-        c['cliente'](origem='WHATSAPP EMPRESA (MATRIX)')
+        certo = c['lead'](cpf='52998224725', tel='19998887766', ganhou=True)
+        c['lead'](cpf='11144477735', tel='19998887766', ganhou=True)
 
-        assert svc.vendas_sem_card(c['tenant'])[0].anomalia is True
+        r = svc._classificar(c['tenant'], [venda(cpf='52998224725', tel='19998887766')])
+        assert r['com_venda'][0].lead_id == certo.pk
 
-    def test_respeita_o_periodo(self, cenario):
+
+class TestAgrupamento:
+    def test_canal_integrado_e_anomalia(self):
+        assert svc.GrupoOrigem(origem='WHATSAPP EMPRESA (MATRIX)').anomalia is True
+        assert svc.GrupoOrigem(origem='WHATSAPP ATIVO').anomalia is False
+        assert svc.GrupoOrigem(origem='PRESENCIAL LOJA').anomalia is False
+
+    def test_titularidade_nao_e_venda(self):
+        assert svc.GrupoOrigem(origem='TRANSFERENCIA DE TITULARIDADE').nao_e_venda is True
+        assert svc.GrupoOrigem(origem='INDICAÇÃO').nao_e_venda is False
+
+    def test_ordem_anomalia_primeiro_titularidade_ultimo(self):
+        """Ordem carrega significado: o que exige acao nossa no topo, o que nem e
+        venda no fim."""
+        vs = ([venda(origem='PRESENCIAL LOJA', cpf=str(i)) for i in range(5)]
+              + [venda(origem='TRANSFERENCIA DE TITULARIDADE', cpf='90')]
+              + [venda(origem='WHATSAPP EMPRESA (MATRIX)', cpf='91')])
+        ordem = [g.origem for g in svc._agrupar_por_origem(vs)]
+
+        assert ordem[0] == 'WHATSAPP EMPRESA (MATRIX)'
+        assert ordem[-1] == 'TRANSFERENCIA DE TITULARIDADE'
+
+    def test_agrupa_e_conta(self):
+        vs = [venda(origem='WHATSAPP ATIVO', cpf=str(i)) for i in range(3)]
+        vs += [venda(origem='INDICAÇÃO', cpf='99')]
+        assert {g.origem: g.quantidade for g in svc._agrupar_por_origem(vs)} == {
+            'WHATSAPP ATIVO': 3, 'INDICAÇÃO': 1}
+
+
+class TestMontarPagina:
+    def _com_vendas(self, vendas):
+        return patch.object(svc, '_buscar_vendas_hubsoft', return_value=vendas)
+
+    def test_separa_titularidade_da_venda_real(self, cenario):
+        vs = [venda(origem='TRANSFERENCIA DE TITULARIDADE', cpf=str(i)) for i in range(3)]
+        vs += [venda(origem='WHATSAPP ATIVO', cpf=str(10 + i)) for i in range(4)]
+
+        with self._com_vendas(vs):
+            d = svc.montar_pagina(cenario['tenant'], forcar=True)
+
+        assert d['total_sem_nada'] == 7
+        assert d['titularidade'] == 3
+        assert d['venda_real_fora'] == 4
+
+    def test_conta_os_quatro_grupos(self, cenario):
         c = cenario
-        c['cliente'](origem='INDICAÇÃO', dias_atras=1)
-        c['cliente'](origem='INDICAÇÃO', dias_atras=400)
+        c['lead'](cpf='52998224725', ganhou=True)
+        c['lead'](cpf='11144477735', ganhou=False)
+        c['lead'](cpf='', tel='19991112233', ganhou=False)
+        vs = [venda(cpf='52998224725'), venda(cpf='11144477735'),
+              venda(cpf='', tel='19991112233'), venda(cpf='99988877766')]
 
-        hoje = timezone.localdate()
-        grupos = svc.vendas_sem_card(c['tenant'], inicio=hoje - timedelta(days=7), fim=hoje)
-        assert sum(g.quantidade for g in grupos) == 1
+        with self._com_vendas(vs):
+            d = svc.montar_pagina(c['tenant'], forcar=True)
 
-    def test_isola_por_tenant(self, cenario, db):
-        c = cenario
-        outro = TenantFactory(plano_comercial='pro', modulo_comercial=True)
-        ClienteHubsoft.all_tenants.create(
-            tenant=outro, id_cliente=99991, codigo_cliente=99991,
-            nome_razaosocial='De outro tenant', origem_cliente='INDICAÇÃO')
-        c['cliente'](origem='INDICAÇÃO')
+        assert d['total'] == 4
+        assert d['com_venda'] == 1
+        assert d['so_lead_cpf'] == 1
+        assert d['so_lead_tel'] == 1
+        assert d['total_sem_nada'] == 1
 
-        assert sum(g.quantidade for g in svc.vendas_sem_card(c['tenant'])) == 1
-
-
-class TestEstadoDoEspelho:
-    def test_marca_desatualizado_sem_nenhuma_sync(self, cenario):
-        info = svc.estado_do_espelho(cenario['tenant'])
-        assert info['ultima_sync'] is None
-        assert info['desatualizado'] is True
-
-    def test_conta_quantos_estao_sem_lead(self, cenario):
-        c = cenario
-        c['cliente'](com_lead=False)
-        c['cliente'](com_lead=False)
-        c['cliente'](com_lead=True)
-
-        info = svc.estado_do_espelho(c['tenant'])
-        assert info['total'] == 3 and info['sem_lead'] == 2
-
-    def test_sync_recente_nao_e_desatualizado(self, cenario):
-        cenario['cliente']()
-        assert svc.estado_do_espelho(cenario['tenant'])['desatualizado'] is False
+    def test_usa_cache_e_forcar_ignora(self, cenario):
+        with patch.object(svc, '_buscar_vendas_hubsoft',
+                          return_value=[venda(cpf='1')]) as m:
+            svc.montar_pagina(cenario['tenant'], forcar=True)
+            svc.montar_pagina(cenario['tenant'])          # deve vir do cache
+            assert m.call_count == 1
+            svc.montar_pagina(cenario['tenant'], forcar=True)
+            assert m.call_count == 2
 
 
 class TestPagina:
@@ -144,29 +179,21 @@ class TestPagina:
         return client
 
     def test_abre(self, logado, cenario):
-        resp = logado.get(reverse('integracoes:inconsistencias'))
+        with patch.object(svc, '_buscar_vendas_hubsoft', return_value=[]):
+            resp = logado.get(reverse('integracoes:inconsistencias'))
         assert resp.status_code == 200
 
-    def test_mostra_o_estado_do_espelho_junto_da_lista(self, logado, cenario):
-        """Regressao de comportamento: lista vazia com espelho parado nao pode
-        parecer 'esta tudo certo'."""
-        html = logado.get(reverse('integracoes:inconsistencias')).content.decode()
-        assert 'espelho' in html.lower()
-        assert 'Buscar no HubSoft' in html
+    def test_mostra_os_grupos_e_o_aviso_de_titularidade(self, logado, cenario):
+        vs = [venda(origem='WHATSAPP ATIVO', cpf='1', nome='Cliente Fora'),
+              venda(origem='TRANSFERENCIA DE TITULARIDADE', cpf='2')]
+        with patch.object(svc, '_buscar_vendas_hubsoft', return_value=vs):
+            html = logado.get(reverse('integracoes:inconsistencias'),
+                              {'atualizar': '1'}).content.decode()
 
-    def test_lista_as_vendas_agrupadas(self, logado, cenario):
-        cenario['cliente'](origem='WHATSAPP ATIVO', nome='Cliente Sem Card')
-        html = logado.get(reverse('integracoes:inconsistencias')).content.decode()
         assert 'WHATSAPP ATIVO' in html
-        assert 'Cliente Sem Card' in html
+        assert 'Cliente Fora' in html
+        assert 'titularidade' in html.lower()
 
     def test_exige_login(self, client, cenario):
         resp = client.get(reverse('integracoes:inconsistencias'))
         assert resp.status_code in (302, 403)
-
-
-class TestAtualizarEspelho:
-    def test_sem_integracao_devolve_erro_sem_explodir(self, cenario):
-        r = svc.atualizar_espelho(cenario['tenant'])
-        assert r['ok'] is False
-        assert 'integracao' in r['erro'].lower()

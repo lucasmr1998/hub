@@ -369,3 +369,59 @@ bot cria e a vendedora cria de novo porque nao ve o primeiro.
   prospecto por telefone lead a lead, entao vai com limite explicito por
   execucao, nao num clique so.
 - **Status:** completed (bloco 1); pending (bloco 2)
+
+### Reescrita: o criterio certo pra "venda do HubSoft" (tarefa 221)
+
+A primeira versao da pagina lia o espelho local e mostrava zero, porque a
+reconciliacao do dia tinha vinculado todos os clientes orfaos de julho. Pior: o
+botao "Buscar no HubSoft" chamava `sincronizar_base_clientes` com
+`modificados_desde`, que filtra por data de MODIFICACAO — trouxe a base
+historica inteira e o espelho saltou de 1236 para 4931 clientes. **Eu tinha
+afirmado ao dono que traria "so o periodo", sem ter testado.** Revertido:
+3612 clientes e 3821 servicos removidos, preservando os 90 com lead vinculado.
+
+**Tres criterios testados ate achar o certo:**
+
+| Criterio | Resultado | Por que falha |
+|---|---|---|
+| `data_cadastro_cliente` | 3838 em julho | cliente antigo tem o cadastro atualizado por migracao de plano e recadastro |
+| `servico.id_prospecto` | sempre `None` | o HubSoft nao preenche o campo, nem em venda vinda do nosso funil |
+| **`servico.data_venda`** | **311** | e o mesmo criterio do relatorio que a Nuvyon usa |
+
+**Correcao levantada pela Gabi:** ela disse que o relatorio dela tinha 337
+vendas e nos tinhamos 311. Ela estava certa. A API filtra por **cadastro do
+cliente**, entao cliente que virou cliente em marco e contratou outro servico em
+julho tem a venda em julho mas o cadastro em marco — e escapava do recorte.
+
+    janela de cadastro so julho .... 311 vendas (39 paginas)
+    janela desde 01/01 do ano ...... 348 vendas (59 paginas)
+
+As 37 de diferenca sao exatamente clientes cadastrados de janeiro a junho. A
+busca passou a usar a janela do ano corrente.
+
+**Limite que fica, e a tela declara:** cliente cadastrado antes do ano corrente
+que compre hoje ainda escapa. Cobrir 2024 em diante custaria 165 paginas (~4
+min). Preferimos numero levemente incompleto e declarado a numero completo e
+inutilizavel.
+
+**O que a pagina mostra** (medido em 22/07, janela so de julho):
+
+    311 vendas no HubSoft
+    ├── 230 tem lead E venda ganha aqui        [certo]
+    ├──  17 tem lead (CPF), sem venda marcada  [recuperavel]
+    ├──   3 tem lead (casou por telefone)      [recuperavel]
+    └──  61 nao existe no CRM                  [fora]
+
+Os 61 por origem: WhatsApp Ativo 15, sem origem 15, **transferencia de
+titularidade 13**, presencial 6, indicacao 5, ligacao 4, WhatsApp Empresa 3.
+
+**Transferencia de titularidade nao e venda** — e troca de titular num contrato
+existente, e entrava no relatorio do HubSoft como se fosse venda nova. A pagina
+separa isso e mostra "venda real fora do funil: 48", nao 61.
+
+**Ordem dos grupos carrega significado:** anomalia (canal integrado que escapou)
+primeiro, titularidade por ultimo e esmaecida.
+
+**Cache de 30 min**, porque sao ~59 chamadas de API por leitura. Link
+`?atualizar=1` forca. Diferente da primeira versao, **esta nao grava nada**: le
+e compara em memoria.

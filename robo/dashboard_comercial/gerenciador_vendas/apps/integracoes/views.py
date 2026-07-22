@@ -2,7 +2,6 @@ import json
 import logging
 from datetime import timedelta
 
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.http import JsonResponse
@@ -532,19 +531,10 @@ def inconsistencias_view(request):
     """
     from apps.integracoes.services import inconsistencias as svc
 
-    resultado_sync = None
-    if request.method == 'POST':
-        resultado_sync = svc.atualizar_espelho(request.tenant)
-        if resultado_sync.get('ok'):
-            messages.success(request, (
-                f"Espelho atualizado: {resultado_sync['criados']} clientes novos, "
-                f"{resultado_sync['atualizados']} atualizados."
-            ))
-        else:
-            messages.error(request, resultado_sync.get('erro') or 'Falha ao atualizar o espelho.')
-
-    dados = svc.montar_pagina(request.tenant)
-    dados['resultado_sync'] = resultado_sync
+    # `?atualizar=1` ignora o cache. A leitura sao ~39 chamadas de API, entao o
+    # padrao e servir do cache (30 min) e so refazer quando pedirem.
+    forcar = request.GET.get('atualizar') == '1'
+    dados = svc.montar_pagina(request.tenant, forcar=forcar)
     return render(request, 'integracoes/inconsistencias.html', dados)
 
 

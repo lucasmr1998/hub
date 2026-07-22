@@ -5,12 +5,15 @@
 {% block content %}
 <div class="page-header">
   <div class="page-eyebrow">Integrações</div>
-  <h1 class="page-title">Vendas que não passaram pelo funil</h1>
+  <h1 class="page-title">Vendas do HubSoft x nosso CRM</h1>
   <p class="page-subtitle">
-    Clientes que existem no HubSoft e nunca viraram lead aqui, de {{ inicio|date:"d/m/Y" }} até {{ fim|date:"d/m/Y" }}.
-    Agrupados por origem, porque é a origem que diz se o caso é falha nossa ou canal que o Hubtrix não cobre.
+    Vendas registradas no HubSoft de {{ inicio|date:"d/m/Y" }} até {{ fim|date:"d/m/Y" }},
+    cruzadas com o nosso funil por CPF e por telefone.
   </p>
   <div class="page-actions">
+    <a href="?atualizar=1" class="btn btn-secondary btn-sm">
+      <i class="bi bi-arrow-repeat"></i> Reler o HubSoft
+    </a>
     <a href="{% url 'integracoes:reconciliacao' %}" class="btn btn-secondary btn-sm">
       <i class="bi bi-arrow-left-right"></i> Reconciliação
     </a>
@@ -21,82 +24,98 @@
 </div>
 
 <style>
-  .inc-espelho { border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 13px; line-height: 1.5; }
-  .inc-espelho.ok { background: #D1FAE5; color: #065F46; }
-  .inc-espelho.velho { background: #FEF3C7; color: #92400E; }
-  .inc-espelho .inc-espelho-txt { flex: 1; min-width: 260px; }
-  .inc-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
-  .inc-kpi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; }
-  .inc-kpi strong { display: block; font-size: 28px; font-weight: 700; line-height: 1.1; }
-  .inc-kpi span { font-size: 12px; color: var(--color-text-muted, #64748B); text-transform: uppercase; letter-spacing: .04em; }
-  .inc-kpi.alerta strong { color: var(--color-danger, #DC2626); }
-  .inc-grupo { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+  .inc-funil { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px 22px; margin-bottom: 20px; }
+  .inc-funil h2 { margin: 0 0 4px; font-size: 30px; font-weight: 700; }
+  .inc-funil .inc-sub { font-size: 12px; color: var(--color-text-muted, #64748B); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 18px; }
+  .inc-linha { display: flex; align-items: center; gap: 14px; padding: 11px 0; border-top: 1px solid var(--color-border); font-size: 14px; }
+  .inc-linha .inc-n { font-size: 22px; font-weight: 700; min-width: 62px; font-variant-numeric: tabular-nums; }
+  .inc-linha .inc-txt { flex: 1; }
+  .inc-linha .inc-tag { font-size: 11px; padding: 2px 9px; border-radius: 999px; font-weight: 600; }
+  .inc-linha.ok .inc-n { color: var(--color-success, #059669); }
+  .inc-linha.rec .inc-n { color: var(--color-warning, #D97706); }
+  .inc-linha.fora .inc-n { color: var(--color-danger, #DC2626); }
+  .inc-tag.ok { background: #D1FAE5; color: #065F46; }
+  .inc-tag.rec { background: #FEF3C7; color: #92400E; }
+  .inc-tag.fora { background: #FEE2E2; color: #991B1B; }
+  .inc-cobertura { margin-top: 16px; padding-top: 14px; border-top: 2px solid var(--color-border); font-size: 14px; }
+  .inc-cobertura strong { font-size: 20px; }
+  .inc-nota { font-size: 12px; color: var(--color-text-muted, #64748B); margin: 6px 0 0; line-height: 1.5; }
+  .inc-grupo { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
   .inc-grupo.anomalia { border-left: 4px solid var(--color-danger, #DC2626); }
-  .inc-grupo-head { padding: 14px 18px; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 12px; }
+  .inc-grupo.naovenda { border-left: 4px solid #94A3B8; opacity: .85; }
+  .inc-grupo-head { padding: 13px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--color-border); }
   .inc-grupo-head h3 { margin: 0; font-size: 15px; font-weight: 700; }
-  .inc-badge { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #F1F5F9; color: #475569; }
+  .inc-badge { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #F1F5F9; color: #475569; }
   .inc-badge.perigo { background: #FEE2E2; color: #991B1B; }
-  .inc-nota { font-size: 12px; color: var(--color-text-muted, #64748B); margin: 4px 0 0; }
   .inc-tabela { width: 100%; border-collapse: collapse; }
   .inc-tabela th { text-align: left; padding: 8px 18px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); font-weight: 600; border-bottom: 1px solid var(--color-border); }
-  .inc-tabela td { padding: 10px 18px; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+  .inc-tabela td { padding: 9px 18px; border-bottom: 1px solid var(--color-border); font-size: 13px; }
   .inc-tabela tr:last-child td { border-bottom: none; }
-  .inc-vazio { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 32px; text-align: center; color: var(--color-text-muted); }
+  .inc-vazio { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 30px; text-align: center; color: var(--color-text-muted); }
 </style>
 
-{% comment %}
-  O estado do espelho vem ANTES da lista de propósito: lista vazia com espelho
-  parado parece "está tudo certo" quando na verdade é "não perguntei". Foi
-  exatamente o caso da Nuvyon, onde a varredura não rodava desde 18/06.
-{% endcomment %}
-<div class="inc-espelho {% if espelho.desatualizado %}velho{% else %}ok{% endif %}">
-  <div class="inc-espelho-txt">
-    {% if espelho.ultima_sync %}
-      <strong>Espelho lido há {{ espelho.horas_desde_sync }} horas.</strong>
-      {{ espelho.total }} clientes, {{ espelho.sem_lead }} sem lead vinculado.
-      {% if espelho.desatualizado %}A lista abaixo pode estar incompleta.{% endif %}
-    {% else %}
-      <strong>O espelho nunca foi sincronizado.</strong> A lista abaixo vai aparecer vazia até a primeira leitura.
+<div class="inc-funil">
+  <h2>{{ total }}</h2>
+  <div class="inc-sub">vendas no HubSoft no período</div>
+
+  <div class="inc-linha ok">
+    <span class="inc-n">{{ com_venda }}</span>
+    <span class="inc-txt">tem lead <strong>e</strong> venda ganha aqui</span>
+    <span class="inc-tag ok">certo</span>
+  </div>
+  <div class="inc-linha rec">
+    <span class="inc-n">{{ so_lead_cpf }}</span>
+    <span class="inc-txt">tem lead (CPF bate), mas sem venda marcada</span>
+    <span class="inc-tag rec">recuperável</span>
+  </div>
+  <div class="inc-linha rec">
+    <span class="inc-n">{{ so_lead_tel }}</span>
+    <span class="inc-txt">tem lead (casou só por telefone)</span>
+    <span class="inc-tag rec">recuperável</span>
+  </div>
+  <div class="inc-linha fora">
+    <span class="inc-n">{{ total_sem_nada }}</span>
+    <span class="inc-txt">não existe no CRM, nunca passou por aqui</span>
+    <span class="inc-tag fora">fora</span>
+  </div>
+
+  <div class="inc-cobertura">
+    Cobertura: <strong>{{ com_venda|add:so_lead_cpf|add:so_lead_tel }} de {{ total }}</strong>
+    {% comment %}
+      Titularidade sai da conta de "venda perdida" porque nao e venda: e troca de
+      titular num contrato que ja existia. Sem essa separacao o numero acusa o
+      funil por algo que nunca deveria passar por ele.
+    {% endcomment %}
+    {% if titularidade %}
+      <p class="inc-nota">
+        Das {{ total_sem_nada }} que estão fora, <strong>{{ titularidade }} são transferência de titularidade</strong>,
+        que não é venda nova. Venda real fora do funil: <strong>{{ venda_real_fora }}</strong>.
+      </p>
     {% endif %}
-  </div>
-  <form method="post" style="margin:0;">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-primary btn-sm"
-            onclick="return confirm('Isso vai ler os clientes do HubSoft do período e gravá-los no nosso espelho. Continuar?');">
-      <i class="bi bi-arrow-repeat"></i> Buscar no HubSoft
-    </button>
-  </form>
-</div>
-
-{% if resultado_sync and resultado_sync.ok %}
-  <p class="inc-nota">
-    Última busca: {{ resultado_sync.total_registros }} clientes lidos,
-    {{ resultado_sync.criados }} novos, {{ resultado_sync.atualizados }} atualizados.
-  </p>
-{% endif %}
-
-<div class="inc-resumo">
-  <div class="inc-kpi">
-    <strong>{{ total_sem_card }}</strong>
-    <span>vendas sem card aqui</span>
-  </div>
-  <div class="inc-kpi {% if total_anomalia %}alerta{% endif %}">
-    <strong>{{ total_anomalia }}</strong>
-    <span>por canal integrado</span>
-  </div>
-  <div class="inc-kpi">
-    <strong>{{ grupos|length }}</strong>
-    <span>origens diferentes</span>
+    {% comment %}
+      Limite declarado, nao escondido: a API filtra por cadastro do cliente, nao
+      por data da venda, entao a busca alcanca so quem virou cliente neste ano.
+      Cobrir anos anteriores custaria 165 paginas e tornaria a leitura inviavel.
+    {% endcomment %}
+    <p class="inc-nota">
+      Lido do HubSoft em {{ lido_em|date:"d/m/Y H:i" }}. Use "Reler o HubSoft" para atualizar.<br>
+      Alcança clientes cadastrados a partir de {{ cadastro_desde|date:"d/m/Y" }}.
+      Quem já era cliente antes disso e comprou agora não aparece aqui.
+    </p>
   </div>
 </div>
+
+<h2 style="font-size:16px;font-weight:700;margin:24px 0 12px;">As {{ total_sem_nada }} que não existem no CRM, por origem</h2>
 
 {% for g in grupos %}
-  <div class="inc-grupo {% if g.anomalia %}anomalia{% endif %}">
+  <div class="inc-grupo {% if g.anomalia %}anomalia{% elif g.nao_e_venda %}naovenda{% endif %}">
     <div class="inc-grupo-head">
       <div style="flex:1;">
         <h3>{{ g.origem }}</h3>
         {% if g.anomalia %}
-          <p class="inc-nota">Este canal alimenta o Hubtrix. Venda que entra por aqui <strong>deveria</strong> ter virado lead, então cada caso é falha nossa.</p>
+          <p class="inc-nota">Este canal alimenta o Hubtrix. Venda que entra por aqui <strong>deveria</strong> virar lead sozinha, então cada caso é falha nossa.</p>
+        {% elif g.nao_e_venda %}
+          <p class="inc-nota">Troca de titular num contrato existente. Não é venda nova e não deveria passar pelo funil.</p>
         {% endif %}
       </div>
       <span class="inc-badge {% if g.anomalia %}perigo{% endif %}">{{ g.quantidade }}</span>
@@ -106,9 +125,9 @@
         <tr>
           <th>Cliente</th>
           <th>Código</th>
-          <th>CPF/CNPJ</th>
-          <th>Telefone</th>
-          <th>Cadastrado</th>
+          <th>Plano</th>
+          <th>Venda</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -116,21 +135,52 @@
           <tr>
             <td><strong>{{ v.nome }}</strong></td>
             <td>{{ v.codigo_cliente }}</td>
-            <td>{{ v.cpf_cnpj|default:"—" }}</td>
-            <td>{{ v.telefone|default:"—" }}</td>
-            <td>{{ v.cadastrado_em|date:"d/m/Y"|default:"—" }}</td>
+            <td>{{ v.plano }}</td>
+            <td>{{ v.data_venda }}</td>
+            <td>{{ v.status_servico|default:"—" }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 {% empty %}
-  <div class="inc-vazio">
-    {% if espelho.ultima_sync %}
-      Nenhuma venda sem card no período. Se isso parecer estranho, use o botão acima para reler o HubSoft.
-    {% else %}
-      Ainda não lemos o HubSoft. Use o botão acima para começar.
-    {% endif %}
-  </div>
+  <div class="inc-vazio">Nenhuma venda fora do CRM no período.</div>
 {% endfor %}
+
+{% if recuperaveis %}
+  <h2 style="font-size:16px;font-weight:700;margin:28px 0 12px;">
+    As {{ recuperaveis|length }} recuperáveis
+  </h2>
+  <div class="inc-grupo">
+    <div class="inc-grupo-head">
+      <div style="flex:1;">
+        <h3>Temos o lead, falta marcar a venda</h3>
+        <p class="inc-nota">A venda existe dos dois lados. Só falta mover a oportunidade para o estágio de ganho aqui.</p>
+      </div>
+      <span class="inc-badge">{{ recuperaveis|length }}</span>
+    </div>
+    <table class="inc-tabela">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Lead</th>
+          <th>Status do lead</th>
+          <th>Casou por</th>
+          <th>Venda</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in recuperaveis %}
+          <tr>
+            <td><strong>{{ v.nome }}</strong></td>
+            <td><a href="/crm/leads/{{ v.lead_id }}/">#{{ v.lead_id }}</a></td>
+            <td>{{ v.lead_status }}</td>
+            <td>{{ v.casou_por }}</td>
+            <td>{{ v.data_venda }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
 {% endblock %}
