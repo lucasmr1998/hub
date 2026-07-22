@@ -275,3 +275,97 @@ justamente o que pegou o bug. Nao pushar antes da suite fechar.
   ganha), **zero bloqueados pela salvaguarda de CPF**, 54 `ClienteHubsoft` criados.
   Cobertura da planilha da Gabi sairia de 53% para 73%.
 - **Status:** completed
+
+## 2026-07-22 — Reconciliacao de julho aplicada em prod (tarefas 219, 220)
+
+Investigacao longa a partir de duas planilhas exportadas pela Gabi (Nuvyon).
+Resultado da reconciliacao das vendas de 01/07 a 20/07:
+
+| | Antes | Depois |
+|---|---|---|
+| Clientes da planilha no nosso espelho | 144/270 | **219/270** |
+| Com venda ganha no CRM | 138 | **214** |
+| Leads com CPF preenchido | 517 | **607** |
+| Presos em `rascunho_hubsoft` | 851 | **799** |
+
+**O que foi aplicado:**
+1. Fix da tarefa 220 nos 54 leads que ja eram cliente no HubSoft: 54/54
+   reconhecidos, zero pulados pela salvaguarda de CPF, zero erros.
+2. 21 clientes vinculados por match de telefone + nome, com o CPF preenchido a
+   partir do cliente (era a ausencia de CPF que impedia o match automatico).
+3. 12 oportunidades movidas pro estagio de Ganho. **11 vinham de "Perdido"** e
+   4 seriam bloqueadas pelo gate de campos obrigatorios; o dono autorizou
+   contornar. Cada movimentacao ficou no `LogSistema` com o estagio anterior.
+
+**Erro meu, registrado:** eu disse ao dono que seriam 5 ou 6 movimentacoes e
+foram **12**. Contei so as que vinham dos 54 recem-espelhados, mas o script
+identificou pelo conjunto todo da planilha. A trava que coloquei ("abortar se
+passar de 12") bateu exatamente no limite e nao protegeu.
+
+**Diagnostico das 51 que continuaram fora** (consultando `origem_cliente` na API):
+
+| Origem | Qtd | Natureza |
+|---|---|---|
+| WHATSAPP ATIVO | 16 | vendedora inicia do numero dela, sem passar pelo bot |
+| (origem em branco) | 11 | cadastro apressado |
+| INDICACAO / PRESENCIAL / LIGACAO | 15 | nunca teve conversa digital |
+| WHATSAPP EMPRESA (MATRIX) | 5 | **anomalia: canal integrado que escapou** |
+| SITE / Vendedor Externo | 2 | |
+
+Comparando com quem ESTA no funil: WhatsApp Empresa e 57% dos capturados e so
+10% dos perdidos; WhatsApp Ativo e o inverso, 11% contra 33%. **O Matrix
+funciona; o problema sao os canais que ele nao cobre.**
+
+**19 das 51 sao de vendedoras sem usuario no sistema** (Nicoly 7, Trainee 3,
+Damaris 3, Flavia 2...). Nao e indisciplina: elas provavelmente nao tem login.
+
+**Comparacao funil x funil** (planilha de CRM, 842 cartoes x 872 nossos, mesma
+janela ate 21/07 08:38): 758 casados por `id_prospecto`, **90% de cobertura**,
+concordancia de 72%. A divergencia dominante sao **166 casos em que eles estao
+negociando e nos ja demos como perdido** (135 deles em "Assuntos Comerciais").
+Nossa taxa de perda e 68% contra 47% deles. Suspeita nao confirmada: automacao
+de inatividade fechando cedo demais.
+
+**Dos 84 cartoes que so existem la: 53 sao prospecto DUPLICADO** — ids quase
+consecutivos (cartao 24210 x nosso 24211), criados com minutos de diferenca. O
+bot cria e a vendedora cria de novo porque nao ve o primeiro.
+
+**Achados de metodo:**
+- `id_prospecto` e a melhor chave de reconciliacao: casou 763 contra 232 do CPF,
+  porque so 22% dos cartoes tem documento.
+- Existe `/api/v1/integracao/crm/all` (catalogo de funis), que nao estava
+  mapeado. **Nao existe endpoint de cartoes** — a comparacao de funil depende do
+  export manual.
+- O CPF da Angelica (lead 2520), que eu vinha tratando como "faltando", estava
+  **digitado errado**. O vinculo por telefone corrigiu.
+- Leads nomeados `"(60365) LUIZ GUSTAVO"`: as vendedoras colam o codigo do
+  cliente no campo nome porque nao tem como ligar as duas pontas. E pedido de
+  feature disfarcado.
+
+## 2026-07-22 — Pagina de inconsistencias (tarefa 221)
+
+- **Acao:** `/configuracoes/integracoes/inconsistencias/`, operacional, lista
+  caso a caso as vendas que existem no HubSoft e nunca viraram lead aqui.
+- **Diferenca pra pagina de reconciliacao:** aquela resume numeros (diagnostico),
+  esta lista pra alguem agir.
+- **Restricoes do dono, respeitadas:** sem mexer em cron ou servico (busca sob
+  demanda, por botao); escopo do mes corrente, nao da base inteira; v1 so lista,
+  sem acao de escrita nos casos.
+- **Agrupamento por origem**, com **anomalia primeiro**: origem que passa pelo
+  canal integrado ("WhatsApp Empresa (Matrix)") ganha destaque, porque venda que
+  entra por ali e nao vira lead e falha nossa. Presencial e indicacao ficam
+  abaixo, sem alarme, porque sao canais descobertos.
+- **O estado do espelho aparece ANTES da lista.** Sem isso, lista vazia pareceria
+  "esta tudo certo" quando o real e "nao perguntei" — exatamente o caso da
+  Nuvyon, onde `/cliente/todos` **nunca tinha sido chamado em prod** e os 1006
+  clientes sem lead vieram de uma carga unica entre 03/06 e 18/06.
+- **O botao grava, e avisa.** Usa `sincronizar_base_clientes` com
+  `modificados_desde` no inicio do mes (~3 paginas de 100, em vez de ~13 da base
+  inteira). O `confirm()` diz que vai gravar no espelho.
+- **Testes:** 15 casos, com peso no agrupamento (origem vazia com rotulo proprio,
+  anomalia marcada e ordenada primeiro, isolamento por tenant) e no aviso de
+  espelho desatualizado.
+- **Pendente:** bloco 2 (leads duplicados no HubSoft). Precisa consultar
+  prospecto por telefone lead a lead, entao vai com limite explicito por
+  execucao, nao num clique so.
+- **Status:** completed (bloco 1); pending (bloco 2)

@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import timedelta
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.http import JsonResponse
@@ -514,6 +515,37 @@ def reconciliacao_view(request):
     dados = montar_reconciliacao(request.tenant, dias=dias)
     dados['opcoes_dias'] = [7, 30, 90]
     return render(request, 'integracoes/reconciliacao.html', dados)
+
+
+@login_required
+def inconsistencias_view(request):
+    """Vendas que existem no HubSoft e nunca viraram lead aqui, caso a caso.
+
+    Irma da pagina de reconciliacao: aquela resume numeros, esta lista pra
+    alguem agir. Agrupa por origem porque e a origem que diz se o caso e furo
+    nosso ou canal descoberto — "WhatsApp Empresa" devia ter entrado, enquanto
+    "Presencial Loja" nunca teve conversa digital.
+
+    O POST atualiza o espelho antes de listar. Isso ESCREVE (upsert de
+    ClienteHubsoft), e a tela avisa antes do clique em vez de esconder. Escopo
+    do periodo, nao da base inteira: com `modificados_desde` sao ~3 paginas.
+    """
+    from apps.integracoes.services import inconsistencias as svc
+
+    resultado_sync = None
+    if request.method == 'POST':
+        resultado_sync = svc.atualizar_espelho(request.tenant)
+        if resultado_sync.get('ok'):
+            messages.success(request, (
+                f"Espelho atualizado: {resultado_sync['criados']} clientes novos, "
+                f"{resultado_sync['atualizados']} atualizados."
+            ))
+        else:
+            messages.error(request, resultado_sync.get('erro') or 'Falha ao atualizar o espelho.')
+
+    dados = svc.montar_pagina(request.tenant)
+    dados['resultado_sync'] = resultado_sync
+    return render(request, 'integracoes/inconsistencias.html', dados)
 
 
 @login_required

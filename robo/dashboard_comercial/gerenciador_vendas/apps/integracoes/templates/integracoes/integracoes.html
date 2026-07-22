@@ -17,6 +17,9 @@
         Sem estes dois links as paginas ficam inalcancaveis pela navegacao. A de
         saude existia ha meses sem nenhuma entrada apontando pra ela.
       {% endcomment %}
+      <a href="{% url 'integracoes:inconsistencias' %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-exclamation-diamond"></i> Inconsistencias
+      </a>
       <a href="{% url 'integracoes:reconciliacao' %}" class="btn btn-secondary btn-sm">
         <i class="bi bi-arrow-left-right"></i> Reconciliacao
       </a>
