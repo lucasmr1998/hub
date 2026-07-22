@@ -34,7 +34,13 @@ Dois campos sao TRAVADOS, e por razoes diferentes de peso igual:
 # CONSEQUENCIA A LEMBRAR: quem so tem foto do curriculo impresso nao anexa.
 # Enquanto o curriculo estiver marcado como OBRIGATORIO numa vaga, essa pessoa
 # nao se candidata. As duas configuracoes andam juntas.
-EXTENSOES_CURRICULO = ('.pdf', '.doc', '.docx')
+#
+# `.doc` (Word binario, pre 2007) SAIU em 22/07, pelo mesmo criterio que barrou
+# imagem: nenhuma biblioteca Python leve le, entao ele entrava e a triagem
+# rodava cega sobre ele, com cara de analise completa. Quem tem .doc salva como
+# PDF, que o proprio Word faz em dois cliques. A lista aqui tem que ser a mesma
+# de `triagem_ia.LEITORES`, e um teste amarra isso.
+EXTENSOES_CURRICULO = ('.pdf', '.docx')
 
 TAMANHO_MAX_CURRICULO_MB = 5
 
@@ -253,5 +259,15 @@ def curriculo_aceito(nome_arquivo):
 
 
 def rotulo_formatos_curriculo():
-    """Texto pro erro, derivado da lista, pra nunca divergir dela."""
-    return 'PDF ou Word (doc, docx)'
+    """
+    Texto pro erro, DERIVADO da lista.
+
+    Antes a frase era chumbada e dizia "PDF ou Word (doc, docx)", entao ao tirar
+    o `.doc` da lista ela continuaria prometendo um formato recusado. Um texto
+    que se diz derivado e nao e mente mais rapido do que se ninguem tivesse
+    escrito a promessa.
+    """
+    nomes = [ext.lstrip('.').upper() for ext in EXTENSOES_CURRICULO]
+    if len(nomes) == 1:
+        return nomes[0]
+    return ' ou '.join([', '.join(nomes[:-1]), nomes[-1]])

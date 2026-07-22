@@ -313,3 +313,143 @@ def test_quem_so_ve_nao_analisa(cenario):
                                     args=[cenario['candidato'].pk]))
 
     assert resposta.status_code == 403
+
+
+# ── Leitura do arquivo do curriculo ──────────────────────────────────────────
+#
+# O buraco que estes testes fecham: a gente ACEITAVA .doc e .docx no upload e so
+# LIA .pdf. Quem mandava curriculo em Word tinha a analise rodando as cegas, so
+# com o formulario, e o RH via um veredito com cara de completo que nao tinha
+# lido o curriculo.
+
+def _com_curriculo(candidato, nome, conteudo):
+    from django.core.files.base import ContentFile
+
+    candidato.curriculo.save(nome, ContentFile(conteudo), save=True)
+    return candidato
+
+
+def _docx_de_teste(paragrafos=(), linhas_de_tabela=()):
+    """Gera um .docx de verdade em memoria, e nao um mock do python-docx."""
+    import io
+
+    import docx
+
+    doc = docx.Document()
+    for texto in paragrafos:
+        doc.add_paragraph(texto)
+    if linhas_de_tabela:
+        tabela = doc.add_table(rows=len(linhas_de_tabela),
+                               cols=len(linhas_de_tabela[0]))
+        for i, linha in enumerate(linhas_de_tabela):
+            for j, celula in enumerate(linha):
+                tabela.cell(i, j).text = celula
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    return buffer.getvalue()
+
+
+@pytest.mark.django_db
+def test_le_curriculo_em_docx(cenario):
+    """Era o buraco: aceito no upload, ignorado na leitura."""
+    from apps.people.services.triagem_ia import _texto_do_curriculo
+
+    candidato = _com_curriculo(
+        cenario['candidato'], 'cv.docx',
+        _docx_de_teste(['Tecnico em redes desde 2019',
+                        'Instalacao de fibra optica']))
+
+    texto = _texto_do_curriculo(candidato)
+    assert 'Tecnico em redes desde 2019' in texto
+    assert 'fibra optica' in texto
+
+
+@pytest.mark.django_db
+def test_le_tabela_dentro_do_docx(cenario):
+    """
+    Modelo de curriculo do Word diagrama com tabela, e e comum o historico
+    profissional inteiro morar dentro de uma. Ler so os paragrafos devolveria o
+    nome da pessoa e mais nada, e a analise sairia dizendo "informou pouco"
+    sobre um curriculo completo.
+    """
+    from apps.people.services.triagem_ia import _texto_do_curriculo
+
+    candidato = _com_curriculo(
+        cenario['candidato'], 'cv_tabela.docx',
+        _docx_de_teste(paragrafos=['Joao'],
+                       linhas_de_tabela=[['2019 a 2024', 'Tecnico de campo'],
+                                         ['2017 a 2019', 'Auxiliar de suporte']]))
+
+    texto = _texto_do_curriculo(candidato)
+    assert 'Tecnico de campo' in texto
+    assert 'Auxiliar de suporte' in texto
+
+
+@pytest.mark.django_db
+def test_curriculo_ilegivel_nao_derruba_a_analise(cenario):
+    """
+    Arquivo corrompido deixa a analise mais pobre, e nao quebrada. O RH sabe
+    disso pelo `usou_curriculo`, que e o campo que existe pra nao deixar a
+    sugestao passar por completa.
+    """
+    from apps.people.services.triagem_ia import _texto_do_curriculo
+
+    candidato = _com_curriculo(cenario['candidato'], 'cv.docx',
+                               b'isto nao e um docx')
+
+    assert _texto_do_curriculo(candidato) == ''
+
+    bom = json.dumps({'veredito': 'atencao', 'resumo': 'Ok',
+                      'sinais_de_atencao': [], 'requisitos': []})
+    p1, p2 = _com_ia(bom)
+    with p1, p2:
+        analise = analisar_candidato(candidato)
+
+    assert analise.usou_curriculo is False
+
+
+@pytest.mark.django_db
+def test_o_texto_do_curriculo_chega_no_prompt(cenario):
+    """
+    Ler o arquivo nao adianta se o texto nao viaja. Este teste existe porque as
+    duas metades foram escritas em dias diferentes.
+    """
+    candidato = _com_curriculo(
+        cenario['candidato'], 'cv.docx',
+        _docx_de_teste(['Certificacao NR 35 em vigor']))
+
+    bom = json.dumps({'veredito': 'apto', 'resumo': 'Ok',
+                      'sinais_de_atencao': [], 'requisitos': []})
+    p1, p2 = _com_ia(bom)
+    with p1, p2 as chamada:
+        analise = analisar_candidato(candidato)
+
+    enviado = json.dumps(chamada.call_args.args[1], ensure_ascii=False)
+    assert 'Certificacao NR 35 em vigor' in enviado
+    assert analise.usou_curriculo is True
+
+
+def test_aceito_no_upload_e_o_mesmo_que_a_ia_le():
+    """
+    AMARRA AS DUAS LISTAS.
+
+    Aceitar um formato que a triagem nao le foi exatamente o bug: a analise
+    rodava as cegas com cara de completa. Se alguem voltar a aceitar `.doc` sem
+    ensinar a IA a ler, este teste cai.
+    """
+    from apps.people.campos_candidatura import EXTENSOES_CURRICULO
+    from apps.people.services.triagem_ia import LEITORES
+
+    assert set(EXTENSOES_CURRICULO) == set(LEITORES)
+
+
+def test_o_texto_dos_formatos_nao_promete_o_que_nao_aceita():
+    """A frase que o candidato le sai da lista, e nao de uma string chumbada."""
+    from apps.people.campos_candidatura import (
+        EXTENSOES_CURRICULO, rotulo_formatos_curriculo,
+    )
+
+    rotulo = rotulo_formatos_curriculo()
+    for extensao in EXTENSOES_CURRICULO:
+        assert extensao.lstrip('.').upper() in rotulo
+    assert 'DOC ' not in rotulo and not rotulo.endswith('DOC')

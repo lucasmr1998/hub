@@ -42,9 +42,41 @@ class TriagemIndisponivel(PeopleError):
     """Falta integracao de IA, ou falta o que analisar."""
 
 
+def _texto_de_pdf(arquivo):
+    from pypdf import PdfReader
+
+    leitor = PdfReader(arquivo)
+    return '\n'.join((pagina.extract_text() or '') for pagina in leitor.pages)
+
+
+def _texto_de_docx(arquivo):
+    """
+    Paragrafos E tabelas.
+
+    As tabelas nao sao detalhe: modelo de curriculo do Word usa tabela pra
+    diagramar, e e comum o historico profissional inteiro morar dentro de uma.
+    Ler so `doc.paragraphs` devolveria o nome da pessoa e mais nada, e a analise
+    sairia dizendo "informou pouco" sobre um curriculo completo.
+    """
+    import docx
+
+    doc = docx.Document(arquivo)
+    pedacos = [p.text for p in doc.paragraphs]
+    for tabela in doc.tables:
+        for linha in tabela.rows:
+            pedacos.extend(celula.text for celula in linha.cells)
+    return '\n'.join(pedacos)
+
+
+# Extensao -> extrator. Mapa, e nao if/elif, porque e o mesmo criterio que
+# `EXTENSOES_CURRICULO` usa pra decidir o que aceitar no upload: os dois precisam
+# andar juntos, e um teste amarra isso.
+LEITORES = {'.pdf': _texto_de_pdf, '.docx': _texto_de_docx}
+
+
 def _texto_do_curriculo(candidato):
     """
-    Texto do PDF, ou vazio.
+    Texto do curriculo, ou vazio.
 
     Devolve vazio em vez de levantar: curriculo ilegivel nao impede a analise,
     so a deixa mais pobre, e isso e registrado em `usou_curriculo` pra o RH saber
@@ -52,26 +84,29 @@ def _texto_do_curriculo(candidato):
 
     Imagem nao e lida: precisaria de OCR, que e dependencia bem mais pesada. O
     candidato que manda foto continua sendo analisado pelo que preencheu.
+
+    `.doc` (Word binario, pre 2007) tambem nao: nenhuma biblioteca Python leve
+    le. Por isso ele saiu tambem da lista de formatos ACEITOS, em vez de ficar
+    aceito e ilegivel. Prometer o que nao se le e o que produz analise cega com
+    cara de completa.
     """
     if not candidato.curriculo:
         return ''
-    if not candidato.curriculo.name.lower().endswith('.pdf'):
+
+    nome = candidato.curriculo.name.lower()
+    leitor = next((f for ext, f in LEITORES.items() if nome.endswith(ext)), None)
+    if leitor is None:
         return ''
 
     try:
-        from pypdf import PdfReader
-
         candidato.curriculo.open('rb')
         try:
-            leitor = PdfReader(candidato.curriculo.file)
-            paginas = [(pagina.extract_text() or '') for pagina in leitor.pages]
+            return leitor(candidato.curriculo.file).strip()[:LIMITE_CURRICULO]
         finally:
             candidato.curriculo.close()
-
-        return '\n'.join(paginas).strip()[:LIMITE_CURRICULO]
     except Exception:
-        # PDF protegido, corrompido ou so imagem escaneada. Nao e erro de
-        # programacao e nao deve derrubar a analise.
+        # Arquivo protegido, corrompido, ou PDF que e so imagem escaneada. Nao e
+        # erro de programacao e nao deve derrubar a analise.
         logger.warning('Nao consegui ler o curriculo do candidato %s',
                        candidato.pk, exc_info=True)
         return ''
