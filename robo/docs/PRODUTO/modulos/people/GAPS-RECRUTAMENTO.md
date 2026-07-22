@@ -80,11 +80,6 @@ pelo link de origem, que e mais confiavel que memoria de quem preencheu.
 
 Parte disso ja da pra fazer sem codigo, com os campos custom por vaga.
 
-### 14. Botao "Reativar" no card de saida
-
-A rota de reabrir ja existe (`SAIDAS_REABRIVEIS`). Falta o botao no card, que
-nos cards de Inaptos deles fica ao lado do motivo.
-
 ### 15. "Selecionar varios" no kanban
 
 Temos selecao em lote na LISTA, e nao no kanban. Eles tem nos dois.
