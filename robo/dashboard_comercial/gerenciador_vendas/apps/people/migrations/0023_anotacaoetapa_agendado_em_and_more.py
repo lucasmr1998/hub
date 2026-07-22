@@ -18,13 +18,31 @@ def preencher_blocos(apps, schema_editor):
     Etapa = apps.get_model('people', 'EtapaPipeline')
 
     por_nome = {e['nome']: e for e in estados_rs.ETAPAS_PADRAO}
+
+    # Nomes ANTIGOS, que sairam da spec de handoff e foram semeados antes de a
+    # gente confrontar com o print do produto rodando. Tenant provisionado
+    # naquela epoca tem esses nomes gravados, e sem este mapa o back-fill nao
+    # os reconheceria e daria o conjunto minimo a todas as etapas.
+    #
+    # Nao depender da ordem entre renomear em prod e rodar a migration: o
+    # operador nao deveria precisar acertar a sequencia pra o dado sair certo.
+    APELIDOS = {
+        'Triagem': 'Análise de inscrição',
+        'Teste Comportamental': 'Perfil comportamental',
+        'Seleção': 'Entrevista / Seleção',
+        'Teste prático': 'Teste Prático',
+        # "Histórico" nao tem equivalente: nao existe no produto real. Cai no
+        # minimo, e o cliente decide se apaga.
+    }
+
     minimo = [estados_rs.BLOCO_ANOTACAO, estados_rs.BLOCO_MENSAGEM]
 
     atualizadas = []
     for etapa in Etapa.objects.all():
         if etapa.blocos:
             continue
-        padrao = por_nome.get(etapa.nome)
+        padrao = por_nome.get(etapa.nome) or por_nome.get(
+            APELIDOS.get(etapa.nome, ''))
         etapa.blocos = padrao['blocos'] if padrao else minimo
         if estados_rs.BLOCO_ROTEIRO in etapa.blocos and not etapa.roteiro:
             etapa.roteiro = estados_rs.ROTEIRO_PADRAO
