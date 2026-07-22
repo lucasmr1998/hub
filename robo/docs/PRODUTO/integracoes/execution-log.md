@@ -203,3 +203,32 @@ comentario no template explicando por que estao ali.
 
 Fica a licao pro checklist de feature (secao 14): **pagina sem rota de navegacao
 nao esta entregue**, mesmo com view, template e teste prontos.
+
+### Correcao imediata: o guard pegou um bug meu ja deployado
+
+Commitei e deployei o `4c45e033` com 18 testes verdes e a pagina renderizando
+200, mas **sem esperar a suite fechar**. Ela fechou depois do push, com 1 falha
+que era do codigo de producao, nao do teste:
+
+```
+ValueError: Espelho de clientes: intersecao (1) maior que um dos lados (nossos=0, deles=1)
+```
+
+`comparar_espelho` contava "leads enviados ao HubSoft" por uma whitelist de
+status (`processado` + `rascunho_hubsoft`). Só que **quando o lead vira cliente o
+sync troca o status pra `convertido_cliente`** (`hubsoft.py:271`). Esses saiam do
+lado "nossos" e continuavam no lado "viraram cliente", violando a invariante e
+derrubando a pagina com 500.
+
+Nao quebrava na Nuvyon (968 enviados x 230 clientes, a desigualdade nao dispara),
+mas quebraria em qualquer tenant com poucos leads e a maioria ja convertida.
+
+**Fix:** "chegou ao HubSoft" passou a ser `tem id_hubsoft OU ja tem cliente
+espelhado OU esta em rascunho`. A clausula do cliente garante **por construcao**
+que a intersecao seja subconjunto. Severidade passou a comparar presos contra o
+total enviado, em vez de contra `processados`, que deixou de existir.
+
+Dois testes novos travam o cenario, incluindo o exato que quebrou.
+
+**Licao:** evidencia boa nao e evidencia completa. O unico teste que faltava era
+justamente o que pegou o bug. Nao pushar antes da suite fechar.

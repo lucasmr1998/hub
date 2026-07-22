@@ -62,7 +62,7 @@ def cenario(db):
         return c
 
     return {
-        'tenant': tenant, 'e_novo': e_novo, 'e_ganho': e_ganho,
+        'tenant': tenant, 'user': user, 'e_novo': e_novo, 'e_ganho': e_ganho,
         'novo_lead': novo_lead, 'nova_op': nova_op, 'novo_cliente': novo_cliente,
     }
 
@@ -110,12 +110,31 @@ class TestCompararEspelho:
         d = rec.comparar_espelho(c['tenant'])
         assert ('Presos em rascunho_hubsoft', 3) in d.detalhes
 
-    def test_severidade_critica_quando_rascunho_supera_processado(self, cenario):
+    def test_severidade_critica_quando_rascunho_domina(self, cenario):
         c = cenario
-        c['novo_lead'](status_api='processado')
+        c['novo_lead'](status_api='processado', id_hubsoft='111')
         for _ in range(2):
-            c['novo_lead'](status_api='rascunho_hubsoft')
+            c['novo_lead'](status_api='rascunho_hubsoft', id_hubsoft='222')
         assert rec.comparar_espelho(c['tenant']).severidade == 'critico'
+
+    def test_lead_convertido_cliente_conta_como_enviado(self, cenario):
+        """Regressao encontrada pelo proprio guard: quando o lead vira cliente o
+        sync troca o status pra `convertido_cliente`. A versao antiga contava
+        'enviados' por uma whitelist de status que nao incluia esse, entao o
+        lead sumia do lado 'nossos' enquanto seguia no lado 'viraram cliente' —
+        intersecao maior que o conjunto, e a PAGINA QUEBRAVA com ValueError."""
+        c = cenario
+        lead = c['novo_lead'](status_api='convertido_cliente')
+        c['novo_cliente'](lead=lead, id_cliente=555)
+
+        d = rec.comparar_espelho(c['tenant'])   # nao pode levantar
+        assert d.nossos >= d.intersecao, 'intersecao tem que ser subconjunto'
+        assert d.deles == 1 and d.nossos == 1
+
+    def test_lead_sem_id_hubsoft_e_sem_cliente_nao_conta_como_enviado(self, cenario):
+        c = cenario
+        c['novo_lead'](status_api='pendente', id_hubsoft='')
+        assert rec.comparar_espelho(c['tenant']).nossos == 0
 
 
 class TestCompararVendas:
@@ -234,9 +253,7 @@ class TestPaginaReconciliacao:
 
     @pytest.fixture
     def cliente_logado(self, client, cenario):
-        from django.contrib.auth.models import User
-        user = User.objects.filter(perfil_usuario__tenant=cenario['tenant']).first()
-        client.force_login(user)
+        client.force_login(cenario['user'])
         return client
 
     def test_pagina_abre(self, cliente_logado, cenario):

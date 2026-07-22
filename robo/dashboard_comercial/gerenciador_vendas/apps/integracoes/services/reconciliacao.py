@@ -196,10 +196,21 @@ def comparar_espelho(tenant) -> Divergencia:
         leads.values_list('status_api').annotate(n=Count('id')).values_list('status_api', 'n')
     )
     presos = por_status.get(STATUS_RASCUNHO, 0)
-    processados = por_status.get('processado', 0)
-    enviados = processados + presos
 
     clientes = _qs_clientes(tenant)
+    # "Chegou ao HubSoft" = tem id_hubsoft, OU ja tem cliente espelhado, OU esta
+    # em rascunho (que por definicao significa prospecto criado la).
+    #
+    # A versao por lista de status dava numero errado: quando o lead vira cliente
+    # o sync troca o status pra `convertido_cliente` (hubsoft.py:271), entao uma
+    # whitelist com processado+rascunho perdia justamente quem completou o ciclo,
+    # e a intersecao ficava maior que o proprio conjunto. A clausula do cliente
+    # garante, por construcao, que a intersecao seja subconjunto.
+    enviados = leads.filter(
+        (Q(id_hubsoft__isnull=False) & ~Q(id_hubsoft=''))
+        | Q(pk__in=clientes.exclude(lead__isnull=True).values('lead_id'))
+        | Q(status_api=STATUS_RASCUNHO)
+    ).distinct().count()
     # So conta como "virou cliente" quem esta amarrado a um lead nosso. O
     # espelho tambem recebe cliente da sync em massa, que nunca passou pelo
     # funil; incluir esses inflaria o lado HubSoft e produziria intersecao
@@ -218,7 +229,9 @@ def comparar_espelho(tenant) -> Divergencia:
         titulo='Espelho de clientes',
         nossos=enviados, deles=viraram_cliente, intersecao=viraram_cliente,
         rotulo_nossos='Leads enviados ao HubSoft', rotulo_deles='Viraram cliente',
-        severidade='critico' if presos > processados else 'atencao',
+        # critico quando o gargalo domina: mais da metade do que foi enviado
+        # esta parado em rascunho
+        severidade='critico' if presos * 2 > enviados else 'atencao',
         explicacao=(
             f'{presos} leads estao parados em "{STATUS_RASCUNHO}": o prospecto foi '
             'criado no HubSoft mas o cadastro nunca foi completado aqui, entao o '
