@@ -38,6 +38,18 @@ def _so_digitos(valor) -> str:
     return re.sub(r'\D', '', str(valor or ''))
 
 
+def _e_anomalia(origem: str) -> bool:
+    """Canal integrado que escapou. Venda que entra pelo WhatsApp da empresa
+    deveria virar lead sozinha; quando nao vira, e furo nosso e nao canal
+    descoberto."""
+    o = (origem or '').upper()
+    return 'MATRIX' in o or o.startswith('WHATSAPP EMPRESA')
+
+
+def _nao_e_venda(origem: str) -> bool:
+    return (origem or '').upper().startswith('TRANSFER')
+
+
 @dataclass
 class Venda:
     codigo_cliente: int
@@ -52,6 +64,24 @@ class Venda:
     lead_status: str | None = None
     casou_por: str = ''          # 'cpf' | 'telefone' | ''
 
+    # A tabela e plana, entao a etiqueta que antes vinha do cabecalho do grupo
+    # precisa existir por linha.
+    @property
+    def anomalia(self) -> bool:
+        return _e_anomalia(self.origem)
+
+    @property
+    def nao_e_venda(self) -> bool:
+        return _nao_e_venda(self.origem)
+
+    @property
+    def tipo_label(self) -> str:
+        if self.nao_e_venda:
+            return 'nao e venda'
+        if self.anomalia:
+            return 'falha nossa'
+        return 'canal fora do funil'
+
 
 @dataclass
 class GrupoOrigem:
@@ -64,15 +94,11 @@ class GrupoOrigem:
 
     @property
     def anomalia(self) -> bool:
-        """Canal integrado que escapou. Venda que entra pelo WhatsApp da empresa
-        deveria virar lead sozinha; quando nao vira, e furo nosso e nao canal
-        descoberto."""
-        o = (self.origem or '').upper()
-        return 'MATRIX' in o or o.startswith('WHATSAPP EMPRESA')
+        return _e_anomalia(self.origem)
 
     @property
     def nao_e_venda(self) -> bool:
-        return (self.origem or '').upper().startswith('TRANSFER')
+        return _nao_e_venda(self.origem)
 
 
 def _inicio_do_mes() -> date:
@@ -212,7 +238,7 @@ def montar_pagina(tenant, inicio: date | None = None, fim: date | None = None,
 
     classes = _classificar(tenant, cacheado['vendas'])
     sem_nada = classes['sem_nada']
-    titularidade = [v for v in sem_nada if v.origem.upper().startswith('TRANSFER')]
+    titularidade = [v for v in sem_nada if v.nao_e_venda]
 
     return {
         'inicio': inicio,

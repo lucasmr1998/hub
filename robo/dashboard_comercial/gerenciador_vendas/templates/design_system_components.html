@@ -498,6 +498,79 @@
     </div>
   </section>
 
+  {# ========== DATATABLE ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Datatable</h2>
+    <p class="showcase-section-desc">
+      A <strong>Tabela</strong> acima e so estilo: <code>.is-sortable</code> desenha a setinha mas nao ordena nada.
+      Use a <strong>Datatable</strong> quando precisar de comportamento: busca sem acento, ordenacao por
+      coluna, paginacao e export CSV. Funciona por progressive enhancement, entao a marcacao continua
+      sendo uma <code>&lt;table&gt;</code> normal, com link, badge e formatacao livres nas celulas.
+    </p>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/datatable.html" %}{% endverbatim %}</code> uma vez na pagina,
+      depois <code>&lt;table class="dt" data-busca="..." data-por-pagina="25" data-exportar="arquivo"&gt;</code>.
+      No <code>&lt;th&gt;</code>: <code>data-tipo="numero|data"</code> e <code>data-nosort</code>.
+      No <code>&lt;td&gt;</code>: <code>data-ordem</code> pra ordenar por um valor diferente do texto exibido.
+    </p>
+
+    <span class="showcase-label">Com busca, ordenacao, paginacao (3 por pagina) e CSV</span>
+    <div class="showcase-row" style="display:block; padding: var(--sp-4); background: var(--color-surface);">
+      {% include "components/datatable.html" %}
+      <table class="dt"
+             data-busca="Buscar empresa, plano ou status..."
+             data-por-pagina="3"
+             data-exportar="tenants-exemplo">
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th data-tipo="numero">Leads</th>
+            <th>Plano</th>
+            <th data-tipo="data">Criado em</th>
+            <th data-nosort>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Megalink</strong></td>
+            <td>1248</td>
+            <td>{% include "components/badge.html" with variant="primary" label="Advanced" style="solid" %}</td>
+            <td>12/03/2025</td>
+            <td>{% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}</td>
+          </tr>
+          <tr>
+            <td><strong>Nuvyon</strong></td>
+            <td>342</td>
+            <td>{% include "components/badge.html" with variant="success" label="Pro" style="solid" %}</td>
+            <td>27/04/2026</td>
+            <td>{% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}</td>
+          </tr>
+          <tr>
+            <td><strong>TR Carrion</strong></td>
+            <td>87</td>
+            <td>{% include "components/badge.html" with variant="success" label="Pro" style="solid" %}</td>
+            <td>03/06/2026</td>
+            <td>{% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}</td>
+          </tr>
+          <tr>
+            <td><strong>Gigamax</strong></td>
+            <td>9</td>
+            <td>{% include "components/badge.html" with variant="warning" label="Trial" style="solid" %}</td>
+            <td>15/01/2026</td>
+            <td>{% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}</td>
+          </tr>
+          <tr>
+            <td><strong>Aurora HQ</strong></td>
+            <td>1560</td>
+            <td>{% include "components/badge.html" with variant="neutral" label="Interno" style="solid" %}</td>
+            <td>01/01/2025</td>
+            <td>{% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   {# ========== MODAIS ========== #}
   <section class="showcase-section">
     <h2 class="showcase-section-title">Modais</h2>

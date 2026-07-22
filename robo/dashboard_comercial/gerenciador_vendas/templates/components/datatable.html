@@ -1,0 +1,308 @@
+{% comment %}
+Datatable — busca, ordenacao por coluna, paginacao e export CSV.
+
+Funciona por progressive enhancement: a pagina escreve uma <table> normal e o
+componente enriquece. Nao recebe os dados por parametro de propósito, porque
+celula real precisa de link, badge e formatacao que um {'chave': valor} generico
+nao expressa sem virar HTML cru no contexto.
+
+USO
+  {% include "components/datatable.html" %}   {# uma vez por pagina, antes das tabelas #}
+
+  <table class="dt"
+         data-busca="Buscar cliente, origem ou plano..."
+         data-por-pagina="25"
+         data-exportar="vendas-fora-do-crm">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th data-tipo="numero">Codigo</th>
+        <th data-tipo="data">Venda</th>
+        <th data-nosort>Acoes</th>
+      </tr>
+    </thead>
+    <tbody>...</tbody>
+  </table>
+
+ATRIBUTOS DA <table>
+  data-busca      placeholder do campo de busca. Ausente = sem busca.
+  data-por-pagina linhas por pagina. Ausente ou 0 = sem paginacao.
+  data-exportar   nome do arquivo CSV (sem extensao). Ausente = sem botao.
+  data-vazio      texto quando a busca nao acha nada.
+
+ATRIBUTOS DO <th>
+  data-tipo       'texto' (default), 'numero' ou 'data' (dd/mm/aaaa ou ISO).
+  data-nosort     coluna nao ordenavel.
+
+ATRIBUTO DO <td>
+  data-ordem      valor usado pra ordenar/buscar no lugar do texto visivel.
+                  Serve pra ordenar por data ISO exibindo dd/mm, por exemplo.
+{% endcomment %}
+<style>
+  .dt-wrap { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+  .dt-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--color-border); flex-wrap: wrap; }
+  .dt-busca { position: relative; flex: 1; min-width: 200px; }
+  .dt-busca i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted, #64748B); font-size: 13px; pointer-events: none; }
+  .dt-busca input { width: 100%; padding: 7px 11px 7px 31px; font-size: 13px; border: 1px solid var(--color-border); border-radius: var(--radius-sm, 6px); background: var(--color-bg, #fff); color: inherit; }
+  .dt-busca input:focus { outline: none; border-color: var(--color-primary, #2563EB); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  .dt-contador { font-size: 12px; color: var(--color-text-muted, #64748B); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .dt-wrap table { width: 100%; border-collapse: collapse; }
+  .dt-wrap th { text-align: left; padding: 8px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted, #64748B); font-weight: 600; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+  .dt-wrap th.dt-ord { cursor: pointer; user-select: none; }
+  .dt-wrap th.dt-ord:hover { color: var(--color-text, #0F172A); }
+  .dt-wrap th.dt-ord::after { content: "\F282"; font-family: "bootstrap-icons"; font-size: 9px; margin-left: 5px; opacity: .25; }
+  .dt-wrap th.dt-asc::after { content: "\F235"; opacity: 1; }
+  .dt-wrap th.dt-desc::after { content: "\F229"; opacity: 1; }
+  .dt-wrap td { padding: 9px 16px; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+  .dt-wrap tbody tr:hover { background: var(--color-bg-subtle, #F8FAFC); }
+  .dt-rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--color-border); flex-wrap: wrap; }
+  .dt-info { font-size: 12px; color: var(--color-text-muted, #64748B); font-variant-numeric: tabular-nums; }
+  .dt-paginas { display: flex; gap: 4px; }
+  .dt-paginas button { min-width: 30px; height: 28px; padding: 0 8px; font-size: 12px; border: 1px solid var(--color-border); background: var(--color-bg, #fff); color: inherit; border-radius: var(--radius-sm, 6px); cursor: pointer; font-variant-numeric: tabular-nums; }
+  .dt-paginas button:hover:not(:disabled) { border-color: var(--color-primary, #2563EB); }
+  .dt-paginas button.ativa { background: var(--color-primary, #2563EB); border-color: var(--color-primary, #2563EB); color: #fff; font-weight: 600; }
+  .dt-paginas button:disabled { opacity: .4; cursor: default; }
+  .dt-semnada td { text-align: center; padding: 26px; color: var(--color-text-muted, #64748B); font-size: 13px; }
+</style>
+<script>
+(function () {
+  if (window.__datatablePronto) { return; }
+  window.__datatablePronto = true;
+
+  function semAcento(s) {
+    return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+
+  function textoCelula(td) {
+    return td.dataset.ordem !== undefined ? td.dataset.ordem : td.textContent.trim();
+  }
+
+  // Ordenar numero e data como texto e o erro classico: "10" vem antes de "9" e
+  // 01/08 antes de 30/07. Por isso o tipo vem declarado no <th>.
+  function chaveOrdem(td, tipo) {
+    var txt = textoCelula(td);
+    if (tipo === 'numero') {
+      var n = parseFloat(txt.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
+      return isNaN(n) ? -Infinity : n;
+    }
+    if (tipo === 'data') {
+      var m = txt.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if (m) { return new Date(+m[3], +m[2] - 1, +m[1]).getTime(); }
+      var d = Date.parse(txt);
+      return isNaN(d) ? -Infinity : d;
+    }
+    return semAcento(txt);
+  }
+
+  function montar(tabela) {
+    if (tabela.dataset.dtPronta) { return; }
+    tabela.dataset.dtPronta = '1';
+
+    var corpo = tabela.tBodies[0];
+    if (!corpo) { return; }
+
+    var linhas = Array.prototype.slice.call(corpo.rows);
+    var cabecalhos = Array.prototype.slice.call(tabela.tHead ? tabela.tHead.rows[0].cells : []);
+    var porPagina = parseInt(tabela.dataset.porPagina || '0', 10);
+    var placeholder = tabela.dataset.busca || '';
+    var arquivo = tabela.dataset.exportar || '';
+    var textoVazio = tabela.dataset.vazio || 'Nada encontrado com esse filtro.';
+
+    // cache do texto de cada linha: buscar em 300 linhas a cada tecla sem isso
+    // reflora o DOM inteiro e trava a digitacao
+    linhas.forEach(function (tr) {
+      tr._dtTexto = semAcento(
+        Array.prototype.map.call(tr.cells, textoCelula).join(' ')
+      );
+    });
+
+    var wrap = document.createElement('div');
+    wrap.className = 'dt-wrap';
+    tabela.parentNode.insertBefore(wrap, tabela);
+
+    var barra = null, campo = null, contador = null;
+    if (placeholder || arquivo) {
+      barra = document.createElement('div');
+      barra.className = 'dt-bar';
+      if (placeholder) {
+        var cx = document.createElement('div');
+        cx.className = 'dt-busca';
+        cx.innerHTML = '<i class="bi bi-search"></i>';
+        campo = document.createElement('input');
+        campo.type = 'search';
+        campo.placeholder = placeholder;
+        cx.appendChild(campo);
+        barra.appendChild(cx);
+      }
+      contador = document.createElement('span');
+      contador.className = 'dt-contador';
+      barra.appendChild(contador);
+      if (arquivo) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-secondary btn-sm';
+        btn.innerHTML = '<i class="bi bi-download"></i> CSV';
+        btn.addEventListener('click', function () { exportar(arquivo); });
+        barra.appendChild(btn);
+      }
+      wrap.appendChild(barra);
+    }
+
+    wrap.appendChild(tabela);
+
+    var rodape = document.createElement('div');
+    rodape.className = 'dt-rodape';
+    var info = document.createElement('span');
+    info.className = 'dt-info';
+    var paginas = document.createElement('div');
+    paginas.className = 'dt-paginas';
+    rodape.appendChild(info);
+    rodape.appendChild(paginas);
+    wrap.appendChild(rodape);
+
+    var vazio = document.createElement('tr');
+    vazio.className = 'dt-semnada';
+    var vazioTd = document.createElement('td');
+    vazioTd.colSpan = cabecalhos.length || 1;
+    vazioTd.textContent = textoVazio;
+    vazio.appendChild(vazioTd);
+
+    var filtradas = linhas.slice();
+    var pagina = 1;
+    var colOrd = -1, desc = false;
+
+    function filtrar() {
+      var termo = semAcento(campo ? campo.value.trim() : '');
+      filtradas = termo
+        ? linhas.filter(function (tr) { return tr._dtTexto.indexOf(termo) !== -1; })
+        : linhas.slice();
+      pagina = 1;
+      render();
+    }
+
+    function ordenar(i) {
+      var th = cabecalhos[i];
+      desc = colOrd === i ? !desc : false;
+      colOrd = i;
+      var tipo = th.dataset.tipo || 'texto';
+      cabecalhos.forEach(function (h) { h.classList.remove('dt-asc', 'dt-desc'); });
+      th.classList.add(desc ? 'dt-desc' : 'dt-asc');
+      var sinal = desc ? -1 : 1;
+      filtradas.sort(function (a, b) {
+        var x = chaveOrdem(a.cells[i], tipo), y = chaveOrdem(b.cells[i], tipo);
+        return x < y ? -sinal : x > y ? sinal : 0;
+      });
+      pagina = 1;
+      render();
+    }
+
+    function render() {
+      var total = filtradas.length;
+      var paginado = porPagina > 0 && total > porPagina;
+      var ultima = paginado ? Math.ceil(total / porPagina) : 1;
+      if (pagina > ultima) { pagina = ultima || 1; }
+      var de = paginado ? (pagina - 1) * porPagina : 0;
+      var ate = paginado ? Math.min(de + porPagina, total) : total;
+
+      corpo.textContent = '';
+      if (!total) {
+        corpo.appendChild(vazio);
+      } else {
+        var frag = document.createDocumentFragment();
+        for (var i = de; i < ate; i++) { frag.appendChild(filtradas[i]); }
+        corpo.appendChild(frag);
+      }
+
+      if (contador) {
+        contador.textContent = total === linhas.length
+          ? total + (total === 1 ? ' registro' : ' registros')
+          : total + ' de ' + linhas.length;
+      }
+      info.textContent = total
+        ? (paginado ? (de + 1) + '–' + ate + ' de ' + total : total + (total === 1 ? ' registro' : ' registros'))
+        : '';
+
+      paginas.textContent = '';
+      if (!paginado) { return; }
+      var alvos = [1, ultima, pagina, pagina - 1, pagina + 1]
+        .filter(function (n) { return n >= 1 && n <= ultima; })
+        .sort(function (a, b) { return a - b; })
+        .filter(function (n, i, arr) { return arr.indexOf(n) === i; });
+      paginas.appendChild(botao('‹', pagina - 1, pagina === 1));
+      var anterior = 0;
+      alvos.forEach(function (n) {
+        if (n - anterior > 1) {
+          var gap = document.createElement('button');
+          gap.textContent = '…';
+          gap.disabled = true;
+          paginas.appendChild(gap);
+        }
+        paginas.appendChild(botao(String(n), n, false, n === pagina));
+        anterior = n;
+      });
+      paginas.appendChild(botao('›', pagina + 1, pagina === ultima));
+    }
+
+    function botao(rotulo, destino, desativado, ativa) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = rotulo;
+      if (desativado) { b.disabled = true; }
+      if (ativa) { b.className = 'ativa'; }
+      b.addEventListener('click', function () { pagina = destino; render(); });
+      return b;
+    }
+
+    function exportar(nome) {
+      // ; como separador e BOM porque o destino real e o Excel em pt-BR, que
+      // com virgula joga a linha inteira numa celula so.
+      var cab = cabecalhos.map(function (h) { return h.textContent.trim(); });
+      var corpoCsv = filtradas.map(function (tr) {
+        return Array.prototype.map.call(tr.cells, textoCelula);
+      });
+      var csv = [cab].concat(corpoCsv).map(function (linha) {
+        return linha.map(function (c) {
+          return '"' + String(c).replace(/"/g, '""') + '"';
+        }).join(';');
+      }).join('\r\n');
+      var url = URL.createObjectURL(
+        new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+      );
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = nome + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    cabecalhos.forEach(function (th, i) {
+      if (th.dataset.nosort !== undefined) { return; }
+      th.classList.add('dt-ord');
+      th.addEventListener('click', function () { ordenar(i); });
+    });
+
+    if (campo) {
+      var timer;
+      campo.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(filtrar, 120);
+      });
+    }
+
+    render();
+  }
+
+  function iniciar() {
+    document.querySelectorAll('table.dt').forEach(montar);
+  }
+
+  // exposto pra tabela criada por JS depois do load
+  window.datatable = { iniciar: iniciar, montar: montar };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciar);
+  } else {
+    iniciar();
+  }
+})();
+</script>

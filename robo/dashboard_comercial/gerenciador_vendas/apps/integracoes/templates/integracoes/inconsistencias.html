@@ -40,19 +40,21 @@
   .inc-cobertura { margin-top: 16px; padding-top: 14px; border-top: 2px solid var(--color-border); font-size: 14px; }
   .inc-cobertura strong { font-size: 20px; }
   .inc-nota { font-size: 12px; color: var(--color-text-muted, #64748B); margin: 6px 0 0; line-height: 1.5; }
-  .inc-grupo { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
-  .inc-grupo.anomalia { border-left: 4px solid var(--color-danger, #DC2626); }
-  .inc-grupo.naovenda { border-left: 4px solid #94A3B8; opacity: .85; }
-  .inc-grupo-head { padding: 13px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--color-border); }
-  .inc-grupo-head h3 { margin: 0; font-size: 15px; font-weight: 700; }
-  .inc-badge { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #F1F5F9; color: #475569; }
-  .inc-badge.perigo { background: #FEE2E2; color: #991B1B; }
-  .inc-tabela { width: 100%; border-collapse: collapse; }
-  .inc-tabela th { text-align: left; padding: 8px 18px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); font-weight: 600; border-bottom: 1px solid var(--color-border); }
-  .inc-tabela td { padding: 9px 18px; border-bottom: 1px solid var(--color-border); font-size: 13px; }
-  .inc-tabela tr:last-child td { border-bottom: none; }
+  .inc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .inc-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 999px; font-size: 12.5px; cursor: pointer; color: inherit; }
+  .inc-chip:hover { border-color: var(--color-primary, #2563EB); }
+  .inc-chip.ativo { background: var(--color-primary, #2563EB); border-color: var(--color-primary, #2563EB); color: #fff; }
+  .inc-chip .n { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .inc-chip.perigo { border-left: 3px solid var(--color-danger, #DC2626); }
+  .inc-chip.cinza { opacity: .7; }
+  .inc-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .inc-pill.falha { background: #FEE2E2; color: #991B1B; }
+  .inc-pill.fora { background: #F1F5F9; color: #475569; }
+  .inc-pill.naovenda { background: #E2E8F0; color: #475569; }
   .inc-vazio { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 30px; text-align: center; color: var(--color-text-muted); }
 </style>
+
+{% include "components/datatable.html" %}
 
 <div class="inc-funil">
   <h2>{{ total }}</h2>
@@ -105,82 +107,138 @@
   </div>
 </div>
 
-<h2 style="font-size:16px;font-weight:700;margin:24px 0 12px;">As {{ total_sem_nada }} que não existem no CRM, por origem</h2>
+<h2 style="font-size:16px;font-weight:700;margin:24px 0 12px;">As {{ total_sem_nada }} que não existem no CRM</h2>
 
-{% for g in grupos %}
-  <div class="inc-grupo {% if g.anomalia %}anomalia{% elif g.nao_e_venda %}naovenda{% endif %}">
-    <div class="inc-grupo-head">
-      <div style="flex:1;">
-        <h3>{{ g.origem }}</h3>
-        {% if g.anomalia %}
-          <p class="inc-nota">Este canal alimenta o Hubtrix. Venda que entra por aqui <strong>deveria</strong> virar lead sozinha, então cada caso é falha nossa.</p>
-        {% elif g.nao_e_venda %}
-          <p class="inc-nota">Troca de titular num contrato existente. Não é venda nova e não deveria passar pelo funil.</p>
-        {% endif %}
-      </div>
-      <span class="inc-badge {% if g.anomalia %}perigo{% endif %}">{{ g.quantidade }}</span>
-    </div>
-    <table class="inc-tabela">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>Código</th>
-          <th>Plano</th>
-          <th>Venda</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for v in g.vendas %}
-          <tr>
-            <td><strong>{{ v.nome }}</strong></td>
-            <td>{{ v.codigo_cliente }}</td>
-            <td>{{ v.plano }}</td>
-            <td>{{ v.data_venda }}</td>
-            <td>{{ v.status_servico|default:"—" }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% comment %}
+  Os grupos por origem viraram filtro em vez de N tabelas separadas: com uma
+  tabela so da pra ordenar por data, buscar por nome e exportar o conjunto
+  inteiro, o que a versao agrupada nao permitia. Os chips preservam a contagem
+  por origem e a distincao entre falha nossa e canal descoberto.
+{% endcomment %}
+{% if grupos %}
+  <div class="inc-chips">
+    <button type="button" class="inc-chip ativo" data-filtro="">
+      Todas <span class="n">{{ total_sem_nada }}</span>
+    </button>
+    {% for g in grupos %}
+      <button type="button"
+              class="inc-chip {% if g.anomalia %}perigo{% elif g.nao_e_venda %}cinza{% endif %}"
+              data-filtro="{{ g.origem }}">
+        {{ g.origem }} <span class="n">{{ g.quantidade }}</span>
+      </button>
+    {% endfor %}
   </div>
-{% empty %}
+
+  <table class="dt"
+         id="tbl-fora"
+         data-busca="Buscar por cliente, código, origem ou plano..."
+         data-por-pagina="25"
+         data-exportar="vendas-fora-do-crm"
+         data-vazio="Nenhuma venda com esse filtro.">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th data-tipo="numero">Código</th>
+        <th>Origem</th>
+        <th>Classificação</th>
+        <th>Plano</th>
+        <th data-tipo="data">Venda</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in sem_nada %}
+        <tr>
+          <td><strong>{{ v.nome }}</strong></td>
+          <td>{{ v.codigo_cliente }}</td>
+          <td>{{ v.origem }}</td>
+          <td>
+            <span class="inc-pill {% if v.nao_e_venda %}naovenda{% elif v.anomalia %}falha{% else %}fora{% endif %}">
+              {{ v.tipo_label }}
+            </span>
+          </td>
+          <td>{{ v.plano }}</td>
+          <td>{{ v.data_venda }}</td>
+          <td>{{ v.status_servico|default:"—" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="inc-nota" style="margin-top:10px;">
+    <strong>Falha nossa:</strong> canal que alimenta o Hubtrix (Matrix, WhatsApp da empresa).
+    A venda <strong>deveria</strong> ter virado lead sozinha.
+    &nbsp;·&nbsp;
+    <strong>Não é venda:</strong> troca de titular num contrato que já existia.
+    &nbsp;·&nbsp;
+    <strong>Canal fora do funil:</strong> venda que nunca teve como passar por aqui.
+  </p>
+{% else %}
   <div class="inc-vazio">Nenhuma venda fora do CRM no período.</div>
-{% endfor %}
+{% endif %}
 
 {% if recuperaveis %}
   <h2 style="font-size:16px;font-weight:700;margin:28px 0 12px;">
     As {{ recuperaveis|length }} recuperáveis
   </h2>
-  <div class="inc-grupo">
-    <div class="inc-grupo-head">
-      <div style="flex:1;">
-        <h3>Temos o lead, falta marcar a venda</h3>
-        <p class="inc-nota">A venda existe dos dois lados. Só falta mover a oportunidade para o estágio de ganho aqui.</p>
-      </div>
-      <span class="inc-badge">{{ recuperaveis|length }}</span>
-    </div>
-    <table class="inc-tabela">
-      <thead>
+  <p class="inc-nota" style="margin:-6px 0 12px;">
+    A venda existe dos dois lados. Só falta mover a oportunidade para o estágio de ganho aqui.
+  </p>
+  <table class="dt"
+         id="tbl-recuperaveis"
+         data-busca="Buscar por cliente ou lead..."
+         data-por-pagina="25"
+         data-exportar="recuperaveis">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th data-tipo="numero">Lead</th>
+        <th>Status do lead</th>
+        <th>Casou por</th>
+        <th data-tipo="data">Venda</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in recuperaveis %}
         <tr>
-          <th>Cliente</th>
-          <th>Lead</th>
-          <th>Status do lead</th>
-          <th>Casou por</th>
-          <th>Venda</th>
+          <td><strong>{{ v.nome }}</strong></td>
+          <td data-ordem="{{ v.lead_id }}"><a href="/crm/leads/{{ v.lead_id }}/">#{{ v.lead_id }}</a></td>
+          <td>{{ v.lead_status }}</td>
+          <td>{{ v.casou_por }}</td>
+          <td>{{ v.data_venda }}</td>
         </tr>
-      </thead>
-      <tbody>
-        {% for v in recuperaveis %}
-          <tr>
-            <td><strong>{{ v.nome }}</strong></td>
-            <td><a href="/crm/leads/{{ v.lead_id }}/">#{{ v.lead_id }}</a></td>
-            <td>{{ v.lead_status }}</td>
-            <td>{{ v.casou_por }}</td>
-            <td>{{ v.data_venda }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      {% endfor %}
+    </tbody>
+  </table>
 {% endif %}
+
+<script>
+  // Os chips escrevem no campo de busca da datatable em vez de filtrar por
+  // conta propria: um caminho de filtro so, entao contador, paginacao e o CSV
+  // exportado ja saem coerentes com o chip ativo, de graca.
+  document.addEventListener('DOMContentLoaded', function () {
+    var chips = document.querySelectorAll('.inc-chip');
+    var tabela = document.getElementById('tbl-fora');
+    if (!chips.length || !tabela) { return; }
+    var busca = tabela.closest('.dt-wrap').querySelector('.dt-busca input');
+    if (!busca) { return; }
+
+    chips.forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        chips.forEach(function (c) { c.classList.remove('ativo'); });
+        chip.classList.add('ativo');
+        busca.value = chip.dataset.filtro;
+        busca.dispatchEvent(new Event('input'));
+      });
+    });
+
+    // digitar na busca desmarca o chip, senao a tela mente sobre o filtro ativo
+    busca.addEventListener('input', function () {
+      var atual = document.querySelector('.inc-chip.ativo');
+      if (atual && busca.value !== atual.dataset.filtro) {
+        atual.classList.remove('ativo');
+      }
+    });
+  });
+</script>
 {% endblock %}

@@ -425,3 +425,30 @@ primeiro, titularidade por ultimo e esmaecida.
 **Cache de 30 min**, porque sao ~59 chamadas de API por leitura. Link
 `?atualizar=1` forca. Diferente da primeira versao, **esta nao grava nada**: le
 e compara em memoria.
+
+## 2026-07-22 — Pagina de inconsistencias: grupos viram datatable filtravel
+
+- **Acao:** os N grupos por origem da pagina de inconsistencias viraram **uma
+  tabela unica** com busca, ordenacao por coluna, paginacao e export CSV. As
+  origens viraram **chips de filtro** que escrevem no campo de busca da propria
+  datatable (um caminho de filtro so, entao contador/paginacao/CSV saem sempre
+  coerentes com o chip ativo). Cada linha ganhou coluna **Origem** e
+  **Classificacao** (falha nossa / nao e venda / canal fora do funil).
+- **Decisao:** criei componente de DS `templates/components/datatable.html` em
+  vez de biblioteca externa. Progressive enhancement sobre uma `<table>` normal,
+  entao celula continua com link/badge/formatacao livres. O `.table` do DS so
+  desenha a setinha `.is-sortable` mas nao ordena nada; a datatable acrescenta o
+  comportamento, nao duplica. Registrado no showcase `/design-system/componentes/`.
+- **Motivo:** com tabela unica da pra ordenar por data, buscar por nome e
+  exportar o conjunto inteiro, o que a versao agrupada nao permitia. Pedido do
+  dono ("transforme isso numa datatable").
+- **Servico:** `inconsistencias.py` ganhou `Venda.anomalia/nao_e_venda/tipo_label`
+  (a etiqueta que antes so existia no cabecalho do grupo agora resolve por
+  linha, porque a tabela e plana). Helpers `_e_anomalia`/`_nao_e_venda`
+  compartilhados entre `Venda` e `GrupoOrigem` pra as duas nunca divergirem.
+- **Output:** `manage.py check` limpo; render das duas telas ok; 22 testes
+  passando (2 novos cobrindo etiqueta por linha e concordancia com o grupo).
+- **Achado de lado:** a suite estava levando 3m54 nao por lentidao de teste, e
+  sim porque cada rodada recriava o banco de teste do zero (todas as migrations).
+  Com `--reuse-db` cai pra ~17s. `pytest.ini` do projeto nao tem `--reuse-db`.
+- **Status:** completed

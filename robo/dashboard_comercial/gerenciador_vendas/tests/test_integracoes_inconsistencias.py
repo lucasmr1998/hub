@@ -130,6 +130,30 @@ class TestAgrupamento:
             'WHATSAPP ATIVO': 3, 'INDICAÇÃO': 1}
 
 
+class TestEtiquetaPorLinha:
+    """A tabela e plana, entao a etiqueta que antes vinha do cabecalho do grupo
+    tem que resolver por venda. Se divergir do grupo, a tela passa a contradizer
+    o proprio chip de filtro."""
+
+    @pytest.mark.parametrize('origem,esperado', [
+        ('WHATSAPP EMPRESA (MATRIX)', 'falha nossa'),
+        ('MATRIX', 'falha nossa'),
+        ('TRANSFERENCIA DE TITULARIDADE', 'nao e venda'),
+        ('INDICAÇÃO', 'canal fora do funil'),
+        ('WHATSAPP ATIVO', 'canal fora do funil'),
+        (svc.ORIGEM_VAZIA, 'canal fora do funil'),
+    ])
+    def test_tipo_label(self, origem, esperado):
+        assert venda(origem=origem).tipo_label == esperado
+
+    def test_venda_concorda_com_o_grupo(self):
+        for origem in ['WHATSAPP EMPRESA (MATRIX)', 'TRANSFERENCIA DE TITULARIDADE',
+                       'INDICAÇÃO', 'WHATSAPP ATIVO', svc.ORIGEM_VAZIA]:
+            v, g = venda(origem=origem), svc.GrupoOrigem(origem=origem)
+            assert v.anomalia is g.anomalia, origem
+            assert v.nao_e_venda is g.nao_e_venda, origem
+
+
 class TestMontarPagina:
     def _com_vendas(self, vendas):
         return patch.object(svc, '_buscar_vendas_hubsoft', return_value=vendas)
