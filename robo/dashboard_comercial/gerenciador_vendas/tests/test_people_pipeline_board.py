@@ -526,3 +526,43 @@ def test_lote_nao_alcanca_candidato_de_outro_tenant(cenario):
     alheio.refresh_from_db()
     assert resposta.json()['movidos'] == 0
     assert alheio.etapa_id is None
+
+
+@pytest.mark.django_db
+def test_parcial_devolve_so_o_miolo(cenario):
+    """
+    Filtrar e trocar de chip nao recarregam a pagina: o JS busca a mesma view
+    com `parcial=1` e troca so o miolo. Se este teste falhar devolvendo a pagina
+    inteira, a troca passa a injetar um `<html>` dentro de uma `<div>`, o que o
+    navegador ate perdoa calado, e ai a tela ganha duas sidebars.
+    """
+    cliente = _cliente(cenario)
+    url = reverse('people:pipeline_board')
+
+    cheia = cliente.get(url).content.decode()
+    parcial = cliente.get(url, {'parcial': '1'}).content.decode()
+
+    assert '<html' in cheia and 'id="pipeline-conteudo"' in cheia
+    assert '<html' not in parcial
+    assert 'id="filtro-pipeline"' in parcial and 'pipe-chip' in parcial
+    assert len(parcial) < len(cheia) / 2
+
+    # O script vive FORA do miolo: se viesse junto, cada troca registraria os
+    # listeners de novo e um clique viraria N requisicoes.
+    assert 'pipeline.js' in cheia
+    assert 'pipeline.js' not in parcial
+
+
+@pytest.mark.django_db
+def test_filtro_preserva_a_fase_escolhida(cenario):
+    """
+    A fase vem do chip, e nao do form, entao viaja como input escondido. Sem
+    isso, filtrar por unidade devolveria o usuario pra fase padrao, e ele leria
+    isso como "o filtro apagou meus candidatos".
+    """
+    etapa = cenario['etapas'][1]
+    resposta = _cliente(cenario).get(reverse('people:pipeline_board'),
+                                     {'etapa': str(etapa.pk), 'parcial': '1'})
+    corpo = resposta.content.decode()
+
+    assert f'name="etapa" value="{etapa.pk}"' in corpo

@@ -52,6 +52,8 @@ TR Carrion antes de construir mais coisa especifica de vertical.
 | 28 | Saidas como coluna no kanban | 1h | RESOLVIDO |
 | 29 | Chips inline, numa linha so | 1h | RESOLVIDO |
 | 30 | Botao "Reativar" no card de saida | 1h | RESOLVIDO |
+| 31 | Board numa superficie branca so | 1h | RESOLVIDO |
+| 32 | Filtro e chip sem recarregar a pagina | 3h | RESOLVIDO |
 | **13** | **Campos do Perfil que faltam** | **4h** | **ABERTO** |
 | **15** | **"Selecionar varios" no kanban** | **3h** | **ABERTO** |
 | **16** | **Requisicao de vaga com aprovacao** | **2 dias** | **ABERTO** |

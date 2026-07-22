@@ -3,9 +3,9 @@
  *
  * A tela tem duas vistas:
  *
- *   LISTA (padrao) — chips por etapa e por saida no topo, e a lista da selecao.
- *   Aqui o volume manda: dezenas de candidatos numa etapa cabem numa lista e
- *   nao cabem numa coluna. Tem selecao em lote.
+ *   LISTA (padrao) — chips por etapa e por saida no topo, e a grade de cards da
+ *   selecao. Aqui o volume manda: dezenas de candidatos numa etapa cabem numa
+ *   grade e nao cabem numa coluna. Tem selecao em lote.
  *
  *   KANBAN (toggle) — colunas arrastaveis. Melhor com poucos candidatos, porque
  *   mover e arrastar.
@@ -13,299 +13,358 @@
  * Duas regras que valem nas duas vistas:
  *   Mover ENTRE etapas e livre (etapa e configuracao, nao maquina de estados).
  *   SAIR do pipeline exige motivo e passa por regra, entao e modal, nao arrasto.
+ *
+ * TUDO POR DELEGACAO NO DOCUMENTO, e nao listener por card. E o que permite
+ * trocar o conteudo por busca parcial (filtro e chip nao recarregam a pagina)
+ * sem religar nada: os nos novos ja nascem funcionando, porque quem escuta e o
+ * documento. Antes, um innerHTML novo deixava todos os cards mortos.
  */
 (function () {
   'use strict';
 
-  const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-  const modal = document.getElementById('modal-saida');
+  const ALVO = 'pipeline-conteudo';   // id da regiao que a busca parcial troca
 
-  // Alvo do modal de saida: um card (kanban), uma linha, ou uma lista de ids
-  // (lote). Guardar os dois evita dois modais que fazem a mesma coisa.
-  let cardDaSaida = null;
-  let idsDoLote = [];
+  let cardDaSaida = null;   // card unico esperando o modal de saida
+  let idsDoLote = [];       // ou a lista de ids, no modo lote
+  let arrastando = null;
+  let colunaOrigem = null;
+  let arrastouAgora = false;
 
-  const dados = document.getElementById('pipeline-dados');
+  const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+  const dados = () => document.getElementById('pipeline-dados');
+  const modal = () => document.getElementById('modal-saida');
+  const conteudo = () => document.getElementById(ALVO);
 
   function post(url, corpo) {
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
       body: JSON.stringify(corpo),
     }).then(r => r.json().then(j => ({ status: r.status, corpo: j })));
   }
 
-  function abrirModalSaida() {
-    if (!modal) return;
-    modal.querySelector('[data-motivo]').value = '';
-    modal.querySelector('[data-motivo-codigo]').value = '';
-    modal.querySelector('[data-saida-valor]').value = '';
-    modal.querySelectorAll('[data-saida-opcao]').forEach(o => o.classList.remove('is-selected'));
-    abrirModal('modal-saida');
+  // ── Busca parcial ───────────────────────────────────────────────────────
+  //
+  // Filtrar e trocar de chip nao recarregam a pagina: buscam so a regiao do
+  // conteudo e trocam. A URL e atualizada com pushState, entao voltar, recarregar
+  // e compartilhar continuam funcionando, que e o que se perde quando alguem
+  // resolve isso guardando estado so em memoria.
+  let buscando = false;
+
+  function trocarConteudo(url, empurrarHistorico) {
+    if (buscando) return;
+    buscando = true;
+
+    const alvo = conteudo();
+    if (alvo) alvo.style.opacity = '0.5';
+
+    const separador = url.indexOf('?') === -1 ? '?' : '&';
+    fetch(url + separador + 'parcial=1', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(r => r.text())
+      .then(function (html) {
+        const atual = conteudo();
+        if (atual) {
+          atual.innerHTML = html;
+          atual.style.opacity = '';
+        }
+        if (empurrarHistorico) window.history.pushState({}, '', url);
+      })
+      .catch(function () {
+        // Falhou a busca parcial: cai pra navegacao normal, que sempre
+        // funciona. Melhor recarregar a pagina do que deixar o filtro mudo.
+        window.location.href = url;
+      })
+      .finally(function () {
+        buscando = false;
+        const atual = conteudo();
+        if (atual) atual.style.opacity = '';
+      });
   }
 
-  // ── Filtros ─────────────────────────────────────────────────────────────
-  document.querySelectorAll('#filtro-pipeline select').forEach(function (s) {
-    s.addEventListener('change', function () { s.form.submit(); });
+  function urlDoFiltro() {
+    const form = document.getElementById('filtro-pipeline');
+    if (!form) return null;
+    // A fase escolhida vem junto porque o template a coloca como input
+    // escondido no proprio form. Resolver isso aqui no JS funcionaria igual, e
+    // deixaria o form quebrado pra quem submete sem JS.
+    const params = new URLSearchParams(new FormData(form));
+
+    // Tira vazio, pra a URL nao encher de `&canal=&periodo=`
+    for (const [chave, valor] of Array.from(params.entries())) {
+      if (!valor) params.delete(chave);
+    }
+    const query = params.toString();
+    return window.location.pathname + (query ? '?' + query : '');
+  }
+
+  // Voltar no navegador refaz a busca da URL anterior.
+  window.addEventListener('popstate', function () {
+    trocarConteudo(window.location.href, false);
   });
 
-  // ── Selecao em lote (vista de lista) ────────────────────────────────────
-  const barra = document.getElementById('lote-barra');
-  if (barra) {
-    const itens = () => Array.from(document.querySelectorAll('.lote-item'));
-    const marcados = () => itens().filter(i => i.checked);
+  // ── Delegacao: um listener pra tudo ─────────────────────────────────────
 
-    function atualizarBarra() {
-      const n = marcados().length;
-      document.getElementById('lote-total').textContent = n;
-      barra.hidden = n === 0;
+  document.addEventListener('submit', function (evento) {
+    if (evento.target.id !== 'filtro-pipeline') return;
+    evento.preventDefault();
+    const url = urlDoFiltro();
+    if (url) trocarConteudo(url, true);
+  });
+
+  document.addEventListener('change', function (evento) {
+    const alvo = evento.target;
+
+    // Filtro: trocar o select ja aplica, sem precisar do botao.
+    if (alvo.closest('#filtro-pipeline')) {
+      const url = urlDoFiltro();
+      if (url) trocarConteudo(url, true);
+      return;
     }
 
-    document.getElementById('lote-todos')?.addEventListener('change', function () {
-      itens().forEach(i => { i.checked = this.checked; });
-      atualizarBarra();
-    });
-    itens().forEach(i => i.addEventListener('change', atualizarBarra));
+    if (alvo.classList.contains('lote-item') || alvo.id === 'lote-todos') {
+      if (alvo.id === 'lote-todos') {
+        document.querySelectorAll('.lote-item').forEach(i => { i.checked = alvo.checked; });
+      }
+      atualizarBarraDeLote();
+    }
+  });
 
-    function aplicarLote(corpo) {
-      post('/people/candidatos/lote/', corpo).then(function (resp) {
-        if (resp.status === 200) {
-          // Recusa parcial nao pode passar batida: o RH precisa saber que
-          // alguns nao foram, e por que.
-          if (resp.corpo.recusados && resp.corpo.recusados.length) {
-            toast('Movidos com ressalva',
-                  resp.corpo.movidos + ' movidos. ' + resp.corpo.recusados[0], 'warning');
-            setTimeout(() => window.location.reload(), 2500);
-          } else {
-            window.location.reload();
-          }
-          return;
-        }
-        toast('Nao foi possivel', resp.corpo.erro || 'Erro inesperado.', 'danger');
-      }).catch(() => toast('Nao foi possivel', 'Falha de conexao.', 'danger'));
+  document.addEventListener('click', function (evento) {
+    const alvo = evento.target;
+
+    // Chip: busca parcial no lugar de navegar. O alternador de lista/kanban
+    // fica de fora e navega mesmo: ele vive no cabecalho, e o proprio rotulo
+    // dele ("Ver em kanban") muda junto, entao trocar so o miolo deixaria o
+    // botao mentindo sobre o que faz.
+    const link = alvo.closest('.pipe-chip');
+    if (link && link.href) {
+      evento.preventDefault();
+      trocarConteudo(link.href, true);
+      return;
     }
 
-    document.getElementById('lote-mover')?.addEventListener('click', function () {
-      const etapa = document.getElementById('lote-etapa').value;
-      if (!etapa) { toast('Escolha a etapa', 'Diga pra onde mover.', 'warning'); return; }
-      aplicarLote({ acao: 'etapa', etapa_id: Number(etapa),
-                    ids: marcados().map(i => Number(i.value)) });
-    });
-
-    document.getElementById('lote-sair')?.addEventListener('click', function () {
+    if (alvo.closest('[data-avancar]')) {
+      evento.stopPropagation();
+      return avancar(alvo.closest('[data-avancar]'));
+    }
+    if (alvo.closest('[data-reabrir]')) {
+      evento.stopPropagation();
+      return reabrir(alvo.closest('[data-reabrir]'));
+    }
+    if (alvo.closest('[data-abrir-saida]')) {
+      evento.stopPropagation();
+      cardDaSaida = alvo.closest('.kanban-card');
+      idsDoLote = [];
+      return abrirModalSaida();
+    }
+    if (alvo.closest('#lote-mover')) return moverLote();
+    if (alvo.closest('#lote-sair')) {
       cardDaSaida = null;
       idsDoLote = marcados().map(i => Number(i.value));
-      abrirModalSaida();
-    });
+      return abrirModalSaida();
+    }
 
-    // Guarda o aplicador pro modal alcancar no modo lote.
-    barra._aplicar = aplicarLote;
-  }
+    const opcao = alvo.closest('[data-saida-opcao]');
+    if (opcao) {
+      const m = modal();
+      m.querySelectorAll('[data-saida-opcao]').forEach(o => o.classList.remove('is-selected'));
+      opcao.classList.add('is-selected');
+      m.querySelector('[data-saida-valor]').value = opcao.dataset.saidaOpcao;
+      return;
+    }
+    if (alvo.closest('[data-confirmar-saida]')) return confirmarSaida();
 
-  // ── Modal de saida: serve lista, lote e kanban ──────────────────────────
-  if (modal) {
-    modal.querySelectorAll('[data-saida-opcao]').forEach(function (opcao) {
-      opcao.addEventListener('click', function () {
-        modal.querySelectorAll('[data-saida-opcao]').forEach(o => o.classList.remove('is-selected'));
-        opcao.classList.add('is-selected');
-        modal.querySelector('[data-saida-valor]').value = opcao.dataset.saidaOpcao;
-      });
-    });
-
-    modal.querySelector('[data-confirmar-saida]')?.addEventListener('click', function () {
-      const saida = modal.querySelector('[data-saida-valor]').value;
-      const motivoCodigo = modal.querySelector('[data-motivo-codigo]').value;
-      const motivo = modal.querySelector('[data-motivo]').value.trim();
-
-      if (!saida) { toast('Escolha uma saida', 'Diga pra onde o candidato vai.', 'warning'); return; }
-      if (!motivoCodigo) { toast('Registre o motivo', 'Toda saida precisa de um motivo.', 'warning'); return; }
-      // "Outro" sozinho nao diz nada, e e justamente o motivo que mais some na
-      // analise depois. Ai o detalhe vira obrigatorio.
-      if (motivoCodigo === 'outro' && !motivo) {
-        toast('Descreva o motivo', 'Com "Outro", o detalhe e obrigatorio.', 'warning');
-        return;
-      }
-
-      // Modo lote
-      if (!cardDaSaida && idsDoLote.length) {
-        barra._aplicar({ acao: 'saida', saida: saida, motivo: motivo,
-                        motivo_codigo: motivoCodigo, ids: idsDoLote });
-        fecharModal('modal-saida');
-        return;
-      }
-
-      // Modo card unico. Le do #pipeline-dados, e nao do .kanban-board, pra
-      // funcionar tambem na vista lista, onde nao ha tabuleiro.
-      if (!cardDaSaida || !dados) return;
-      const id = cardDaSaida.dataset.candidatoId;
-      post(dados.dataset.urlSaida.replace('0', id),
-           { saida: saida, motivo: motivo, motivo_codigo: motivoCodigo })
-        .then(function (resp) {
-        if (resp.status === 200) {
-          const origem = cardDaSaida.closest('.kanban-col');
-          cardDaSaida.remove();
-          atualizarContador(origem);
-          marcarVazio(origem);
-          fecharModal('modal-saida');
-          toast('Candidato movido', 'Saiu do processo: ' + (resp.corpo.rotulo || ''), 'success');
-          if (resp.corpo.aviso) toast('Atenção', resp.corpo.aviso, 'warning');
-          return;
-        }
-        toast('Nao foi possivel', resp.corpo.erro || 'Erro inesperado.', 'danger');
-      }).catch(() => toast('Nao foi possivel', 'Falha de conexao.', 'danger'));
-    });
-  }
-
-  // ── Abrir a ficha: vale pra QUALQUER um que enxerga o board ─────────────
-  //
-  // Fica fora da guarda de `podeMover` de proposito. Abrir a ficha e leitura,
-  // nao movimentacao: quem so tem people.ver precisa conseguir clicar no card.
-  let arrastouAgora = false;
-
-  document.querySelectorAll('.kanban-card').forEach(function (card) {
-    card.addEventListener('click', function (e) {
-      if (arrastouAgora) return;
-      if (e.target.closest('a, button, form, input')) return;
-      const destino = card.dataset.detalhe;
-      if (destino) window.location.href = destino;
-    });
+    // Abrir a ficha. Fica FORA da guarda de permissao de proposito: abrir a
+    // ficha e leitura, e quem so tem people.ver precisa conseguir clicar.
+    const card = alvo.closest('.kanban-card');
+    if (card && !arrastouAgora && !alvo.closest('a, button, form, input, label')) {
+      if (card.dataset.detalhe) window.location.href = card.dataset.detalhe;
+    }
   });
 
-  // ── Acoes rapidas do card, nas duas vistas ──────────────────────────────
+  // ── Selecao em lote ─────────────────────────────────────────────────────
+
+  const marcados = () => Array.from(document.querySelectorAll('.lote-item:checked'));
+
+  function atualizarBarraDeLote() {
+    const barra = document.getElementById('lote-barra');
+    if (!barra) return;
+    const n = marcados().length;
+    const total = document.getElementById('lote-total');
+    if (total) total.textContent = n;
+    barra.hidden = n === 0;
+  }
+
+  function aplicarLote(corpo) {
+    post('/people/candidatos/lote/', corpo).then(function (resp) {
+      if (resp.status === 200) {
+        // Recusa parcial nao pode passar batida: o RH precisa saber que alguns
+        // nao foram, e por que.
+        if (resp.corpo.recusados && resp.corpo.recusados.length) {
+          toast('Movidos com ressalva',
+                resp.corpo.movidos + ' movidos. ' + resp.corpo.recusados[0], 'warning');
+          setTimeout(() => trocarConteudo(window.location.href, false), 2000);
+        } else {
+          trocarConteudo(window.location.href, false);
+        }
+        return;
+      }
+      toast('Nao foi possivel', resp.corpo.erro || 'Erro inesperado.', 'danger');
+    }).catch(() => toast('Nao foi possivel', 'Falha de conexao.', 'danger'));
+  }
+
+  function moverLote() {
+    const etapa = document.getElementById('lote-etapa')?.value;
+    if (!etapa) { toast('Escolha a etapa', 'Diga pra onde mover.', 'warning'); return; }
+    aplicarLote({ acao: 'etapa', etapa_id: Number(etapa),
+                  ids: marcados().map(i => Number(i.value)) });
+  }
+
+  // ── Acoes rapidas do card ───────────────────────────────────────────────
   //
   // Existem porque com 82 candidatos numa etapa, abrir a ficha e voltar 82
   // vezes e o que faz o RH desistir da tela.
-  document.querySelectorAll('[data-avancar]').forEach(function (botao) {
-    botao.addEventListener('click', function (evento) {
-      evento.stopPropagation();   // nao abre a ficha junto
-      const card = botao.closest('.kanban-card');
-      if (!dados || !card) return;
-      botao.disabled = true;
-      post(dados.dataset.urlMover.replace('0', card.dataset.candidatoId),
-           { etapa_id: botao.dataset.avancar }).then(function (resp) {
-        if (resp.status === 200) { window.location.reload(); }
-        else {
-          botao.disabled = false;
-          toast('Nao consegui mover', resp.corpo.erro || 'Tente de novo.', 'danger');
-        }
-      });
+
+  function moverCandidato(botao, etapaId, aviso) {
+    const card = botao.closest('.kanban-card');
+    const d = dados();
+    if (!card || !d) return;
+    botao.disabled = true;
+    post(d.dataset.urlMover.replace('0', card.dataset.candidatoId),
+         { etapa_id: Number(etapaId) }).then(function (resp) {
+      if (resp.status === 200) { trocarConteudo(window.location.href, false); return; }
+      botao.disabled = false;
+      toast(aviso, resp.corpo.erro || 'Tente de novo.', 'danger');
+    }).catch(function () {
+      botao.disabled = false;
+      toast(aviso, 'Falha de conexao.', 'danger');
     });
-  });
+  }
 
-  document.querySelectorAll('[data-reabrir]').forEach(function (botao) {
-    botao.addEventListener('click', function (evento) {
-      evento.stopPropagation();
-      const card = botao.closest('.kanban-card');
-      const primeira = dados && dados.dataset.primeiraEtapa;
-      if (!primeira || !card) {
-        toast('Sem etapa', 'O fluxo nao tem etapa pra onde reativar.', 'warning');
-        return;
-      }
-      botao.disabled = true;
-      post(dados.dataset.urlMover.replace('0', card.dataset.candidatoId),
-           { etapa_id: primeira }).then(function (resp) {
-        if (resp.status === 200) { window.location.reload(); }
-        else {
-          botao.disabled = false;
-          toast('Nao consegui reativar', resp.corpo.erro || 'Tente de novo.', 'danger');
-        }
-      });
-    });
-  });
+  function avancar(botao) {
+    moverCandidato(botao, botao.dataset.avancar, 'Nao consegui mover');
+  }
 
-  document.querySelectorAll('[data-abrir-saida]').forEach(function (botao) {
-    botao.addEventListener('click', function () {
-      cardDaSaida = botao.closest('.kanban-card');
-      idsDoLote = [];
-      abrirModalSaida();
-    });
-  });
+  function reabrir(botao) {
+    const primeira = dados()?.dataset.primeiraEtapa;
+    if (!primeira) {
+      toast('Sem etapa', 'O fluxo nao tem etapa pra onde reativar.', 'warning');
+      return;
+    }
+    moverCandidato(botao, primeira, 'Nao consegui reativar');
+  }
 
-  // ── Daqui pra baixo: kanban, so pra quem pode mover ─────────────────────
-  const board = document.querySelector('.kanban-board');
-  if (!board) return;
+  // ── Modal de saida: serve lista, lote e kanban ──────────────────────────
 
-  const podeMover = board.dataset.podeMover === '1';
-  const urlMover = board.dataset.urlMover;
-  if (!podeMover) return;
+  function abrirModalSaida() {
+    const m = modal();
+    if (!m) return;
+    m.querySelector('[data-motivo]').value = '';
+    m.querySelector('[data-motivo-codigo]').value = '';
+    m.querySelector('[data-saida-valor]').value = '';
+    m.querySelectorAll('[data-saida-opcao]').forEach(o => o.classList.remove('is-selected'));
+    abrirModal('modal-saida');
+  }
 
-  let arrastando = null;
-  let colunaOrigem = null;
+  function confirmarSaida() {
+    const m = modal();
+    const saida = m.querySelector('[data-saida-valor]').value;
+    const motivoCodigo = m.querySelector('[data-motivo-codigo]').value;
+    const motivo = m.querySelector('[data-motivo]').value.trim();
 
-  document.querySelectorAll('.kanban-card').forEach(function (card) {
-    card.draggable = true;
+    if (!saida) { toast('Escolha uma saida', 'Diga pra onde o candidato vai.', 'warning'); return; }
+    if (!motivoCodigo) { toast('Registre o motivo', 'Toda saida precisa de um motivo.', 'warning'); return; }
+    // "Outro" sozinho nao diz nada, e e justamente o motivo que mais some na
+    // analise depois. Ai o detalhe vira obrigatorio.
+    if (motivoCodigo === 'outro' && !motivo) {
+      toast('Descreva o motivo', 'Com "Outro", o detalhe e obrigatorio.', 'warning');
+      return;
+    }
 
-    card.addEventListener('dragstart', function (e) {
-      arrastando = card;
-      colunaOrigem = card.closest('.kanban-col');
-      arrastouAgora = true;
-      card.classList.add('is-dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', card.dataset.candidatoId || '');
-    });
+    if (!cardDaSaida && idsDoLote.length) {
+      aplicarLote({ acao: 'saida', saida: saida, motivo: motivo,
+                    motivo_codigo: motivoCodigo, ids: idsDoLote });
+      fecharModal('modal-saida');
+      return;
+    }
 
-    card.addEventListener('dragend', function () {
-      card.classList.remove('is-dragging');
-      document.querySelectorAll('.kanban-col').forEach(function (col) {
-        col.classList.remove('is-drop-target');
-      });
-      // Solta a trava no proximo tick: o clique sintetico, quando vem, chega
-      // logo apos o dragend. Sem isso, soltar o card abriria a ficha.
-      setTimeout(function () { arrastouAgora = false; }, 0);
-    });
-  });
-
-  // Toda etapa aceita o drop: mover entre etapas e livre.
-  document.querySelectorAll('.kanban-col[data-etapa-id]').forEach(function (coluna) {
-    coluna.addEventListener('dragover', function (e) {
-      if (!arrastando) return;
-      e.preventDefault();
-      coluna.classList.add('is-drop-target');
-    });
-    coluna.addEventListener('dragleave', function () {
-      coluna.classList.remove('is-drop-target');
-    });
-    coluna.addEventListener('drop', function (e) {
-      e.preventDefault();
-      coluna.classList.remove('is-drop-target');
-      if (!arrastando || colunaOrigem === coluna) return;
-
-      const card = arrastando;
-      const origem = colunaOrigem;
-      post(urlMover.replace('0', card.dataset.candidatoId),
-           { etapa_id: Number(coluna.dataset.etapaId) }).then(function (resp) {
+    const d = dados();
+    if (!cardDaSaida || !d) return;
+    post(d.dataset.urlSaida.replace('0', cardDaSaida.dataset.candidatoId),
+         { saida: saida, motivo: motivo, motivo_codigo: motivoCodigo })
+      .then(function (resp) {
         if (resp.status === 200) {
-          coluna.querySelector('.kanban-col-body').appendChild(card);
-          atualizarContador(origem);
-          atualizarContador(coluna);
-          limparVazio(coluna);
-          marcarVazio(origem);
+          fecharModal('modal-saida');
+          toast('Candidato movido', 'Saiu do processo: ' + (resp.corpo.rotulo || ''), 'success');
+          if (resp.corpo.aviso) toast('Atenção', resp.corpo.aviso, 'warning');
+          trocarConteudo(window.location.href, false);
           return;
         }
-        toast('Nao foi possivel mover', resp.corpo.erro || 'Erro inesperado.', 'danger');
-      }).catch(() => toast('Nao foi possivel mover', 'Falha de conexao.', 'danger'));
-    });
+        toast('Nao foi possivel', resp.corpo.erro || 'Erro inesperado.', 'danger');
+      }).catch(() => toast('Nao foi possivel', 'Falha de conexao.', 'danger'));
+  }
+
+  // ── Arrastar no kanban ──────────────────────────────────────────────────
+  //
+  // Tambem por delegacao: dragstart e drop borbulham, entao um listener no
+  // documento cobre os cards que a busca parcial trouxer depois.
+
+  document.addEventListener('dragstart', function (evento) {
+    const card = evento.target.closest?.('.kanban-card');
+    if (!card || dados()?.dataset.podeMover !== '1') return;
+    arrastando = card;
+    colunaOrigem = card.closest('.kanban-col');
+    arrastouAgora = true;
+    card.classList.add('is-dragging');
+    evento.dataTransfer.effectAllowed = 'move';
+    evento.dataTransfer.setData('text/plain', card.dataset.candidatoId || '');
   });
 
-  // ── Contadores e estado vazio ──────────────────────────────────────────
-  function atualizarContador(coluna) {
+  document.addEventListener('dragend', function (evento) {
+    evento.target.closest?.('.kanban-card')?.classList.remove('is-dragging');
+    document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('is-drop-target'));
+    // Solta a trava no proximo tick: o clique sintetico, quando vem, chega
+    // logo apos o dragend. Sem isso, soltar o card abriria a ficha.
+    setTimeout(function () { arrastouAgora = false; }, 0);
+  });
+
+  document.addEventListener('dragover', function (evento) {
+    // So etapa aceita: saida exige motivo, e o arrasto nao tem onde perguntar.
+    const coluna = evento.target.closest?.('.kanban-col[data-etapa-id]');
+    if (!coluna || !arrastando) return;
+    evento.preventDefault();
+    coluna.classList.add('is-drop-target');
+  });
+
+  document.addEventListener('dragleave', function (evento) {
+    evento.target.closest?.('.kanban-col')?.classList.remove('is-drop-target');
+  });
+
+  document.addEventListener('drop', function (evento) {
+    const coluna = evento.target.closest?.('.kanban-col[data-etapa-id]');
     if (!coluna) return;
-    const alvo = coluna.querySelector('.kanban-col-count');
-    if (alvo) alvo.textContent = coluna.querySelectorAll('.kanban-card').length;
+    evento.preventDefault();
+    coluna.classList.remove('is-drop-target');
+    if (!arrastando || colunaOrigem === coluna) return;
+
+    const card = arrastando;
+    post(dados().dataset.urlMover.replace('0', card.dataset.candidatoId),
+         { etapa_id: Number(coluna.dataset.etapaId) }).then(function (resp) {
+      if (resp.status === 200) { trocarConteudo(window.location.href, false); return; }
+      toast('Nao foi possivel mover', resp.corpo.erro || 'Erro inesperado.', 'danger');
+    }).catch(() => toast('Nao foi possivel mover', 'Falha de conexao.', 'danger'));
+  });
+
+  // Cards so ficam arrastaveis pra quem pode mover, e o atributo precisa valer
+  // tambem no conteudo que a busca parcial trouxer.
+  function marcarArrastaveis() {
+    if (dados()?.dataset.podeMover !== '1') return;
+    document.querySelectorAll('.kanban-card').forEach(c => { c.draggable = true; });
   }
 
-  function limparVazio(coluna) {
-    coluna.querySelector('.kanban-empty')?.remove();
-  }
-
-  function marcarVazio(coluna) {
-    if (!coluna) return;
-    const body = coluna.querySelector('.kanban-col-body');
-    if (body.querySelectorAll('.kanban-card').length === 0 && !body.querySelector('.kanban-empty')) {
-      const vazio = document.createElement('p');
-      vazio.className = 'kanban-empty';
-      vazio.textContent = 'Vazio';
-      body.appendChild(vazio);
-    }
-  }
+  marcarArrastaveis();
+  new MutationObserver(marcarArrastaveis).observe(
+    document.body, { childList: true, subtree: true });
 })();

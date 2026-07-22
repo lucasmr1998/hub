@@ -93,145 +93,16 @@
     </div>
   </div>
 
-  <form method="get" id="filtro-pipeline"
-        style="display: flex; gap: var(--sp-3); align-items: flex-end; margin-bottom: var(--sp-4); flex-wrap: wrap;">
-    {% if vista == 'kanban' %}<input type="hidden" name="vista" value="kanban">{% endif %}
-    {% include "components/input.html" with name="busca" label="Buscar candidato" value=busca placeholder="Nome" size="sm" %}
-    {% include "components/select.html" with name="vaga" label="Vaga" options=vagas_opcoes value=vaga_selecionada blank_label="Todas" size="sm" %}
-    {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas" size="sm" %}
-    {% include "components/select.html" with name="canal" label="Canal" options=canais_opcoes value=canal_selecionado blank_label="Todos" size="sm" %}
-    {% include "components/select.html" with name="periodo" label="Período" options=periodos_opcoes value=periodo_selecionado blank_label="Qualquer" size="sm" %}
-    <button type="submit" class="btn btn-ghost btn-sm">Filtrar</button>
-  </form>
+  {% comment %}
+    Regiao que a busca parcial troca. Filtro e chip buscam so este pedaco e
+    substituem, em vez de recarregar a pagina. Quem escuta os eventos e o
+    documento (delegacao, ver pipeline.js), entao o conteudo novo ja nasce
+    funcionando: com listener por elemento, um innerHTML novo deixaria todos
+    os cards mortos.
+  {% endcomment %}
+  <div id="pipeline-conteudo">{% include "people/_pipeline_conteudo.html" %}</div>
 
-  {% if not tem_etapas %}
-    {% include "components/empty_state.html" with icon="bi-diagram-3" text="O pipeline ainda não tem etapas" subtext="Configure o fluxo para começar a receber candidatos." cta_label="Configurar fluxo" cta_href="/people/fluxo/" cta_icon="bi-sliders" %}
-  {% else %}
-    {% comment %}
-      Rotas e permissao num elemento que existe nas DUAS vistas. Antes viviam
-      no `.kanban-board`, que so existe no kanban, entao a acao rapida do card
-      nao funcionava na lista. Card unico exige dado unico.
-    {% endcomment %}
-    <div id="pipeline-dados" hidden
-         data-pode-mover="{% if pode_mover %}1{% else %}0{% endif %}"
-         data-url-mover="{% url 'people:pipeline_mover' 0 %}"
-         data-url-saida="{% url 'people:pipeline_saida' 0 %}"
-         data-primeira-etapa="{% if etapas %}{{ etapas.0.pk }}{% endif %}"></div>
-
-    {# ── Chips: etapas e saídas, numa linha só ── #}
-    <div class="pipe-chips" style="margin-bottom: var(--sp-4);">
-      {% for chip in chips %}
-        <a class="pipe-chip{% if chip.ativo %} is-active{% endif %}{% if not chip.total %} is-vazio{% endif %}"
-           href="?etapa={{ chip.chave }}{% if unidade_selecionada %}&unidade={{ unidade_selecionada }}{% endif %}{% if vaga_selecionada %}&vaga={{ vaga_selecionada }}{% endif %}{% if busca %}&busca={{ busca }}{% endif %}{% if canal_selecionado %}&canal={{ canal_selecionado }}{% endif %}{% if periodo_selecionado %}&periodo={{ periodo_selecionado }}{% endif %}">
-          <span class="pipe-chip-ponto" style="background: {{ chip.cor }};"></span>
-          {{ chip.rotulo }}
-          <span class="pipe-chip-total">{{ chip.total }}</span>
-        </a>
-      {% endfor %}
-
-      <span class="pipe-sep" aria-hidden="true"></span>
-
-      {% for chip in chips_saida %}
-        <a class="pipe-chip{% if chip.ativo %} is-active{% endif %}{% if not chip.total %} is-vazio{% endif %}"
-           href="?saida={{ chip.chave }}{% if unidade_selecionada %}&unidade={{ unidade_selecionada }}{% endif %}{% if vaga_selecionada %}&vaga={{ vaga_selecionada }}{% endif %}{% if busca %}&busca={{ busca }}{% endif %}{% if canal_selecionado %}&canal={{ canal_selecionado }}{% endif %}{% if periodo_selecionado %}&periodo={{ periodo_selecionado }}{% endif %}">
-          <span class="pipe-chip-ponto" style="background: {{ chip.cor }};"></span>
-          {{ chip.rotulo }}
-          <span class="pipe-chip-total">{{ chip.total }}</span>
-        </a>
-      {% endfor %}
-    </div>
-
-    {% if vista == 'kanban' %}
-      {# ── Kanban: bom com poucos candidatos, porque mover e arrastar ── #}
-      <div class="kanban-board"
-           style="grid-template-columns: repeat({{ colunas|length }}, minmax(240px, 1fr));"
-           data-pode-mover="{% if pode_mover %}1{% else %}0{% endif %}"
-           data-url-mover="{% url 'people:pipeline_mover' 0 %}"
-           data-url-saida="{% url 'people:pipeline_saida' 0 %}">
-        {% for coluna in colunas %}
-          {% comment %}
-            Coluna de etapa aceita soltar; coluna de SAIDA nao, porque toda
-            saida exige motivo e o arrasto nao tem onde perguntar. Pra tirar do
-            processo o caminho e o botao, que abre o modal.
-          {% endcomment %}
-          <div class="kanban-col{% if coluna.saida %} kanban-col-saida{% endif %}"
-               {% if coluna.etapa %}data-etapa-id="{{ coluna.etapa.pk }}"{% endif %}>
-            <div class="kanban-col-header">
-              <h2 class="kanban-col-title">
-                {% if coluna.saida %}
-                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ coluna.cor }};"></span>
-                  {{ coluna.rotulo }}
-                {% else %}{{ coluna.etapa.nome }}{% endif %}
-              </h2>
-              <span class="kanban-col-count">{{ coluna.total }}</span>
-            </div>
-            <div class="kanban-col-body">
-              {% for candidato in coluna.cards %}
-                {% include "people/_pipeline_card.html" with candidato=candidato %}
-              {% empty %}
-                <p class="kanban-empty">
-                  {% if coluna.saida %}Ninguém aqui{% else %}Solte aqui{% endif %}
-                </p>
-              {% endfor %}
-              {% if coluna.truncada %}
-                <a href="?saida={{ coluna.saida }}" class="field-helper"
-                   style="display: block; text-align: center; padding: var(--sp-2);">
-                  ver todos os {{ coluna.total }}
-                </a>
-              {% endif %}
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      {# ── Lista da seleção ── #}
-      <h2 class="form-section-title">
-        {{ selecao.rotulo }}
-        <span class="field-helper">· {{ lista|length }} candidato{{ lista|length|pluralize }}</span>
-      </h2>
-
-      {% if pode_mover %}
-        <div class="lote-barra" id="lote-barra" hidden>
-          <strong style="font-size: var(--fs-sm);"><span id="lote-total">0</span> selecionados</strong>
-          <span class="field-helper">mover para</span>
-          <select class="field-input field-select" id="lote-etapa" style="max-width: 220px;">
-            <option value="">Etapa...</option>
-            {% for etapa in etapas %}<option value="{{ etapa.pk }}">{{ etapa.nome }}</option>{% endfor %}
-          </select>
-          <button type="button" class="btn btn-secondary btn-sm" id="lote-mover">Mover</button>
-          <span class="field-helper">ou</span>
-          <button type="button" class="btn btn-ghost btn-sm" id="lote-sair">Tirar do processo</button>
-        </div>
-      {% endif %}
-
-      {% if lista %}
-        {% comment %}
-          GRADE DE CARDS, e nao tabela, como no board da origem.
-
-          A tabela dava mais densidade, porem obrigava a abrir a ficha pra
-          qualquer acao. Com 82 candidatos numa etapa, abrir e voltar 82 vezes
-          e o que faz o RH desistir da tela. O card resolve o caso comum ali
-          mesmo: avancar, tirar do processo, ver o curriculo, ligar.
-
-          Mesmo card do kanban, de proposito: card diferente por vista faria a
-          acao rapida existir num lugar e nao no outro.
-        {% endcomment %}
-        <div class="cand-grade">
-          {% for candidato in lista %}
-            <div class="cand-grade-item">
-              {% if pode_mover %}
-                <label class="cand-grade-check" onclick="event.stopPropagation();">
-                  <input type="checkbox" class="lote-item" value="{{ candidato.pk }}">
-                </label>
-              {% endif %}
-              {% include "people/_pipeline_card.html" with candidato=candidato %}
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        {% include "components/empty_state.html" with icon="bi-people" text="Nenhum candidato nesta fase" subtext="Escolha outra fase acima, ou divulgue a vaga para receber candidaturas." %}
-      {% endif %}
-    {% endif %}
+  {% if tem_etapas %}
 
     {% comment %} Modal de saida: exige escolher pra onde e um motivo. {% endcomment %}
     <div id="modal-saida" class="modal-overlay" role="dialog" aria-modal="true" hidden>
@@ -288,5 +159,11 @@
     </div>
   {% endif %}
 
+  {% comment %}
+    Fica FORA da regiao trocavel de proposito. Se o script vivesse dentro do
+    miolo, cada busca parcial o reinjetaria e registraria os listeners de novo,
+    e ai um clique disparava N requisicoes. Como ele escuta o documento por
+    delegacao, carregar uma vez basta pra sempre.
+  {% endcomment %}
   <script src="{% static 'people/js/pipeline.js' %}"></script>
 {% endblock %}

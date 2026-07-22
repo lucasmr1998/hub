@@ -593,3 +593,26 @@ Recuperado com `git checkout HEAD --` (o commit anterior salvou) e refeito com a
 
 - **Output**: 652 testes. Sem migration.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-22 — Board numa superficie branca, e filtro que troca so o conteudo
+
+- **Acao**: dois pedidos do Lucas sobre o board de candidatos. "visualmente n ta agradavel, deveria ter um fundo branco" e "no filtro n deveria trocar de pagina, deveria somente recarregar os conteudos".
+
+**1. Fundo branco.** Filtro, chips e selecao viviam soltos direto no cinza da pagina, o que fazia a tela parecer rascunho. Agora o board inteiro vive numa `.section-card` unica, com um risco separando o filtro da selecao. **Cuidado com os tokens**, que e o erro mais comum aqui: `--color-bg` e a superficie de CARD (branco) e `--color-surface` e o fundo da PAGINA. Trocar os dois faz o card sumir no fundo.
+
+De quebra, o form de filtro virou GRADE. Com flex os campos tinham larguras diferentes (a Vaga esticava, o Periodo caia sozinho pra linha de baixo) e a barra virava escada.
+
+**2. Busca parcial.** Filtrar e trocar de chip agora buscam so o miolo (`?parcial=1`) e trocam o `innerHTML`, com `history.pushState`. A pagina cheia tem 107 KB e o parcial 9 KB.
+
+Tres decisoes que sustentam isso:
+
+- **Delegacao no documento, e nao listener por elemento.** Era o `pipeline.js` inteiro em `querySelectorAll().forEach()`, e nesse desenho o primeiro `innerHTML` novo deixaria todos os cards mortos. Reescrito com um listener por tipo de evento no `document`. `dragstart`, `dragover` e `drop` borbulham, entao o arrasto entrou junto.
+- **O corte fica ANTES dos chips**, e nao depois. E o que faz o contador do chip ficar certo depois do filtro.
+- **O modal e o `<script>` ficam FORA do miolo.** Trocar o no de um modal aberto o fecharia na cara do usuario; e o script reinjetado registraria os listeners de novo, fazendo um clique virar N requisicoes.
+
+**Um bug que so aparece com o parcial**: a fase escolhida vem do chip, e nao do form. Sem carregar ela junto, filtrar por unidade devolvia o usuario pra fase padrao, e ele leria isso como "o filtro apagou meus candidatos". Resolvido com input escondido no form, e nao no JS, pra continuar funcionando sem JS.
+
+O botao Filtrar continua existindo de proposito: trocar o select ja aplica, porem sem ele a pagina fica sem jeito de filtrar quando o JS nao carrega.
+
+- **Output**: `_pipeline_conteudo.html` novo; `pipeline_board.html` e `pipeline.js` reescritos; `views/pipeline.py` escolhe o template por `parcial`. 2 testes novos (`test_parcial_devolve_so_o_miolo`, `test_filtro_preserva_a_fase_escolhida`), 29 no arquivo. Verificado no browser: lote, acao rapida, modal e arrasto continuam funcionando **em card que veio da troca parcial**, que e o cenario que o desenho antigo quebraria. Sem migration.
+- **Status**: completed em dev, nao pushado.

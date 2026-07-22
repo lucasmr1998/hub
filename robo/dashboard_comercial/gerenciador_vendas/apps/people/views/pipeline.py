@@ -197,7 +197,14 @@ def board(request):
                 'truncada': por_saida.get(valor, 0) > LIMITE_SAIDA,
             })
 
-    return render(request, 'people/pipeline_board.html', {
+    # Filtrar e trocar de chip nao recarregam a pagina: o JS busca a mesma view
+    # com `parcial=1` e troca so o miolo. Mesma view e mesmo contexto de
+    # proposito, so muda o template: view separada pro parcial vira duas fontes
+    # da verdade que divergem no primeiro filtro novo.
+    template = ('people/_pipeline_conteudo.html' if request.GET.get('parcial')
+                else 'people/pipeline_board.html')
+
+    return render(request, template, {
         'pagetitle': 'Candidatos',
         'chips': chips,
         'chips_saida': chips_saida,
@@ -220,6 +227,11 @@ def board(request):
             Vaga.objects.exclude(status='encerrada').values_list('pk', 'titulo')),
         'vaga_selecionada': vaga_id,
         'busca': busca,
+        # A fase escolhida viaja escondida no form de filtro. Sem isso, filtrar
+        # por unidade devolveria o usuario pra fase padrao, e ele leria isso
+        # como "o filtro apagou meus candidatos".
+        'etapa_selecionada': etapa_sel,
+        'saida_selecionada': saida_sel,
         'pode_mover': pode_acessar(request, 'people.gerir_vagas'),
         'tem_etapas': bool(etapas),
     })
