@@ -17,12 +17,15 @@ continuam ativos. Este helper roda EM PARALELO via automacao.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
 from apps.comercial.leads.models import LeadProspecto
 from apps.integracoes.models import IntegracaoAPI
 from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
+
+logger = logging.getLogger(__name__)
 
 
 # Placeholders padrao usados quando o lead nao tem dado real ainda.
@@ -37,9 +40,92 @@ OBSERVACAO_RASCUNHO = 'RASCUNHO - dados pendentes via Hubtrix'
 @dataclass
 class ResultadoSincProspecto:
     ok: bool
-    acao: str                    # 'criado' / 'atualizado' / 'pulado' / 'erro'
+    acao: str                    # 'criado' / 'atualizado' / 'ja_cliente' / 'pulado' / 'erro'
     motivo: Optional[str]        # mensagem em caso de erro/pular
     id_prospecto: Optional[str]  # preenchido em sucesso
+
+
+def _so_digitos(valor) -> str:
+    return ''.join(ch for ch in str(valor or '') if ch.isdigit())
+
+
+def _marcar_convertido(lead: LeadProspecto) -> None:
+    """Fecha o ciclo do lead: ele virou cliente, nao ha mais o que sincronizar."""
+    LeadProspecto.all_tenants.filter(pk=lead.pk).update(
+        status_api='convertido_cliente',
+        motivo_rejeicao=None,
+    )
+
+
+def _reconhecer_cliente_existente(lead: LeadProspecto, service) -> Optional[ResultadoSincProspecto]:
+    """O prospecto ja virou cliente no HubSoft? Entao espelha e encerra.
+
+    Devolve um `ResultadoSincProspecto` quando reconheceu (o chamador deve parar
+    ali) ou `None` quando nao e cliente / nao deu pra afirmar (segue o fluxo
+    normal de edicao).
+
+    Por que existe: o pre-flight exige 8 campos antes de editar o prospecto, mas
+    prospecto convertido nao pode mais ser editado — o HubSoft recusa. Sem esta
+    checagem o lead ficava travado por dado que ninguem mais precisa, mesmo com o
+    cliente ja existindo do outro lado.
+
+    Duas salvaguardas, porque marcar alguem como cliente por engano e pior do que
+    deixar travado:
+
+    1. So age com resposta REAL da API. Erro de consulta devolve None em vez de
+       adivinhar — melhor seguir o fluxo normal e falhar visivelmente.
+    2. Confere que o CPF devolvido bate com o perguntado. O `clientes[0]` da API
+       e pego sem validacao; hoje o HubSoft se comporta como busca exata, mas
+       depender disso vincularia a pessoa errada no dia em que mudar.
+    """
+    cpf = _so_digitos(lead.cpf_cnpj)
+    if not cpf:
+        return None
+
+    from apps.integracoes.models import ClienteHubsoft
+
+    # Ja espelhado: nem precisa perguntar de novo.
+    if ClienteHubsoft.all_tenants.filter(tenant=lead.tenant, lead=lead).exists():
+        _marcar_convertido(lead)
+        return ResultadoSincProspecto(
+            ok=True, acao='ja_cliente',
+            motivo='cliente ja espelhado',
+            id_prospecto=(lead.id_hubsoft or '').strip() or None,
+        )
+
+    try:
+        resposta = service.consultar_cliente(lead.cpf_cnpj, lead=lead)
+    except HubsoftServiceError as exc:
+        # Nao da pra afirmar nada: segue o fluxo normal.
+        logger.info(
+            '[rascunho] consulta de cliente falhou pro lead %s, seguindo fluxo normal: %s',
+            lead.pk, str(exc)[:160],
+        )
+        return None
+
+    clientes = resposta.get('clientes') or []
+    if not clientes:
+        return None
+
+    dados = clientes[0]
+    if _so_digitos(dados.get('cpf_cnpj')) != cpf:
+        logger.warning(
+            '[rascunho] HubSoft devolveu CPF diferente do consultado no lead %s '
+            '(pedido=%s devolvido=%s); NAO vinculando',
+            lead.pk, cpf, _so_digitos(dados.get('cpf_cnpj')),
+        )
+        return None
+
+    cliente = service._sincronizar_dados_cliente(dados, lead)
+    _marcar_convertido(lead)
+    logger.info(
+        '[rascunho] lead %s reconhecido como cliente HubSoft %s; espelhado e marcado convertido',
+        lead.pk, getattr(cliente, 'id_cliente', None),
+    )
+    return ResultadoSincProspecto(
+        ok=True, acao='ja_cliente', motivo=None,
+        id_prospecto=(lead.id_hubsoft or '').strip() or None,
+    )
 
 
 def _preencher_placeholders_para_rascunho(lead: LeadProspecto, integracao=None) -> dict:
@@ -178,6 +264,18 @@ def sincronizar_prospecto_hubsoft(
             # Restaura campos do lead em memoria (nao foram persistidos)
             for attr, valor in snapshot.items():
                 setattr(lead, attr.replace('_attr', ''), valor)
+
+    # ANTES do pre-flight: o prospecto ja virou cliente la?
+    #
+    # O pre-flight existe pra proteger a EDICAO do prospecto. Se ele ja virou
+    # cliente, editar e impossivel — o HubSoft recusa com "Prospecto foi
+    # convertido para o cliente. Nao e possivel alterar". Exigir os 8 campos
+    # nesse ponto trava o lead por um dado que ninguem mais precisa, e foi o que
+    # deixou 54 vendas de julho fora do espelho (30 delas so por falta de
+    # nascimento/email/CEP, dado que o HubSoft nem devolve).
+    ja_cliente = _reconhecer_cliente_existente(lead, service)
+    if ja_cliente is not None:
+        return ja_cliente
 
     # ATUALIZA prospecto existente — mas SO se lead estiver completo (mesmo
     # padrao do cron `processar_pendentes` legado: usa

@@ -232,3 +232,46 @@ Dois testes novos travam o cenario, incluindo o exato que quebrou.
 
 **Licao:** evidencia boa nao e evidencia completa. O unico teste que faltava era
 justamente o que pegou o bug. Nao pushar antes da suite fechar.
+
+## 2026-07-22 — Reconhecer prospecto ja convertido em cliente (tarefa 220)
+
+- **Acao:** parar de travar o lead exigindo os 8 campos do pre-flight quando o
+  prospecto **ja virou cliente** no HubSoft.
+- **Causa:** o pre-flight roda antes de tudo e bloqueia por campo faltando. Mas
+  ele existe pra proteger a EDICAO do prospecto, e prospecto convertido nao pode
+  mais ser editado: o HubSoft recusa com *"Prospecto foi convertido para o
+  cliente. Nao e possivel alterar"*. A trava estava no lugar errado da ordem.
+  O `editar_prospecto` ja tinha guard parecido, mas so olhava o espelho LOCAL —
+  se o cliente ainda nao tinha sido espelhado, o guard nao via.
+- **Diagnostico que levou ate aqui (medido em prod, planilha da Gabi 01/07-20/07):**
+  - 270 clientes compraram; 144 no nosso espelho; **126 fora**.
+  - Dos 126, consultando o HubSoft por `codigo_cliente` pra obter o CPF:
+    **54 JA ERAM LEAD NOSSO**, 70 sao cliente antigo recontratando, 2 erro.
+  - Dos 54: 30 travaram por falta de dado (nascimento 28, email 23, numero 18,
+    cep 12, rg 3) e 24 estavam completos.
+  - O endpoint `/cliente` do HubSoft **nao devolve endereco**, entao nem daria
+    pra preencher CEP e numero a partir dele. Reconhecer a conversao e o unico
+    caminho que resolve os 30.
+- **Taxa de espelhamento por status (a causa estrutural):** `processado` 226/246
+  (92%), `convertido_cliente` 5/12 (42%), `rascunho_hubsoft` 0/851 (0%),
+  `pendente` 1/63 (2%). O sistema tem uma porta so, e **todo status que nao seja
+  `processado` e terminal** — nao ha varredura, retry nem fila de recuperacao.
+- **Output:** `_reconhecer_cliente_existente()` em
+  `apps/integracoes/services/hubsoft_prospecto_rascunho.py`, chamado **antes** do
+  gate do pre-flight. Se o lead ja tem cliente espelhado, resolve local sem API.
+- **Duas salvaguardas, decididas com o dono:**
+  1. **So age com resposta real da API.** Erro de consulta devolve `None` e segue
+     o fluxo normal, falhando visivelmente. Nunca deduz por texto de mensagem.
+  2. **Confere que o CPF devolvido bate com o perguntado.** O `clientes[0]` da API
+     e pego sem validacao; amostra de 20 deu zero divergencia, mas depender disso
+     vincularia a pessoa errada no dia em que o HubSoft mudar a busca.
+- **Aceito pelo dono:** o lead reconhecido por esse caminho fica com campos vazios.
+  Vira cliente com cadastro incompleto, e isso passa a ser visivel na pagina de
+  reconciliacao em vez de escondido.
+- **Testes:** `tests/test_integracoes_prospecto_ja_cliente.py`, 8 casos, com o peso
+  nas salvaguardas (CPF divergente nao vincula e mantem o status intacto, erro de
+  API segue o fluxo, lead sem CPF nem consulta, CPF pontuado bate com o limpo).
+- **Dry-run em prod antes de aplicar:** 54 leads seriam reconhecidos (48 com venda
+  ganha), **zero bloqueados pela salvaguarda de CPF**, 54 `ClienteHubsoft` criados.
+  Cobertura da planilha da Gabi sairia de 53% para 73%.
+- **Status:** completed
