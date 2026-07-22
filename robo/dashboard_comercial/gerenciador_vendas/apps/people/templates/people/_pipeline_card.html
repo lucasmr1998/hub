@@ -19,7 +19,17 @@ de etapa e na area "fora de etapa".
       <a href="{% url 'people:candidato_detalhe' candidato.pk %}"
          style="color: inherit; text-decoration: none;">{{ candidato.nome_completo }}</a>
     </p>
-    <span style="display: flex; gap: 2px; margin: -4px -4px 0 0;">
+    {% comment %}
+      Dias na etapa no canto do card, como no board da origem. Com 80
+      candidatos numa coluna, "ha quanto tempo esta parado" e o que decide quem
+      olhar primeiro, e ficava so na lista.
+    {% endcomment %}
+    <span style="display: flex; gap: 2px; margin: -4px -4px 0 0; align-items: center;">
+      {% if candidato.dias_na_etapa is not None %}
+        <span class="field-helper" style="white-space: nowrap; {% if candidato.esta_atrasado %}color: var(--color-danger); font-weight: var(--fw-semibold);{% endif %}">
+          {{ candidato.dias_na_etapa }}d
+        </span>
+      {% endif %}
       {% if candidato.curriculo %}
         {% comment %}
           Abre em aba nova porque o board nao pode perder o estado do arrasto.

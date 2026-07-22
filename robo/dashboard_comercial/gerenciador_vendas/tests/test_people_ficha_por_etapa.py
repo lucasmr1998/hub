@@ -40,7 +40,7 @@ def cenario(db):
     cargo = Cargo.all_tenants.create(tenant=tenant, nome='Atendente')
     vaga = Vaga.all_tenants.create(tenant=tenant, unidade=unidade, cargo=cargo,
                                    status='publicada')
-    etapa = EtapaPipeline.all_tenants.get(tenant=tenant, nome='Seleção')
+    etapa = EtapaPipeline.all_tenants.get(tenant=tenant, nome='Entrevista / Seleção')
     candidato = Candidato.all_tenants.create(
         tenant=tenant, unidade=unidade, vaga=vaga, etapa=etapa,
         nome_completo='Diego Melo', whatsapp='5586999991111')
@@ -106,17 +106,19 @@ def test_etapa_renomeada_muda_o_rotulo_da_aba(cenario):
 @pytest.mark.django_db
 def test_a_aba_de_movimentacoes_nao_colide_com_a_etapa_historico(cenario):
     """
-    Uma das etapas padrao se chama "Histórico". Duas abas com o mesmo rotulo,
+    O cliente pode nomear uma etapa de "Histórico". Duas abas com o mesmo rotulo,
     significando coisas diferentes (a etapa versus o log de movimento), e
-    confusao garantida. A aba fixa virou "Movimentações".
+    confusao garantida. A aba fixa se chama "Movimentações".
     """
-    corpo = _ficha(cenario)
-    etapa_historico = EtapaPipeline.all_tenants.get(
-        tenant=cenario['tenant'], nome='Histórico')
+    # "Histórico" saiu do seed (nao existe no produto real), porem o CLIENTE
+    # pode criar uma etapa com esse nome. A aba fixa nao pode colidir com ela.
+    etapa_historico = EtapaPipeline.all_tenants.create(
+        tenant=cenario['tenant'], nome='Histórico', ordem=98,
+        blocos=['anotacao'])
 
-    # A aba fixa de movimentacoes existe e NAO se chama Histórico...
+    corpo = _ficha(cenario)
+
     assert 'Movimentações' in corpo
-    # ...e a etapa chamada Histórico continua tendo a aba dela, com id proprio.
     assert f'tab-etapa-{etapa_historico.pk}' in corpo
 
 
@@ -300,7 +302,7 @@ def test_anotacao_de_outro_tenant_nao_vaza(cenario):
 #
 # A estrutura espelha a da origem (Entrevista RH com roteiro, Teste Pratico com
 # agendamento, Avaliacao Gestor com decisao), SEM chumbar o pipeline dela: as
-# sete etapas padrao ja nascem com os blocos certos, e o cliente reconfigura.
+# seis etapas padrao ja nascem com os blocos certos, e o cliente reconfigura.
 
 @pytest.mark.django_db
 def test_cada_etapa_padrao_nasce_com_os_blocos_da_origem(cenario):
@@ -308,8 +310,8 @@ def test_cada_etapa_padrao_nasce_com_os_blocos_da_origem(cenario):
 
     por_nome = {e.nome: e for e in EtapaPipeline.do_escopo(cenario['tenant'])}
 
-    assert estados_rs.BLOCO_ROTEIRO in por_nome['Seleção'].blocos
-    assert estados_rs.BLOCO_AGENDAMENTO in por_nome['Teste prático'].blocos
+    assert estados_rs.BLOCO_ROTEIRO in por_nome['Entrevista / Seleção'].blocos
+    assert estados_rs.BLOCO_AGENDAMENTO in por_nome['Teste Prático'].blocos
     assert estados_rs.BLOCO_DECISAO in por_nome['Avaliação Gestor'].blocos
     assert estados_rs.BLOCO_ADMISSAO in por_nome['Admissão'].blocos
 
@@ -317,12 +319,12 @@ def test_cada_etapa_padrao_nasce_com_os_blocos_da_origem(cenario):
 @pytest.mark.django_db
 def test_abas_tem_conteudo_diferente(cenario):
     """
-    O defeito que o Lucas viu: sete abas com a mesma coisa dentro. Cada uma
+    O defeito que o Lucas viu: seis abas com a mesma coisa dentro. Cada uma
     precisa mostrar o bloco da SUA etapa.
     """
     corpo = _ficha(cenario)
 
-    assert 'Roteiro da conversa' in corpo      # so na Seleção
+    assert 'Roteiro da conversa' in corpo      # so na Entrevista / Seleção
     assert 'Agendamento' in corpo              # so no Teste prático
     assert 'Decisão' in corpo                  # so na Avaliação Gestor
 
@@ -343,7 +345,7 @@ def test_bloco_desconhecido_e_ignorado_em_vez_de_quebrar(cenario):
 @pytest.mark.django_db
 def test_marca_item_do_roteiro(cenario):
     selecao = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
-                                            nome='Seleção')
+                                            nome='Entrevista / Seleção')
     pergunta = selecao.roteiro[0]
 
     _cliente(cenario).post(
@@ -362,7 +364,7 @@ def test_item_forjado_nao_entra(cenario):
     que nao existe mais na etapa nao fica marcado como se existisse.
     """
     selecao = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
-                                            nome='Seleção')
+                                            nome='Entrevista / Seleção')
 
     _cliente(cenario).post(
         reverse('people:candidato_anotar_etapa',

@@ -1,7 +1,7 @@
 """
 Tela de configuracao do fluxo (gap 3 dos prints).
 
-Sem ela o cliente ficava preso nas sete etapas do seed, o que e o mesmo que ter
+Sem ela o cliente ficava preso nas seis etapas do seed, o que e o mesmo que ter
 etapa em codigo, contrariando o desenho "etapa e dado, saida e codigo".
 
 O que estes testes defendem: a edicao respeita escopo (tenant e unidade), e as
@@ -62,7 +62,7 @@ def _candidato(cenario, etapa, nome='Alguem'):
 def test_tela_lista_as_etapas_do_fluxo(cenario):
     corpo = _cliente(cenario).get(reverse('people:fluxo_config')).content.decode()
 
-    assert 'Triagem' in corpo
+    assert 'Análise de inscrição' in corpo
     assert 'Admissão' in corpo
     # As saidas aparecem, marcadas como fixas
     assert 'Banco de talentos' in corpo
@@ -70,13 +70,13 @@ def test_tela_lista_as_etapas_do_fluxo(cenario):
 
 @pytest.mark.django_db
 def test_tela_mostra_etapa_desativada_em_vez_de_esconder(cenario):
-    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Triagem')
+    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Análise de inscrição')
     etapa.ativa = False
     etapa.save()
 
     corpo = _cliente(cenario).get(reverse('people:fluxo_config')).content.decode()
 
-    assert 'Triagem' in corpo
+    assert 'Análise de inscrição' in corpo
     assert 'Desativada' in corpo
 
 
@@ -89,7 +89,7 @@ def test_criar_etapa_entra_no_fim_do_fluxo(cenario):
 
     nova = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
                                          nome='Entrevista com RH')
-    assert nova.ordem == 8      # as sete padrao mais esta
+    assert nova.ordem == 7      # as seis padrao mais esta
     assert nova.sla_dias == 4
     assert nova.cor == 'roxo'
     assert nova.ativa
@@ -99,16 +99,16 @@ def test_criar_etapa_entra_no_fim_do_fluxo(cenario):
 def test_nome_duplicado_no_mesmo_fluxo_e_recusado(cenario):
     """A unique do banco barraria, mas com IntegrityError na cara do usuario."""
     resposta = _cliente(cenario).post(reverse('people:fluxo_etapa_salvar'),
-                                      {'nome': 'triagem'}, follow=True)
+                                      {'nome': 'análise de inscrição'}, follow=True)
 
     assert 'Já existe' in resposta.content.decode()
     assert EtapaPipeline.all_tenants.filter(
-        tenant=cenario['tenant'], nome__iexact='triagem').count() == 1
+        tenant=cenario['tenant'], nome__iexact='análise de inscrição').count() == 1
 
 
 @pytest.mark.django_db
 def test_editar_etapa_pelo_mesmo_formulario(cenario):
-    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Triagem')
+    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Análise de inscrição')
 
     _cliente(cenario).post(reverse('people:fluxo_etapa_salvar'), {
         'pk': etapa.pk, 'nome': 'Análise de inscrição', 'cor': 'azul',
@@ -152,7 +152,7 @@ def test_nao_apaga_etapa_com_candidato_dentro(cenario):
     Apagar deixaria o candidato orfao no board. Pra tirar de circulacao com
     gente dentro, o caminho e desativar.
     """
-    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Triagem')
+    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Análise de inscrição')
     _candidato(cenario, etapa)
 
     resposta = _cliente(cenario).post(
@@ -165,7 +165,7 @@ def test_nao_apaga_etapa_com_candidato_dentro(cenario):
 @pytest.mark.django_db
 def test_apaga_etapa_vazia(cenario):
     etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
-                                          nome='Teste Comportamental')
+                                          nome='Perfil comportamental')
 
     _cliente(cenario).post(reverse('people:fluxo_etapa_remover', args=[etapa.pk]))
 
@@ -174,7 +174,7 @@ def test_apaga_etapa_vazia(cenario):
 
 @pytest.mark.django_db
 def test_desativar_nao_apaga_e_preserva_o_candidato(cenario):
-    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Triagem')
+    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Análise de inscrição')
     candidato = _candidato(cenario, etapa)
 
     _cliente(cenario).post(reverse('people:fluxo_etapa_alternar', args=[etapa.pk]))
@@ -188,7 +188,7 @@ def test_desativar_nao_apaga_e_preserva_o_candidato(cenario):
 @pytest.mark.django_db
 def test_nao_reseta_fluxo_com_candidato_no_meio(cenario):
     """Resetar com gente dentro deixaria todos fora de etapa de uma vez."""
-    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Triagem')
+    etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome='Análise de inscrição')
     _candidato(cenario, etapa)
 
     resposta = _cliente(cenario).post(reverse('people:fluxo_resetar'), follow=True)
@@ -198,12 +198,12 @@ def test_nao_reseta_fluxo_com_candidato_no_meio(cenario):
 
 
 @pytest.mark.django_db
-def test_resetar_fluxo_vazio_volta_as_sete(cenario):
+def test_resetar_fluxo_vazio_volta_as_seis(cenario):
     EtapaPipeline.all_tenants.filter(tenant=cenario['tenant']).delete()
 
     _cliente(cenario).post(reverse('people:fluxo_resetar'))
 
-    assert EtapaPipeline.do_escopo(cenario['tenant']).count() == 7
+    assert EtapaPipeline.do_escopo(cenario['tenant']).count() == 6
 
 
 # ── Escopo ───────────────────────────────────────────────────────────────────
@@ -219,7 +219,7 @@ def test_etapa_criada_com_unidade_vale_so_pra_ela(cenario):
     do_tenant = EtapaPipeline.do_escopo(cenario['tenant'])
     da_unidade = EtapaPipeline.do_escopo(cenario['tenant'], cenario['unidade'])
 
-    assert do_tenant.count() == 7
+    assert do_tenant.count() == 6
     assert [e.nome for e in da_unidade] == ['Entrevista na loja']
 
 

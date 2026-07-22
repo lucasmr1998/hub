@@ -129,30 +129,32 @@ ROTULOS_BLOCO = {chave: rotulo for chave, rotulo, _ in BLOCOS}
 
 
 ETAPAS_PADRAO = [
-    # Os `blocos` de cada etapa espelham o que a origem mostra em cada aba. Sao
+    # Os nomes saem do PRODUTO RODANDO (prints de 21/07), e nao da lista da
+    # spec de handoff. A spec propunha "Triagem, Historico, Teste
+    # Comportamental, Selecao..." e avisava que era proposta, nao leitura do
+    # schema. O board real tem SEIS etapas, sem "Historico", e com nomes
+    # diferentes. Seguir a spec sem confrontar com print custou uma etapa que
+    # nao existe em lugar nenhum.
+    #
+    # Os `blocos` espelham o que cada aba da ficha mostra na origem. Sao
     # DEFAULT, e nao regra: o cliente muda em /people/fluxo/.
-    {'nome': 'Triagem', 'ordem': 1, 'sla_dias': 3, 'cor': 'ambar',
+    {'nome': 'Análise de inscrição', 'ordem': 1, 'sla_dias': 3, 'cor': 'roxo',
      'blocos': [BLOCO_ANALISE_IA, BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
 
-    {'nome': 'Histórico', 'ordem': 2, 'sla_dias': 3, 'cor': 'azul',
-     'blocos': [BLOCO_CHECKLIST, BLOCO_ANOTACAO]},
-
-    {'nome': 'Teste Comportamental', 'ordem': 3, 'sla_dias': 5, 'cor': 'ciano',
+    {'nome': 'Perfil comportamental', 'ordem': 2, 'sla_dias': 5, 'cor': 'ciano',
      'blocos': [BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
 
-    # A "Entrevista RH" da origem: analise da IA, roteiro da conversa,
-    # requisitos a validar e notas, tudo numa aba so.
-    {'nome': 'Seleção', 'ordem': 4, 'sla_dias': 5, 'cor': 'laranja',
+    {'nome': 'Entrevista / Seleção', 'ordem': 3, 'sla_dias': 5, 'cor': 'rosa',
      'blocos': [BLOCO_ANALISE_IA, BLOCO_ROTEIRO, BLOCO_CHECKLIST,
                 BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
 
-    {'nome': 'Teste prático', 'ordem': 5, 'sla_dias': 5, 'cor': 'azul',
+    {'nome': 'Teste Prático', 'ordem': 4, 'sla_dias': 5, 'cor': 'verde',
      'blocos': [BLOCO_AGENDAMENTO, BLOCO_ANOTACAO, BLOCO_MENSAGEM]},
 
-    {'nome': 'Avaliação Gestor', 'ordem': 6, 'sla_dias': 3, 'cor': 'roxo',
+    {'nome': 'Avaliação Gestor', 'ordem': 5, 'sla_dias': 3, 'cor': 'azul',
      'blocos': [BLOCO_DECISAO, BLOCO_ANOTACAO]},
 
-    {'nome': 'Admissão', 'ordem': 7, 'sla_dias': 5, 'cor': 'verde',
+    {'nome': 'Admissão', 'ordem': 6, 'sla_dias': 5, 'cor': 'ambar',
      'blocos': [BLOCO_ADMISSAO, BLOCO_MENSAGEM]},
 ]
 
@@ -204,6 +206,35 @@ def hex_da_cor(chave, ordem=0):
 
 
 # Cor de cada saida. Fixas junto com as saidas, porque saida e codigo.
+# Motivos de saida, em LISTA FECHADA e nao texto livre.
+#
+# Com texto livre nunca da pra responder "por que a gente reprova", porque cada
+# RH escreve diferente e nao ha o que agregar. E justamente essa a analise que
+# diz se o problema esta na vaga, no anuncio ou no canal.
+#
+# A lista sai do produto rodando (prints de 21/07), onde os cards de Inaptos
+# mostram exatamente estes motivos. "Outro" existe pra o RH nao ficar preso, e
+# ai o campo livre ao lado explica.
+MOTIVOS_SAIDA = [
+    ('perfil_fora',        'Perfil fora dos requisitos mínimos'),
+    ('desistiu',           'Desistiu do processo'),
+    ('nao_retornou',       'Não retornou o contato'),
+    ('falta_entrevista',   'Não compareceu à entrevista'),
+    ('falta_teste',        'Não compareceu ao teste prático'),
+    ('indisponibilidade',  'Indisponibilidade de horário'),
+    ('sem_vaga',           'Sem vaga aberta no momento'),
+    ('outro',              'Outro'),
+]
+
+VALORES_MOTIVO_SAIDA = [valor for valor, _ in MOTIVOS_SAIDA]
+ROTULOS_MOTIVO_SAIDA = dict(MOTIVOS_SAIDA)
+
+
+def rotulo_motivo_saida(motivo):
+    """Rotulo do motivo. Motivo antigo, em texto livre, volta como esta."""
+    return ROTULOS_MOTIVO_SAIDA.get(motivo, motivo)
+
+
 COR_DA_SAIDA = {
     SAIDA_ADMITIDO:       '#10B981',
     SAIDA_BANCO_TALENTOS: '#06B6D4',

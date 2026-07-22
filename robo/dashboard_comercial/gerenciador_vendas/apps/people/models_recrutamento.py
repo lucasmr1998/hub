@@ -865,8 +865,17 @@ class Candidato(TenantMixin):
         db_index=True, verbose_name="Saída",
         help_text="Vazio significa que ainda esta no pipeline.",
     )
-    motivo_saida = models.TextField(blank=True, default='',
-                                    verbose_name="Motivo da saída")
+    motivo_saida_codigo = models.CharField(
+        max_length=30, blank=True, default='',
+        choices=estados_rs.MOTIVOS_SAIDA, verbose_name="Motivo da saída",
+        help_text="Lista fechada. Com texto livre nunca da pra responder 'por "
+                  "que a gente reprova', porque cada RH escreve diferente.",
+    )
+    motivo_saida = models.TextField(
+        blank=True, default='', verbose_name="Detalhe do motivo",
+        help_text="Complemento em texto livre. Obrigatorio quando o motivo e "
+                  "'Outro', que sozinho nao diz nada.",
+    )
     colaborador = models.ForeignKey(
         'people.Colaborador', on_delete=models.PROTECT, null=True, blank=True,
         related_name='candidaturas', verbose_name="Colaborador",
@@ -967,6 +976,20 @@ class Candidato(TenantMixin):
     def canal_origem(self):
         """De qual canal veio. Sobrevive a desativacao do link."""
         return self.link_origem.get_canal_display() if self.link_origem_id else ''
+
+    @property
+    def motivo_saida_texto(self):
+        """
+        O motivo como o RH le. Combina a lista fechada com o detalhe livre.
+
+        Candidato que saiu antes da lista existir tem so o texto livre, e ele
+        continua aparecendo: migrar texto pra codigo seria adivinhar.
+        """
+        rotulo = estados_rs.rotulo_motivo_saida(self.motivo_saida_codigo)
+        detalhe = (self.motivo_saida or '').strip()
+        if rotulo and detalhe:
+            return f'{rotulo}: {detalhe}'
+        return rotulo or detalhe
 
     @property
     def dias_na_etapa(self):

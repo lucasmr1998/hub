@@ -44,7 +44,7 @@ def cenario(db):
     cargo = Cargo.all_tenants.create(tenant=tenant, nome='Atendente')
     vaga = Vaga.all_tenants.create(tenant=tenant, unidade=unidade, cargo=cargo,
                                    titulo='Atendente noturno', status='publicada')
-    etapa = EtapaPipeline.all_tenants.get(tenant=tenant, nome='Triagem')
+    etapa = EtapaPipeline.all_tenants.get(tenant=tenant, nome='Análise de inscrição')
     candidato = Candidato.all_tenants.create(
         tenant=tenant, unidade=unidade, vaga=vaga, etapa=etapa,
         nome_completo='Vitória Russi Santos', whatsapp='5586999998888')

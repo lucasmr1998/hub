@@ -21,7 +21,7 @@ def test_tenant_criado_com_people_ligado_ja_nasce_com_pipeline():
     tenant = Tenant.objects.create(nome='Rede Nova', slug='rede-nova',
                                    modulo_people=True)
 
-    assert _etapas(tenant).count() == 7
+    assert _etapas(tenant).count() == 6
 
 
 @pytest.mark.django_db
@@ -43,7 +43,7 @@ def test_ativar_o_modulo_depois_provisiona():
     tenant.modulo_people = True
     tenant.save()
 
-    assert _etapas(tenant).count() == 7
+    assert _etapas(tenant).count() == 6
 
 
 @pytest.mark.django_db
@@ -55,7 +55,7 @@ def test_salvar_o_tenant_de_novo_nao_duplica():
     tenant.save()
     tenant.save()
 
-    assert _etapas(tenant).count() == 7
+    assert _etapas(tenant).count() == 6
 
 
 @pytest.mark.django_db
@@ -66,13 +66,13 @@ def test_etapa_apagada_de_proposito_nao_volta_no_proximo_save():
     """
     tenant = Tenant.objects.create(nome='Rede Custom', slug='rede-custom',
                                    modulo_people=True)
-    _etapas(tenant).filter(nome='Teste Comportamental').delete()
-    assert _etapas(tenant).count() == 6
+    _etapas(tenant).filter(nome='Perfil comportamental').delete()
+    assert _etapas(tenant).count() == 5      # das seis, sobrou cinco
 
     tenant.nome = 'Rede Custom 2'
     tenant.save()
 
-    assert _etapas(tenant).count() == 6
+    assert _etapas(tenant).count() == 5      # e continua cinco
 
 
 @pytest.mark.django_db
@@ -85,7 +85,7 @@ def test_desligar_e_religar_o_modulo_nao_duplica():
     tenant.modulo_people = True
     tenant.save()
 
-    assert _etapas(tenant).count() == 7
+    assert _etapas(tenant).count() == 6
 
 
 @pytest.mark.django_db
@@ -95,8 +95,11 @@ def test_pipeline_nasce_na_ordem_certa():
 
     nomes = list(_etapas(tenant).order_by('ordem').values_list('nome', flat=True))
 
-    assert nomes == ['Triagem', 'Histórico', 'Teste Comportamental', 'Seleção',
-                     'Teste prático', 'Avaliação Gestor', 'Admissão']
+    # A lista sai do PRODUTO RODANDO, e nao da spec de handoff. O board real
+    # tem seis etapas, sem "Historico". Ver ETAPAS_PADRAO.
+    assert nomes == ['Análise de inscrição', 'Perfil comportamental',
+                     'Entrevista / Seleção', 'Teste Prático',
+                     'Avaliação Gestor', 'Admissão']
 
 
 @pytest.mark.django_db
@@ -104,8 +107,8 @@ def test_pipeline_nao_vaza_entre_tenants():
     um = Tenant.objects.create(nome='Rede A', slug='rede-a', modulo_people=True)
     outro = Tenant.objects.create(nome='Rede B', slug='rede-b', modulo_people=True)
 
-    assert _etapas(um).count() == 7
-    assert _etapas(outro).count() == 7
+    assert _etapas(um).count() == 6
+    assert _etapas(outro).count() == 6
     assert not _etapas(um).filter(tenant=outro).exists()
 
 

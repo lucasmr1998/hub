@@ -76,7 +76,7 @@ def test_candidato_novo_cai_na_primeira_etapa(cenario):
     garantir_etapa_inicial(candidato)
 
     candidato.refresh_from_db()
-    assert candidato.etapa.nome == 'Triagem'
+    assert candidato.etapa.nome == 'Análise de inscrição'
 
 
 @pytest.mark.django_db
@@ -122,7 +122,7 @@ def test_mover_grava_historico(cenario):
     # entrada (garantir_etapa) + 1 movimento
     assert historico.count() == 2
     ultimo = historico.last()
-    assert ultimo.de_etapa == 'Triagem'
+    assert ultimo.de_etapa == 'Análise de inscrição'
     assert ultimo.para_etapa == cenario['etapas'][2].nome
 
 
@@ -225,7 +225,7 @@ def test_board_renderiza_as_colunas_das_etapas(cenario):
     corpo = resposta.content.decode()
 
     assert resposta.status_code == 200
-    assert 'Triagem' in corpo
+    assert 'Análise de inscrição' in corpo
     assert 'Admissão' in corpo
     assert 'Maria Board' in corpo
 

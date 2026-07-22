@@ -48,11 +48,11 @@ def _cliente(tenant, username='gestora', funcionalidades=TODAS):
 
 
 # ──────────────────────────────────────────────
-# Fluxo: as sete etapas
+# Fluxo: as seis etapas
 # ──────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_fluxo_mostra_as_sete_etapas(cenario):
+def test_fluxo_mostra_as_seis_etapas(cenario):
     """
     Sete, nao seis. Ferias e Afastamentos so apareceram quando os prints do
     produto real chegaram, e a spec listava Afastamentos como uma aba que

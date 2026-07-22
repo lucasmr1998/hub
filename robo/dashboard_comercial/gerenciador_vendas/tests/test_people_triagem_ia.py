@@ -60,7 +60,7 @@ def cenario(db):
     RequisitoVaga.all_tenants.create(
         tenant=tenant, vaga=vaga, texto='Experiência com atendimento',
         obrigatorio=True, usar_na_triagem=True, aparece_no_anuncio=True)
-    etapa = EtapaPipeline.all_tenants.get(tenant=tenant, nome='Triagem')
+    etapa = EtapaPipeline.all_tenants.get(tenant=tenant, nome='Análise de inscrição')
     candidato = Candidato.all_tenants.create(
         tenant=tenant, unidade=unidade, vaga=vaga, etapa=etapa,
         nome_completo='Vitória Russi', whatsapp='5589994395653',

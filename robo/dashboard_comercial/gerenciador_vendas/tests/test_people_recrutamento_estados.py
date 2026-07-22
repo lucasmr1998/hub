@@ -89,10 +89,15 @@ def test_admitido_nao_reabre_depois_que_virou_colaborador():
 
 # ── Etapas padrao ────────────────────────────────────────────────────────────
 
-def test_pipeline_padrao_tem_as_sete_etapas_da_origem():
+def test_pipeline_padrao_tem_as_seis_etapas_da_origem():
+    # A lista sai do PRODUTO RODANDO (prints de 21/07), e nao da spec de
+    # handoff, que propunha sete etapas incluindo uma "Historico" que nao
+    # existe em lugar nenhum. Se este teste falhar, confira o print antes de
+    # ajustar o esperado.
     nomes = [e['nome'] for e in estados_rs.ETAPAS_PADRAO]
-    assert nomes == ['Triagem', 'Histórico', 'Teste Comportamental', 'Seleção',
-                     'Teste prático', 'Avaliação Gestor', 'Admissão']
+    assert nomes == ['Análise de inscrição', 'Perfil comportamental',
+                     'Entrevista / Seleção', 'Teste Prático',
+                     'Avaliação Gestor', 'Admissão']
 
 
 def test_ordem_das_etapas_padrao_e_sequencial_e_sem_buraco():
@@ -118,7 +123,7 @@ def cenario(db):
     """
     Tenant com People ligado, porem com o pipeline ZERADO.
 
-    O signal de provisionamento (apps/people/signals.py) semeia as sete etapas
+    O signal de provisionamento (apps/people/signals.py) semeia as seis etapas
     ao ativar o modulo, entao um tenant criado aqui ja nasceria com elas. Os
     testes deste arquivo sao sobre a mecanica de `semear_padrao`, de
     `do_escopo` e da constraint, e todos precisam partir do vazio pra dizer
@@ -142,14 +147,14 @@ def cenario(db):
 
 
 @pytest.mark.django_db
-def test_semear_padrao_cria_as_sete_etapas(cenario):
+def test_semear_padrao_cria_as_seis_etapas(cenario):
     from apps.people.models import EtapaPipeline
 
     criadas = EtapaPipeline.semear_padrao(cenario['tenant'])
 
-    assert len(criadas) == 7
+    assert len(criadas) == 6
     assert EtapaPipeline.all_tenants.filter(
-        tenant=cenario['tenant'], unidade__isnull=True).count() == 7
+        tenant=cenario['tenant'], unidade__isnull=True).count() == 6
 
 
 @pytest.mark.django_db
@@ -161,7 +166,7 @@ def test_semear_padrao_e_idempotente(cenario):
     segunda = EtapaPipeline.semear_padrao(cenario['tenant'])
 
     assert segunda == []
-    assert EtapaPipeline.all_tenants.filter(tenant=cenario['tenant']).count() == 7
+    assert EtapaPipeline.all_tenants.filter(tenant=cenario['tenant']).count() == 6
 
 
 @pytest.mark.django_db
@@ -170,35 +175,35 @@ def test_o_banco_recusa_etapa_global_duplicada(cenario):
     O teste que prova o `nulls_distinct=False`.
 
     Sem ele o Postgres trata cada `unidade IS NULL` como valor distinto, a
-    constraint nao pega nada, e o tenant acumula "Triagem" repetida. Este e o
+    constraint nao pega nada, e o tenant acumula etapa repetida. Este e o
     unico jeito de saber se a constraint esta valendo: pedir pro banco recusar.
     """
     from apps.people.models import EtapaPipeline
 
     EtapaPipeline.all_tenants.create(tenant=cenario['tenant'], unidade=None,
-                                     nome='Triagem', ordem=1)
+                                     nome='Análise de inscrição', ordem=1)
 
     with pytest.raises(IntegrityError):
         with transaction.atomic():
             EtapaPipeline.all_tenants.create(tenant=cenario['tenant'],
-                                             unidade=None, nome='Triagem',
+                                             unidade=None, nome='Análise de inscrição',
                                              ordem=2)
 
 
 @pytest.mark.django_db
 def test_mesma_etapa_pode_existir_em_unidades_diferentes(cenario):
-    """A constraint e por escopo, nao global: cada loja tem a Triagem dela."""
+    """A constraint e por escopo, nao global: cada loja tem a etapa dela."""
     from apps.people.models import EtapaPipeline
 
     EtapaPipeline.all_tenants.create(tenant=cenario['tenant'],
                                      unidade=cenario['unidade'],
-                                     nome='Triagem', ordem=1)
+                                     nome='Análise de inscrição', ordem=1)
     EtapaPipeline.all_tenants.create(tenant=cenario['tenant'],
                                      unidade=cenario['outra'],
-                                     nome='Triagem', ordem=1)
+                                     nome='Análise de inscrição', ordem=1)
 
     assert EtapaPipeline.all_tenants.filter(
-        tenant=cenario['tenant'], nome='Triagem').count() == 2
+        tenant=cenario['tenant'], nome='Análise de inscrição').count() == 2
 
 
 @pytest.mark.django_db
@@ -209,7 +214,7 @@ def test_unidade_sem_etapa_propria_herda_a_do_tenant(cenario):
 
     etapas = EtapaPipeline.do_escopo(cenario['tenant'], cenario['unidade'])
 
-    assert etapas.count() == 7
+    assert etapas.count() == 6
     assert all(e.unidade_id is None for e in etapas)
 
 
@@ -231,7 +236,7 @@ def test_unidade_com_etapa_propria_ignora_a_do_tenant(cenario):
 
     assert [e.nome for e in etapas] == ['Entrevista com RH']
     # A outra loja continua no fluxo do tenant
-    assert EtapaPipeline.do_escopo(cenario['tenant'], cenario['outra']).count() == 7
+    assert EtapaPipeline.do_escopo(cenario['tenant'], cenario['outra']).count() == 6
 
 
 @pytest.mark.django_db
@@ -244,13 +249,13 @@ def test_etapa_desativada_sai_do_escopo_mas_continua_existindo(cenario):
 
     EtapaPipeline.semear_padrao(cenario['tenant'])
     etapa = EtapaPipeline.all_tenants.get(tenant=cenario['tenant'],
-                                          nome='Teste Comportamental')
+                                          nome='Perfil comportamental')
     etapa.ativa = False
     etapa.save()
 
-    assert EtapaPipeline.do_escopo(cenario['tenant']).count() == 6
+    assert EtapaPipeline.do_escopo(cenario['tenant']).count() == 5
     assert EtapaPipeline.do_escopo(
-        cenario['tenant'], somente_ativas=False).count() == 7
+        cenario['tenant'], somente_ativas=False).count() == 6
     assert EtapaPipeline.all_tenants.filter(pk=etapa.pk).exists()
 
 
@@ -262,7 +267,7 @@ def test_etapas_saem_na_ordem_configurada(cenario):
 
     nomes = [e.nome for e in EtapaPipeline.do_escopo(cenario['tenant'])]
 
-    assert nomes[0] == 'Triagem'
+    assert nomes[0] == 'Análise de inscrição'
     assert nomes[-1] == 'Admissão'
 
 
@@ -279,5 +284,5 @@ def test_etapa_nao_vaza_entre_tenants(cenario):
 
     do_primeiro = EtapaPipeline.do_escopo(cenario['tenant'])
 
-    assert do_primeiro.count() == 7
+    assert do_primeiro.count() == 6
     assert all(e.tenant_id == cenario['tenant'].id for e in do_primeiro)

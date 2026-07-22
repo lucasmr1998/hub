@@ -72,6 +72,8 @@
     {% include "components/input.html" with name="busca" label="Buscar candidato" value=busca placeholder="Nome" size="sm" %}
     {% include "components/select.html" with name="vaga" label="Vaga" options=vagas_opcoes value=vaga_selecionada blank_label="Todas" size="sm" %}
     {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade_selecionada blank_label="Todas" size="sm" %}
+    {% include "components/select.html" with name="canal" label="Canal" options=canais_opcoes value=canal_selecionado blank_label="Todos" size="sm" %}
+    {% include "components/select.html" with name="periodo" label="Período" options=periodos_opcoes value=periodo_selecionado blank_label="Qualquer" size="sm" %}
     <button type="submit" class="btn btn-ghost btn-sm">Filtrar</button>
   </form>
 
@@ -174,8 +176,8 @@
                   {% endif %}
                   <td>
                     <a href="{% url 'people:candidato_detalhe' candidato.pk %}">{{ candidato.nome_completo }}</a>
-                    {% if candidato.saida and candidato.motivo_saida %}
-                      <span class="field-helper" style="display: block;">{{ candidato.motivo_saida|truncatechars:60 }}</span>
+                    {% if candidato.saida and candidato.motivo_saida_texto %}
+                      <span class="field-helper" style="display: block;">{{ candidato.motivo_saida_texto|truncatechars:60 }}</span>
                     {% endif %}
                   </td>
                   <td>{% if candidato.vaga %}{{ candidato.vaga.nome_exibido }}{% else %}<span class="field-helper">Banco de talentos</span>{% endif %}</td>
@@ -232,11 +234,31 @@
               </button>
             {% endfor %}
           </div>
+          {% comment %}
+            LISTA FECHADA, e nao texto livre. Com texto livre nunca da pra
+            responder "por que a gente reprova": cada RH escreve diferente e
+            nao ha o que agregar. E justamente essa a analise que diz se o
+            problema esta na vaga, no anuncio ou no canal.
+
+            O campo livre ao lado continua, pra o RH nao ficar preso. Vira
+            OBRIGATORIO quando o motivo e "Outro", que sozinho nao diz nada.
+          {% endcomment %}
           <div class="field">
-            <label class="field-label" for="motivo-saida">Motivo <span class="field-required">*</span></label>
+            <label class="field-label" for="motivo-codigo">Motivo <span class="field-required">*</span></label>
             <div class="field-input-wrap">
-              <textarea class="field-input" id="motivo-saida" data-motivo rows="3"
-                        placeholder="Fica no card do candidato e alimenta a análise do funil."></textarea>
+              <select class="field-input field-select" id="motivo-codigo" data-motivo-codigo>
+                <option value="">Selecione</option>
+                {% for valor, rotulo in motivos_saida %}
+                  <option value="{{ valor }}">{{ rotulo }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="motivo-saida">Detalhe</label>
+            <div class="field-input-wrap">
+              <textarea class="field-input" id="motivo-saida" data-motivo rows="2"
+                        placeholder="Opcional, exceto quando o motivo for Outro."></textarea>
             </div>
           </div>
         </div>

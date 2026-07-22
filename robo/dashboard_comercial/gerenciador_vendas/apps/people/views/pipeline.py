@@ -24,6 +24,7 @@ from django.views.decorators.http import require_POST
 from apps.people import estados_recrutamento as estados_rs
 from apps.people.excecoes import CampoObrigatorioFaltando, TransicaoInvalida
 from apps.people.models import Candidato, EtapaPipeline, Unidade, Vaga
+from apps.people.models_recrutamento import CANAL_CHOICES
 from apps.people.permissoes import pode_acessar, requer_people
 from apps.people.services.pipeline import dar_saida, mover_para_etapa, reabrir
 
@@ -47,6 +48,22 @@ def _candidatos_visiveis(request, unidade, vaga_id):
     busca = (request.GET.get('busca') or '').strip()
     if busca:
         base = base.filter(nome_completo__icontains=busca)
+
+    # Canal e periodo: os filtros que o board da origem tem e o nosso nao
+    # tinha. Canal responde "que canal esta trazendo gente"; periodo separa a
+    # safra desta semana do acumulado, que num board com 400 candidatos e a
+    # diferenca entre a tela servir e nao servir.
+    canal = (request.GET.get('canal') or '').strip()
+    if canal:
+        base = base.filter(link_origem__canal=canal)
+
+    dias = (request.GET.get('periodo') or '').strip()
+    if dias.isdigit():
+        from datetime import timedelta
+
+        from django.utils import timezone
+        base = base.filter(
+            criado_em__gte=timezone.now() - timedelta(days=int(dias)))
     return base
 
 
@@ -152,6 +169,12 @@ def board(request):
         'saidas': [{'valor': v, 'rotulo': r} for v, r in estados_rs.SAIDAS],
         'unidades_opcoes': list(
             Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
+        'canais_opcoes': CANAL_CHOICES,
+        'canal_selecionado': (request.GET.get('canal') or '').strip(),
+        'periodos_opcoes': [('7', 'Últimos 7 dias'), ('30', 'Últimos 30 dias'),
+                            ('90', 'Últimos 90 dias')],
+        'periodo_selecionado': (request.GET.get('periodo') or '').strip(),
+        'motivos_saida': estados_rs.MOTIVOS_SAIDA,
         'unidade_selecionada': unidade_id,
         'vagas_opcoes': list(
             Vaga.objects.exclude(status='encerrada').values_list('pk', 'titulo')),
@@ -207,9 +230,11 @@ def api_dar_saida(request, pk):
 
     saida = payload.get('saida', '')
     motivo = (payload.get('motivo') or '').strip()
+    motivo_codigo = (payload.get('motivo_codigo') or '').strip()
 
     try:
-        dar_saida(candidato, saida, motivo=motivo, usuario=request.user)
+        dar_saida(candidato, saida, motivo=motivo,
+                  motivo_codigo=motivo_codigo, usuario=request.user)
     except CampoObrigatorioFaltando:
         return JsonResponse({
             'erro': 'Registre o motivo antes de tirar do processo.',
@@ -255,6 +280,7 @@ def api_lote(request):
 
     acao = payload.get('acao')
     motivo = (payload.get('motivo') or '').strip()
+    motivo_codigo = (payload.get('motivo_codigo') or '').strip()
 
     # Escopo de tenant no filtro: id vindo do cliente nao decide de quem e.
     candidatos = list(Candidato.objects.filter(pk__in=ids))
@@ -277,7 +303,8 @@ def api_lote(request):
         saida = payload.get('saida', '')
         for candidato in candidatos:
             try:
-                dar_saida(candidato, saida, motivo=motivo, usuario=request.user)
+                dar_saida(candidato, saida, motivo=motivo,
+                  motivo_codigo=motivo_codigo, usuario=request.user)
                 movidos += 1
             except CampoObrigatorioFaltando:
                 return JsonResponse({

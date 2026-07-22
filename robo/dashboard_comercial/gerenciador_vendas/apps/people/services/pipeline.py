@@ -21,7 +21,8 @@ from apps.people.models import Candidato, EtapaPipeline, HistoricoCandidato
 # Campos que uma movimentacao pode mexer. Depois de gravar na linha travada,
 # reflete de volta no objeto que o chamador segurou, senao ele fica com dado
 # velho: o mesmo bug que o mover_situacao do DP ja teve.
-_CAMPOS_SINCRONIZADOS = ('saida', 'motivo_saida', 'etapa_id')
+_CAMPOS_SINCRONIZADOS = ('saida', 'motivo_saida', 'motivo_saida_codigo',
+                        'etapa_id')
 
 
 def _sincronizar(destino, fonte):
@@ -57,12 +58,14 @@ def mover_para_etapa(candidato, etapa, *, usuario=None, origem='painel'):
         # so aplicamos a consequencia.
         travado.saida = ''
         travado.motivo_saida = ''
+        travado.motivo_saida_codigo = ''
         travado.etapa = etapa
         # Reinicia a contagem de tempo na etapa. So aqui: `atualizado_em` nao
         # serve porque corrigir um telefone do candidato zeraria o relogio sem
         # ele ter andado no processo.
         travado.etapa_desde = timezone.now()
-        travado.save(update_fields=['saida', 'motivo_saida', 'etapa',
+        travado.save(update_fields=['saida', 'motivo_saida',
+                                    'motivo_saida_codigo', 'etapa',
                                     'etapa_desde', 'atualizado_em'])
 
         HistoricoCandidato.all_tenants.create(
@@ -75,7 +78,8 @@ def mover_para_etapa(candidato, etapa, *, usuario=None, origem='painel'):
     return candidato
 
 
-def dar_saida(candidato, saida, *, motivo='', usuario=None, origem='painel'):
+def dar_saida(candidato, saida, *, motivo='', motivo_codigo='',
+              usuario=None, origem='painel'):
     """
     Tira o candidato do pipeline por uma saida terminal.
 
@@ -94,7 +98,13 @@ def dar_saida(candidato, saida, *, motivo='', usuario=None, origem='painel'):
 
         travado.saida = saida
         travado.motivo_saida = motivo
-        travado.save(update_fields=['saida', 'motivo_saida', 'atualizado_em'])
+        # So aceita codigo da lista: POST forjado nao inventa motivo, e motivo
+        # inventado quebraria a agregacao, que e a razao de a lista existir.
+        travado.motivo_saida_codigo = (
+            motivo_codigo if motivo_codigo in estados_rs.VALORES_MOTIVO_SAIDA
+            else '')
+        travado.save(update_fields=['saida', 'motivo_saida',
+                                    'motivo_saida_codigo', 'atualizado_em'])
 
         HistoricoCandidato.all_tenants.create(
             tenant=travado.tenant, candidato=travado,

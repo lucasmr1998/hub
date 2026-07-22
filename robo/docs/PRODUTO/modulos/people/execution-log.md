@@ -543,3 +543,32 @@ falha VISIVEL (teste que abre a view, log na rejeicao).
 
 - **Output**: migration 0023. 652 testes no modulo, 25 no arquivo da ficha.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-21 — Board e etapas alinhados ao produto RODANDO, e nao a spec
+
+- **Achado do Lucas**: mandou o print do board real da Visio, e ele nao bate com a lista que eu semeei. Eu tinha portado as sete etapas da spec de handoff (`Triagem, Historico, Teste Comportamental, Selecao, Teste pratico, Avaliacao Gestor, Admissao`), e a propria spec avisava que os nomes eram PROPOSTA, nao leitura do schema.
+
+**O board real tem SEIS etapas, e "Historico" nao existe:**
+
+| Eu semeei (da spec) | Produto rodando (print) |
+|---|---|
+| Triagem | Análise de inscrição |
+| **Histórico** | *nao existe* |
+| Teste Comportamental | Perfil comportamental |
+| Seleção | Entrevista / Seleção |
+| Teste prático | Teste Prático |
+| Avaliação Gestor | Avaliação Gestor |
+| Admissão | Admissão |
+
+- **Licao**: terceira vez no dia em que seguir a spec sem confrontar com print me custou trabalho. A regra que fica: **print do produto rodando ganha da spec escrita, sempre.**
+
+**Outras diferencas do board, tambem corrigidas:**
+
+- **Filtro por CANAL e por PERIODO**, que a origem tem e o nosso nao tinha. Canal responde "que canal esta trazendo gente"; periodo separa a safra da semana do acumulado, e num board com 400 candidatos e a diferenca entre a tela servir e nao servir.
+- **Dias na etapa no card do kanban**. Ja existia na lista; no card so aparecia quando havia atraso. Com 80 candidatos numa coluna, "ha quanto tempo esta parado" e o que decide quem olhar primeiro.
+- **Motivo de saida em LISTA FECHADA** (era texto livre). Com texto livre nunca da pra responder "por que a gente reprova", porque cada RH escreve diferente e nao ha o que agregar. A lista sai dos cards de Inaptos do print. "Outro" existe pra nao prender o RH, e ai o detalhe livre vira OBRIGATORIO, porque "Outro" sozinho nao diz nada. Fecha o item 7 da lista de gaps.
+
+- **ATENCAO PRA O DEPLOY**: o seed novo so vale pra TENANT NOVO. A aurora-hq (e qualquer tenant existente) continua com as sete etapas antigas, inclusive a "Historico". Renomear ou apagar e mudanca de dado em prod e depende de decisao do Lucas: ele pode fazer na tela de fluxo, ou eu escrevo um comando pra alinhar.
+
+- **Output**: migration 0024 (motivo_saida_codigo). 652 testes. Vinte e poucos testes ajustados por causa dos nomes de etapa.
+- **Status**: completed em dev, nao pushado.

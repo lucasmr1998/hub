@@ -35,7 +35,7 @@ from tests.factories import TenantFactory
 
 @pytest.fixture
 def cenario(db):
-    tenant = TenantFactory(modulo_people=True)   # signal semeia as 7 etapas
+    tenant = TenantFactory(modulo_people=True)   # signal semeia as 6 etapas
     ConfiguracaoEmpresa.all_tenants.create(tenant=tenant,
                                            nome_empresa=tenant.nome, ativo=True)
     unidade = Unidade.all_tenants.create(tenant=tenant, nome='Loja Centro',
@@ -60,7 +60,7 @@ def _cliente(cenario, username='rh_217',
     return c
 
 
-def _etapa(cenario, nome='Triagem'):
+def _etapa(cenario, nome='Análise de inscrição'):
     return EtapaPipeline.all_tenants.get(tenant=cenario['tenant'], nome=nome)
 
 
@@ -76,7 +76,7 @@ def _candidato(cenario, etapa=None, dias_atras=0, nome='Alguem'):
 
 @pytest.mark.django_db
 def test_dentro_do_prazo_nao_marca_atraso(cenario):
-    etapa = _etapa(cenario)                       # Triagem, sla_dias=3
+    etapa = _etapa(cenario)          # Análise de inscrição, sla_dias=3
     candidato = _candidato(cenario, etapa, dias_atras=2)
 
     assert candidato.dias_na_etapa == 2
@@ -138,7 +138,7 @@ def test_quem_saiu_do_processo_nao_esta_atrasado(cenario):
 def test_mover_de_etapa_zera_o_relogio(cenario):
     candidato = _candidato(cenario, _etapa(cenario), dias_atras=10)
 
-    mover_para_etapa(candidato, _etapa(cenario, 'Seleção'))
+    mover_para_etapa(candidato, _etapa(cenario, 'Entrevista / Seleção'))
 
     candidato.refresh_from_db()
     assert candidato.dias_na_etapa == 0

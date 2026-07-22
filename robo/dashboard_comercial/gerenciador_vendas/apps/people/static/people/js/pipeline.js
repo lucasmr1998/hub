@@ -36,6 +36,7 @@
   function abrirModalSaida() {
     if (!modal) return;
     modal.querySelector('[data-motivo]').value = '';
+    modal.querySelector('[data-motivo-codigo]').value = '';
     modal.querySelector('[data-saida-valor]').value = '';
     modal.querySelectorAll('[data-saida-opcao]').forEach(o => o.classList.remove('is-selected'));
     abrirModal('modal-saida');
@@ -111,14 +112,22 @@
 
     modal.querySelector('[data-confirmar-saida]')?.addEventListener('click', function () {
       const saida = modal.querySelector('[data-saida-valor]').value;
+      const motivoCodigo = modal.querySelector('[data-motivo-codigo]').value;
       const motivo = modal.querySelector('[data-motivo]').value.trim();
 
       if (!saida) { toast('Escolha uma saida', 'Diga pra onde o candidato vai.', 'warning'); return; }
-      if (!motivo) { toast('Registre o motivo', 'Toda saida precisa de um motivo.', 'warning'); return; }
+      if (!motivoCodigo) { toast('Registre o motivo', 'Toda saida precisa de um motivo.', 'warning'); return; }
+      // "Outro" sozinho nao diz nada, e e justamente o motivo que mais some na
+      // analise depois. Ai o detalhe vira obrigatorio.
+      if (motivoCodigo === 'outro' && !motivo) {
+        toast('Descreva o motivo', 'Com "Outro", o detalhe e obrigatorio.', 'warning');
+        return;
+      }
 
       // Modo lote
       if (!cardDaSaida && idsDoLote.length) {
-        barra._aplicar({ acao: 'saida', saida: saida, motivo: motivo, ids: idsDoLote });
+        barra._aplicar({ acao: 'saida', saida: saida, motivo: motivo,
+                        motivo_codigo: motivoCodigo, ids: idsDoLote });
         fecharModal('modal-saida');
         return;
       }
@@ -128,7 +137,8 @@
       if (!cardDaSaida || !tabuleiro) return;
       const id = cardDaSaida.dataset.candidatoId;
       post(tabuleiro.dataset.urlSaida.replace('0', id),
-           { saida: saida, motivo: motivo }).then(function (resp) {
+           { saida: saida, motivo: motivo, motivo_codigo: motivoCodigo })
+        .then(function (resp) {
         if (resp.status === 200) {
           const origem = cardDaSaida.closest('.kanban-col');
           cardDaSaida.remove();
