@@ -528,14 +528,79 @@ def inconsistencias_view(request):
     O POST atualiza o espelho antes de listar. Isso ESCREVE (upsert de
     ClienteHubsoft), e a tela avisa antes do clique em vez de esconder. Escopo
     do periodo, nao da base inteira: com `modificados_desde` sao ~3 paginas.
+
+    Duas abas: "Vendas" (esta logica) e "Oportunidades" (matriz funil x funil,
+    montada do ultimo export de CRM que alguem subiu — ver oportunidades.py).
     """
     from apps.integracoes.services import inconsistencias as svc
+    from apps.integracoes.services import oportunidades as svc_op
 
     # `?atualizar=1` ignora o cache. A leitura sao ~39 chamadas de API, entao o
     # padrao e servir do cache (30 min) e so refazer quando pedirem.
     forcar = request.GET.get('atualizar') == '1'
     dados = svc.montar_pagina(request.tenant, forcar=forcar)
+    # `oport` fica aninhado pra nao colidir com as chaves de topo das vendas
+    # (ambos tem 'total', 'divergentes', etc).
+    dados['oport'] = svc_op.montar_aba(request.tenant)
+    aba = 'oportunidades' if request.GET.get('tab') == 'oportunidades' else 'vendas'
+    dados['aba'] = aba
+    dados['abas'] = [
+        {'id': 'aba-vendas', 'label': 'Vendas', 'icon': 'bi-cart-check',
+         'badge': dados.get('total_sem_nada') or None, 'active': aba != 'oportunidades'},
+        {'id': 'aba-oportunidades', 'label': 'Oportunidades', 'icon': 'bi-diagram-3',
+         'badge': dados['oport'].get('total_divergentes') or None if dados['oport'].get('tem_import') else None,
+         'active': aba == 'oportunidades'},
+    ]
     return render(request, 'integracoes/inconsistencias.html', dados)
+
+
+@login_required
+@require_http_methods(["POST"])
+def oportunidades_upload_view(request):
+    """Recebe o export de CRM do HubSoft (.xlsx) e guarda como ultimo import.
+
+    Fonte unica da matriz funil x funil, porque nao existe API de cards. So
+    grava a planilha parseada; o cruzamento com as nossas oportunidades e
+    recalculado ao vivo a cada visita (ver oportunidades.montar_aba).
+    """
+    from django.contrib import messages
+    from apps.integracoes.services import oportunidades as svc_op
+    from apps.integracoes.models import ImportacaoCRMHubsoft
+
+    destino = f"{redirect('integracoes:inconsistencias').url}?tab=oportunidades"
+
+    arquivo = request.FILES.get('planilha')
+    if not arquivo:
+        messages.warning(request, "Nenhum arquivo enviado.")
+        return redirect(destino)
+
+    nome = arquivo.name or 'planilha.xlsx'
+    if not nome.lower().endswith('.xlsx'):
+        messages.warning(request, "Formato invalido. Envie o export .xlsx do CRM do HubSoft.")
+        return redirect(destino)
+
+    MAX_BYTES = 15 * 1024 * 1024
+    if arquivo.size > MAX_BYTES:
+        messages.warning(request, f"Arquivo excede 15MB (recebido {arquivo.size // 1024} KB).")
+        return redirect(destino)
+
+    try:
+        cards = svc_op.parse_planilha(arquivo)
+    except Exception as e:
+        logger.warning("[inconsistencias] falha ao parsear planilha CRM: %s", e)
+        messages.error(request, "Nao consegui ler a planilha. Confira se e o export de CRM do HubSoft.")
+        return redirect(destino)
+
+    if not cards:
+        messages.warning(request, "A planilha nao tem cards com id_prospecto. Nada foi importado.")
+        return redirect(destino)
+
+    ImportacaoCRMHubsoft.objects.create(
+        tenant=request.tenant, enviado_por=request.user,
+        nome_arquivo=nome[:255], total=len(cards), cards=cards,
+    )
+    messages.success(request, f"Planilha importada: {len(cards)} cards.")
+    return redirect(destino)
 
 
 @login_required

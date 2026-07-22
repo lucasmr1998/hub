@@ -22,7 +22,15 @@ pgvector==0.3.6
 openai==1.54.4
 
 # QR code do link publico de cadastro do People (pure python, gera SVG)
-# Extracao de texto de PDF, pra triagem de curriculo por IA. Python puro,
-# sem dependencia de sistema, mesmo criterio que escolheu o segno.
+# Extracao de texto de curriculo pra triagem por IA. As duas sao Python puro,
+# sem dependencia de sistema, mesmo criterio que escolheu o segno. `.doc`
+# (Word binario pre 2007) exigiria LibreOffice no container e por isso saiu
+# tambem da lista de formatos aceitos no upload.
 pypdf==6.14.2
+python-docx==1.2.0
 segno==1.6.6
+
+# Leitura do export .xlsx do CRM do HubSoft na pagina de inconsistencias
+# (aba Oportunidades). Python puro, sem dependencia de sistema, mesmo criterio
+# do pypdf/segno acima.
+openpyxl==3.1.5

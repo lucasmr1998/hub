@@ -21,6 +21,9 @@ from .models_hubsoft_relatorios import (  # noqa: F401
     AtendimentoHubsoft,
 )
 
+# Ultimo export de CRM do HubSoft (aba Oportunidades das inconsistencias)
+from .models_crm_import import ImportacaoCRMHubsoft  # noqa: F401
+
 
 class IntegracaoAPI(TenantMixin):
     """

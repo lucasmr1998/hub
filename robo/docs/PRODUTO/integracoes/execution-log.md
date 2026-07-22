@@ -452,3 +452,36 @@ e compara em memoria.
   sim porque cada rodada recriava o banco de teste do zero (todas as migrations).
   Com `--reuse-db` cai pra ~17s. `pytest.ini` do projeto nao tem `--reuse-db`.
 - **Status:** completed
+
+## 2026-07-22 — Aba Oportunidades: matriz funil x funil por upload de planilha
+
+- **Acao:** a pagina de inconsistencias virou duas abas. "Vendas" e a datatable
+  de antes. "Oportunidades" e nova: compara nossas OportunidadeVenda com os
+  cards do CRM do HubSoft, cruzando por id_prospecto, e mostra cobertura,
+  matriz de concordancia 3x3, duplicados e o que so existe de um lado.
+- **Fonte do dado deles:** upload manual do export .xlsx do CRM. Confirmado por
+  probe que NAO existe API de cards: /crm/all so lista os 43 boards, todo drill
+  (crm/4, crm/cards, crm/prospecto) da 404. A planilha e a unica fonte.
+- **Chave de cruzamento:** `id_prospecto` do card x **`id_hubsoft` do nosso
+  lead** (o id_hubsoft do lead E o id do prospecto que criamos). Primeira
+  tentativa usei `id_prospecto_hubsoft` e deu 0 casados: o campo esta vazio em
+  prod. Peguei o bug validando o service READ-ONLY contra prod antes do deploy.
+- **Validacao contra prod (read-only, sem escrita):** o service reproduz a
+  analise da sessao anterior: 764 casados (era 758), concordancia 73% (era 72%),
+  deles ABERTO / nos PERDIDO = **166** (identico), duplicados 49 (era 53). As
+  diferencas sao exatamente as 34 oportunidades movidas pra Ganho e os leads
+  vinculados hoje: o nosso lado e recalculado ao vivo, so o lado deles depende
+  do upload.
+- **Componentes:** model `ImportacaoCRMHubsoft` (JSONField com os cards,
+  migration 0019); service `oportunidades.py` (parse_planilha, situacao_deles,
+  montar_aba); openpyxl no requirements; view com abas + POST de upload; template
+  reusando o componente datatable e o tabs do DS.
+- **Mapa etapa deles -> situacao:** CADASTRO APROVADO=ganho; DESIST* / CREDITO
+  NEGADO / VIABILIDADE NEGATIVA=perdido; o resto=aberto (negociacao viva).
+- **Output:** `manage.py check` limpo; 26 testes novos + 22 de inconsistencias,
+  48 passando; render das duas abas validado.
+- **Escopo declarado na tela:** a aba reflete a planilha enviada COMO ESTA (sem
+  filtro de data). O export da Gabi de 21/07 tem 1226 cards de todas as datas
+  (cobertura 62%); so a janela de julho dava 90%. Quem define o recorte e o
+  export.
+- **Status:** completed

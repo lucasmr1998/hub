@@ -5,10 +5,10 @@
 {% block content %}
 <div class="page-header">
   <div class="page-eyebrow">Integrações</div>
-  <h1 class="page-title">Vendas do HubSoft x nosso CRM</h1>
+  <h1 class="page-title">Inconsistências Hubtrix x HubSoft</h1>
   <p class="page-subtitle">
-    Vendas registradas no HubSoft de {{ inicio|date:"d/m/Y" }} até {{ fim|date:"d/m/Y" }},
-    cruzadas com o nosso funil por CPF e por telefone.
+    Duas visões: vendas do HubSoft que nunca viraram lead aqui, e a comparação
+    das oportunidades (funil x funil) contra o export de CRM.
   </p>
   <div class="page-actions">
     <a href="?atualizar=1" class="btn btn-secondary btn-sm">
@@ -51,171 +51,388 @@
   .inc-pill.falha { background: #FEE2E2; color: #991B1B; }
   .inc-pill.fora { background: #F1F5F9; color: #475569; }
   .inc-pill.naovenda { background: #E2E8F0; color: #475569; }
+  .inc-pill.ganho { background: #D1FAE5; color: #065F46; }
+  .inc-pill.aberto { background: #DBEAFE; color: #1E40AF; }
+  .inc-pill.perdido { background: #FEE2E2; color: #991B1B; }
   .inc-vazio { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 30px; text-align: center; color: var(--color-text-muted); }
+
+  /* aba oportunidades */
+  .oport-envio { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px 18px; margin-bottom: 18px; font-size: 13px; }
+  .oport-envio .meta { color: var(--color-text-muted, #64748B); }
+  .oport-up { display: inline-flex; align-items: center; gap: 8px; }
+  .oport-up input[type=file] { font-size: 12px; max-width: 230px; }
+  .oport-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .oport-kpi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 14px 16px; }
+  .oport-kpi .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .oport-kpi .l { font-size: 11px; color: var(--color-text-muted, #64748B); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+  .oport-kpi.destaque { border-left: 4px solid var(--color-danger, #DC2626); }
+  .mtx { border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .mtx th, .mtx td { border: 1px solid var(--color-border); padding: 9px 14px; text-align: center; font-variant-numeric: tabular-nums; }
+  .mtx th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted, #64748B); font-weight: 600; background: var(--color-bg-subtle, #F8FAFC); }
+  .mtx td.rowh { font-weight: 700; text-transform: none; letter-spacing: 0; color: inherit; text-align: left; }
+  .mtx td.concorda { background: #D1FAE5; color: #065F46; font-weight: 700; }
+  .mtx td.perda { background: #FEE2E2; color: #991B1B; font-weight: 700; }
+  .mtx td.tot { background: var(--color-bg-subtle, #F8FAFC); font-weight: 600; }
+  .oport-sec { font-size: 16px; font-weight: 700; margin: 26px 0 10px; }
 </style>
 
 {% include "components/datatable.html" %}
 
-<div class="inc-funil">
-  <h2>{{ total }}</h2>
-  <div class="inc-sub">vendas no HubSoft no período</div>
+{% comment %}
+  Duas abas via componente do DS. O JS de troca de painel e global (layout_app):
+  data-tab do botao == id do .tabs-panel.
+{% endcomment %}
+{% include "components/tabs.html" with items=abas %}
 
-  <div class="inc-linha ok">
-    <span class="inc-n">{{ com_venda }}</span>
-    <span class="inc-txt">tem lead <strong>e</strong> venda ganha aqui</span>
-    <span class="inc-tag ok">certo</span>
-  </div>
-  <div class="inc-linha rec">
-    <span class="inc-n">{{ so_lead_cpf }}</span>
-    <span class="inc-txt">tem lead (CPF bate), mas sem venda marcada</span>
-    <span class="inc-tag rec">recuperável</span>
-  </div>
-  <div class="inc-linha rec">
-    <span class="inc-n">{{ so_lead_tel }}</span>
-    <span class="inc-txt">tem lead (casou só por telefone)</span>
-    <span class="inc-tag rec">recuperável</span>
-  </div>
-  <div class="inc-linha fora">
-    <span class="inc-n">{{ total_sem_nada }}</span>
-    <span class="inc-txt">não existe no CRM, nunca passou por aqui</span>
-    <span class="inc-tag fora">fora</span>
-  </div>
+{# ===================== ABA VENDAS ===================== #}
+<div class="tabs-panel {% if aba != 'oportunidades' %}is-active{% endif %}" id="aba-vendas">
+  <div class="inc-funil">
+    <h2>{{ total }}</h2>
+    <div class="inc-sub">vendas no HubSoft no período</div>
 
-  <div class="inc-cobertura">
-    Cobertura: <strong>{{ com_venda|add:so_lead_cpf|add:so_lead_tel }} de {{ total }}</strong>
-    {% comment %}
-      Titularidade sai da conta de "venda perdida" porque nao e venda: e troca de
-      titular num contrato que ja existia. Sem essa separacao o numero acusa o
-      funil por algo que nunca deveria passar por ele.
-    {% endcomment %}
-    {% if titularidade %}
+    <div class="inc-linha ok">
+      <span class="inc-n">{{ com_venda }}</span>
+      <span class="inc-txt">tem lead <strong>e</strong> venda ganha aqui</span>
+      <span class="inc-tag ok">certo</span>
+    </div>
+    <div class="inc-linha rec">
+      <span class="inc-n">{{ so_lead_cpf }}</span>
+      <span class="inc-txt">tem lead (CPF bate), mas sem venda marcada</span>
+      <span class="inc-tag rec">recuperável</span>
+    </div>
+    <div class="inc-linha rec">
+      <span class="inc-n">{{ so_lead_tel }}</span>
+      <span class="inc-txt">tem lead (casou só por telefone)</span>
+      <span class="inc-tag rec">recuperável</span>
+    </div>
+    <div class="inc-linha fora">
+      <span class="inc-n">{{ total_sem_nada }}</span>
+      <span class="inc-txt">não existe no CRM, nunca passou por aqui</span>
+      <span class="inc-tag fora">fora</span>
+    </div>
+
+    <div class="inc-cobertura">
+      Cobertura: <strong>{{ com_venda|add:so_lead_cpf|add:so_lead_tel }} de {{ total }}</strong>
+      {% if titularidade %}
+        <p class="inc-nota">
+          Das {{ total_sem_nada }} que estão fora, <strong>{{ titularidade }} são transferência de titularidade</strong>,
+          que não é venda nova. Venda real fora do funil: <strong>{{ venda_real_fora }}</strong>.
+        </p>
+      {% endif %}
       <p class="inc-nota">
-        Das {{ total_sem_nada }} que estão fora, <strong>{{ titularidade }} são transferência de titularidade</strong>,
-        que não é venda nova. Venda real fora do funil: <strong>{{ venda_real_fora }}</strong>.
+        Lido do HubSoft em {{ lido_em|date:"d/m/Y H:i" }}. Use "Reler o HubSoft" para atualizar.<br>
+        Alcança clientes cadastrados a partir de {{ cadastro_desde|date:"d/m/Y" }}.
+        Quem já era cliente antes disso e comprou agora não aparece aqui.
       </p>
-    {% endif %}
-    {% comment %}
-      Limite declarado, nao escondido: a API filtra por cadastro do cliente, nao
-      por data da venda, entao a busca alcanca so quem virou cliente neste ano.
-      Cobrir anos anteriores custaria 165 paginas e tornaria a leitura inviavel.
-    {% endcomment %}
-    <p class="inc-nota">
-      Lido do HubSoft em {{ lido_em|date:"d/m/Y H:i" }}. Use "Reler o HubSoft" para atualizar.<br>
-      Alcança clientes cadastrados a partir de {{ cadastro_desde|date:"d/m/Y" }}.
-      Quem já era cliente antes disso e comprou agora não aparece aqui.
-    </p>
+    </div>
   </div>
+
+  <h2 style="font-size:16px;font-weight:700;margin:24px 0 12px;">As {{ total_sem_nada }} que não existem no CRM</h2>
+
+  {% if grupos %}
+    <div class="inc-chips">
+      <button type="button" class="inc-chip ativo" data-filtro="">
+        Todas <span class="n">{{ total_sem_nada }}</span>
+      </button>
+      {% for g in grupos %}
+        <button type="button"
+                class="inc-chip {% if g.anomalia %}perigo{% elif g.nao_e_venda %}cinza{% endif %}"
+                data-filtro="{{ g.origem }}">
+          {{ g.origem }} <span class="n">{{ g.quantidade }}</span>
+        </button>
+      {% endfor %}
+    </div>
+
+    <table class="dt"
+           id="tbl-fora"
+           data-busca="Buscar por cliente, código, origem ou plano..."
+           data-por-pagina="25"
+           data-exportar="vendas-fora-do-crm"
+           data-vazio="Nenhuma venda com esse filtro.">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th data-tipo="numero">Código</th>
+          <th>Origem</th>
+          <th>Classificação</th>
+          <th>Plano</th>
+          <th data-tipo="data">Venda</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in sem_nada %}
+          <tr>
+            <td><strong>{{ v.nome }}</strong></td>
+            <td>{{ v.codigo_cliente }}</td>
+            <td>{{ v.origem }}</td>
+            <td>
+              <span class="inc-pill {% if v.nao_e_venda %}naovenda{% elif v.anomalia %}falha{% else %}fora{% endif %}">
+                {{ v.tipo_label }}
+              </span>
+            </td>
+            <td>{{ v.plano }}</td>
+            <td>{{ v.data_venda }}</td>
+            <td>{{ v.status_servico|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <p class="inc-nota" style="margin-top:10px;">
+      <strong>Falha nossa:</strong> canal que alimenta o Hubtrix (Matrix, WhatsApp da empresa).
+      A venda <strong>deveria</strong> ter virado lead sozinha.
+      &nbsp;·&nbsp;
+      <strong>Não é venda:</strong> troca de titular num contrato que já existia.
+      &nbsp;·&nbsp;
+      <strong>Canal fora do funil:</strong> venda que nunca teve como passar por aqui.
+    </p>
+  {% else %}
+    <div class="inc-vazio">Nenhuma venda fora do CRM no período.</div>
+  {% endif %}
+
+  {% if recuperaveis %}
+    <h2 style="font-size:16px;font-weight:700;margin:28px 0 12px;">
+      As {{ recuperaveis|length }} recuperáveis
+    </h2>
+    <p class="inc-nota" style="margin:-6px 0 12px;">
+      A venda existe dos dois lados. Só falta mover a oportunidade para o estágio de ganho aqui.
+    </p>
+    <table class="dt"
+           id="tbl-recuperaveis"
+           data-busca="Buscar por cliente ou lead..."
+           data-por-pagina="25"
+           data-exportar="recuperaveis">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th data-tipo="numero">Lead</th>
+          <th>Status do lead</th>
+          <th>Casou por</th>
+          <th data-tipo="data">Venda</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in recuperaveis %}
+          <tr>
+            <td><strong>{{ v.nome }}</strong></td>
+            <td data-ordem="{{ v.lead_id }}"><a href="/crm/leads/{{ v.lead_id }}/">#{{ v.lead_id }}</a></td>
+            <td>{{ v.lead_status }}</td>
+            <td>{{ v.casou_por }}</td>
+            <td>{{ v.data_venda }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
 </div>
 
-<h2 style="font-size:16px;font-weight:700;margin:24px 0 12px;">As {{ total_sem_nada }} que não existem no CRM</h2>
+{# ===================== ABA OPORTUNIDADES ===================== #}
+<div class="tabs-panel {% if aba == 'oportunidades' %}is-active{% endif %}" id="aba-oportunidades">
+  {% if not oport.tem_import %}
+    <div class="inc-vazio">
+      <p style="font-size:15px;margin-bottom:6px;"><strong>Nenhuma planilha de CRM enviada ainda.</strong></p>
+      <p class="inc-nota" style="margin:0 auto 18px;max-width:520px;">
+        Não existe API de cards no HubSoft, então a comparação de funil depende do export manual.
+        Suba o relatório de CRM (.xlsx) exportado do HubSoft para ver quantas oportunidades estão aqui,
+        os cards duplicados e onde os dois sistemas divergem.
+      </p>
+      <form method="post" action="{% url 'integracoes:oportunidades_upload' %}" enctype="multipart/form-data" class="oport-up" style="justify-content:center;">
+        {% csrf_token %}
+        <input type="file" name="planilha" accept=".xlsx" required>
+        <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-upload"></i> Importar planilha</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="oport-envio">
+      <span class="meta">
+        <i class="bi bi-clock-history"></i>
+        Planilha enviada em {{ oport.enviado_em|date:"d/m/Y H:i" }} · {{ oport.total }} cards{% if oport.nome_arquivo %} · {{ oport.nome_arquivo }}{% endif %}
+      </span>
+      <form method="post" action="{% url 'integracoes:oportunidades_upload' %}" enctype="multipart/form-data" class="oport-up">
+        {% csrf_token %}
+        <input type="file" name="planilha" accept=".xlsx" required>
+        <button class="btn btn-secondary btn-sm" type="submit"><i class="bi bi-arrow-repeat"></i> Reenviar</button>
+      </form>
+    </div>
 
-{% comment %}
-  Os grupos por origem viraram filtro em vez de N tabelas separadas: com uma
-  tabela so da pra ordenar por data, buscar por nome e exportar o conjunto
-  inteiro, o que a versao agrupada nao permitia. Os chips preservam a contagem
-  por origem e a distincao entre falha nossa e canal descoberto.
-{% endcomment %}
-{% if grupos %}
-  <div class="inc-chips">
-    <button type="button" class="inc-chip ativo" data-filtro="">
-      Todas <span class="n">{{ total_sem_nada }}</span>
-    </button>
-    {% for g in grupos %}
-      <button type="button"
-              class="inc-chip {% if g.anomalia %}perigo{% elif g.nao_e_venda %}cinza{% endif %}"
-              data-filtro="{{ g.origem }}">
-        {{ g.origem }} <span class="n">{{ g.quantidade }}</span>
-      </button>
-    {% endfor %}
-  </div>
+    <div class="oport-kpis">
+      <div class="oport-kpi">
+        <div class="v">{{ oport.casados }} <span style="font-size:15px;color:var(--color-text-muted);">/ {{ oport.total }}</span></div>
+        <div class="l">Estão aqui ({{ oport.cobertura_pct }}%)</div>
+      </div>
+      <div class="oport-kpi">
+        <div class="v">{{ oport.concordancia_pct }}%</div>
+        <div class="l">Concordância de situação</div>
+      </div>
+      <div class="oport-kpi {% if oport.perda_prematura %}destaque{% endif %}">
+        <div class="v">{{ oport.matriz.perda_prematura }}</div>
+        <div class="l">Eles negociando, nós perdido</div>
+      </div>
+      <div class="oport-kpi">
+        <div class="v">{{ oport.total_duplicados }}</div>
+        <div class="l">Cards duplicados</div>
+      </div>
+      <div class="oport-kpi">
+        <div class="v">{{ oport.total_so_deles }}</div>
+        <div class="l">Só existem lá</div>
+      </div>
+    </div>
 
-  <table class="dt"
-         id="tbl-fora"
-         data-busca="Buscar por cliente, código, origem ou plano..."
-         data-por-pagina="25"
-         data-exportar="vendas-fora-do-crm"
-         data-vazio="Nenhuma venda com esse filtro.">
-    <thead>
-      <tr>
-        <th>Cliente</th>
-        <th data-tipo="numero">Código</th>
-        <th>Origem</th>
-        <th>Classificação</th>
-        <th>Plano</th>
-        <th data-tipo="data">Venda</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for v in sem_nada %}
-        <tr>
-          <td><strong>{{ v.nome }}</strong></td>
-          <td>{{ v.codigo_cliente }}</td>
-          <td>{{ v.origem }}</td>
-          <td>
-            <span class="inc-pill {% if v.nao_e_venda %}naovenda{% elif v.anomalia %}falha{% else %}fora{% endif %}">
-              {{ v.tipo_label }}
-            </span>
-          </td>
-          <td>{{ v.plano }}</td>
-          <td>{{ v.data_venda }}</td>
-          <td>{{ v.status_servico|default:"—" }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% comment %} Matriz de concordancia: linha = situacao deles, coluna = a nossa. {% endcomment %}
+    <div class="inc-funil">
+      <div class="inc-sub" style="margin-bottom:12px;">Matriz funil x funil ({{ oport.matriz.total }} cards casados por id_prospecto)</div>
+      <table class="mtx">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Deles ↓ / Nosso →</th>
+            {% for c in oport.matriz.colunas %}<th>{{ c }}</th>{% endfor %}
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in oport.matriz.linhas %}
+            <tr>
+              <td class="rowh">{{ linha.deles_label }}</td>
+              {% for cel in linha.celulas %}
+                <td class="{% if cel.concorda %}concorda{% elif cel.perda_prematura %}perda{% endif %}">{{ cel.valor }}</td>
+              {% endfor %}
+              <td class="tot">{{ linha.total }}</td>
+            </tr>
+          {% endfor %}
+          <tr>
+            <td class="rowh tot">Total</td>
+            {% for t in oport.matriz.col_total %}<td class="tot">{{ t }}</td>{% endfor %}
+            <td class="tot">{{ oport.matriz.total }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="inc-nota">
+        Verde = os dois sistemas concordam. Vermelho = <strong>{{ oport.matriz.perda_prematura }} que eles ainda
+        negociam e nós já demos como perdido</strong>, a maior divergência.
+        &nbsp;·&nbsp; Só nossos (sem card na planilha): {{ oport.so_nossos }}.
+      </p>
+    </div>
 
-  <p class="inc-nota" style="margin-top:10px;">
-    <strong>Falha nossa:</strong> canal que alimenta o Hubtrix (Matrix, WhatsApp da empresa).
-    A venda <strong>deveria</strong> ter virado lead sozinha.
-    &nbsp;·&nbsp;
-    <strong>Não é venda:</strong> troca de titular num contrato que já existia.
-    &nbsp;·&nbsp;
-    <strong>Canal fora do funil:</strong> venda que nunca teve como passar por aqui.
-  </p>
-{% else %}
-  <div class="inc-vazio">Nenhuma venda fora do CRM no período.</div>
-{% endif %}
+    {% if oport.divergentes %}
+      <div class="oport-sec">Divergências ({{ oport.total_divergentes }})</div>
+      <table class="dt"
+             data-busca="Buscar por cliente, etapa, tag ou vendedor..."
+             data-por-pagina="25"
+             data-exportar="divergencias-funil"
+             data-vazio="Nenhuma divergência com esse filtro.">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th data-tipo="numero">id_prospecto</th>
+            <th>Etapa deles</th>
+            <th>Situação deles</th>
+            <th>Nosso estágio</th>
+            <th>Situação nossa</th>
+            <th>Tag</th>
+            <th>Vendedor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in oport.divergentes %}
+            <tr>
+              <td data-ordem="{{ v.nome_cartao|default:v.nome_prospecto }}">
+                {% if v.lead_id %}<a href="/crm/leads/{{ v.lead_id }}/"><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></a>
+                {% else %}<strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong>{% endif %}
+              </td>
+              <td>{{ v.id_prospecto }}</td>
+              <td>{{ v.crm_etapa }}</td>
+              <td><span class="inc-pill {{ v.situacao }}">{{ v.situacao }}</span></td>
+              <td>{{ v.nosso_estagio }}</td>
+              <td><span class="inc-pill {{ v.nossa_situacao }}">{{ v.nossa_situacao }}</span></td>
+              <td>{{ v.tag }}</td>
+              <td>{{ v.usuario }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
 
-{% if recuperaveis %}
-  <h2 style="font-size:16px;font-weight:700;margin:28px 0 12px;">
-    As {{ recuperaveis|length }} recuperáveis
-  </h2>
-  <p class="inc-nota" style="margin:-6px 0 12px;">
-    A venda existe dos dois lados. Só falta mover a oportunidade para o estágio de ganho aqui.
-  </p>
-  <table class="dt"
-         id="tbl-recuperaveis"
-         data-busca="Buscar por cliente ou lead..."
-         data-por-pagina="25"
-         data-exportar="recuperaveis">
-    <thead>
-      <tr>
-        <th>Cliente</th>
-        <th data-tipo="numero">Lead</th>
-        <th>Status do lead</th>
-        <th>Casou por</th>
-        <th data-tipo="data">Venda</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for v in recuperaveis %}
-        <tr>
-          <td><strong>{{ v.nome }}</strong></td>
-          <td data-ordem="{{ v.lead_id }}"><a href="/crm/leads/{{ v.lead_id }}/">#{{ v.lead_id }}</a></td>
-          <td>{{ v.lead_status }}</td>
-          <td>{{ v.casou_por }}</td>
-          <td>{{ v.data_venda }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% endif %}
+    {% if oport.duplicados %}
+      <div class="oport-sec">Cards duplicados ({{ oport.total_duplicados }})</div>
+      <p class="inc-nota" style="margin:-4px 0 10px;">
+        A pessoa existe aqui como lead (casou por CPF ou telefone), mas o card da planilha tem
+        <strong>outro id_prospecto</strong>. É prospecto criado em dobro, os dois sistemas ao mesmo tempo.
+      </p>
+      <table class="dt"
+             data-busca="Buscar por cliente, tag ou etapa..."
+             data-por-pagina="25"
+             data-exportar="cards-duplicados"
+             data-vazio="Nenhum duplicado com esse filtro.">
+        <thead>
+          <tr>
+            <th>Cliente (card)</th>
+            <th data-tipo="numero">id_prospecto deles</th>
+            <th>Nosso lead</th>
+            <th data-tipo="numero">Nosso id_hubsoft</th>
+            <th>Tag</th>
+            <th>Etapa deles</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in oport.duplicados %}
+            <tr>
+              <td><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></td>
+              <td>{{ v.id_prospecto }}</td>
+              <td data-ordem="{{ v.lead_id }}"><a href="/crm/leads/{{ v.lead_id }}/">{{ v.nosso_nome|default:v.lead_id }}</a></td>
+              <td>{{ v.nosso_id_hubsoft }}</td>
+              <td>{{ v.tag }}</td>
+              <td>{{ v.crm_etapa }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+    {% if oport.so_deles %}
+      <div class="oport-sec">Só existem lá ({{ oport.total_so_deles }})</div>
+      <p class="inc-nota" style="margin:-4px 0 10px;">
+        Cards que não casaram por id_prospecto nem por pessoa. Canal integrado aqui (tag WhatsApp Empresa / Matrix)
+        deveria ter virado lead sozinho.
+      </p>
+      <table class="dt"
+             data-busca="Buscar por cliente, tag, etapa ou vendedor..."
+             data-por-pagina="25"
+             data-exportar="so-existem-la"
+             data-vazio="Nenhum com esse filtro.">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th data-tipo="numero">id_prospecto</th>
+            <th>Tag</th>
+            <th>Etapa deles</th>
+            <th>Telefone</th>
+            <th>Vendedor</th>
+            <th data-tipo="data">Cadastro</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in oport.so_deles %}
+            <tr>
+              <td><strong>{{ v.nome_cartao|default:v.nome_prospecto }}</strong></td>
+              <td>{{ v.id_prospecto }}</td>
+              <td>{{ v.tag }}</td>
+              <td>{{ v.crm_etapa }}</td>
+              <td>{{ v.telefone }}</td>
+              <td>{{ v.usuario }}</td>
+              <td>{{ v.data_cadastro_cartao }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  {% endif %}
+</div>
 
 <script>
-  // Os chips escrevem no campo de busca da datatable em vez de filtrar por
-  // conta propria: um caminho de filtro so, entao contador, paginacao e o CSV
-  // exportado ja saem coerentes com o chip ativo, de graca.
+  // Os chips escrevem no campo de busca da datatable de vendas em vez de filtrar
+  // por conta propria: um caminho de filtro so, entao contador, paginacao e o
+  // CSV exportado ja saem coerentes com o chip ativo, de graca.
   document.addEventListener('DOMContentLoaded', function () {
     var chips = document.querySelectorAll('.inc-chip');
     var tabela = document.getElementById('tbl-fora');
@@ -232,7 +449,6 @@
       });
     });
 
-    // digitar na busca desmarca o chip, senao a tela mente sobre o filtro ativo
     busca.addEventListener('input', function () {
       var atual = document.querySelector('.inc-chip.ativo');
       if (atual && busca.value !== atual.dataset.filtro) {
