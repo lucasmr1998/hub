@@ -36,6 +36,7 @@ TR Carrion antes de construir mais coisa especifica de vertical.
 | # | Gap | Custo | Status |
 |---|---|---|---|
 | 1 | Curriculo: formatos e erro de upload do Chrome | medio | RESOLVIDO |
+| 33 | Triagem le curriculo em Word (docx); .doc recusado | 2h | RESOLVIDO |
 | 2 | Mensagem de WhatsApp por etapa e por saida | meio dia | RESOLVIDO |
 | 3 | Analise por IA sob demanda | 1 dia | RESOLVIDO |
 | 4 | Ponte pro Departamento Pessoal | 1,5 dia | RESOLVIDO |

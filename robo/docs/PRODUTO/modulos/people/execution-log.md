@@ -616,3 +616,16 @@ O botao Filtrar continua existindo de proposito: trocar o select ja aplica, pore
 
 - **Output**: `_pipeline_conteudo.html` novo; `pipeline_board.html` e `pipeline.js` reescritos; `views/pipeline.py` escolhe o template por `parcial`. 2 testes novos (`test_parcial_devolve_so_o_miolo`, `test_filtro_preserva_a_fase_escolhida`), 29 no arquivo. Verificado no browser: lote, acao rapida, modal e arrasto continuam funcionando **em card que veio da troca parcial**, que e o cenario que o desenho antigo quebraria. Sem migration.
 - **Status**: completed em dev, nao pushado.
+
+## 2026-07-22 — Triagem por IA le curriculo em Word (docx)
+
+- **Acao**: fechar o descompasso entre o que o upload ACEITA e o que a triagem LE. A gente aceitava .pdf/.doc/.docx e so lia .pdf, entao curriculo em Word rodava analise cega, so com o formulario, com cara de veredito completo.
+
+1. **Le .docx**: paragrafos E tabelas. Tabela nao e detalhe, modelo de CV do Word diagrama com tabela e o historico inteiro mora dentro de uma. Ler so `doc.paragraphs` devolveria o nome e nada mais.
+2. **`.doc` (Word binario pre 2007) saiu da lista de aceitos**, mesmo criterio que barrou imagem: nenhuma lib Python leve le. Aceitar e ler cego e pior que recusar na porta.
+3. **Extensao -> extrator virou mapa (`LEITORES`)**, e um teste amarra `EXTENSOES_CURRICULO == LEITORES.keys()`: aceitar formato que a IA nao le foi exatamente o bug.
+4. **`rotulo_formatos_curriculo()` passou a derivar da lista**, pra a frase que o candidato le nunca prometer formato recusado.
+
+- **Contexto que mudou no meio**: outra sessao PUSHOU a triagem (831638c7) pra origin. Ela nao esta mais "esperando push". Este commit do docx (8cedeb4e) e o unico local, e precisa subir junto: origin tem "aceita docx" + "so le pdf", entao um deploy sem ele poe o bug da analise cega em prod.
+- **Output**: `triagem_ia.py` e `campos_candidatura.py` alterados; 6 testes novos (22 no arquivo). 77 testes verdes no total (triagem + formato + candidatura), `check` limpo. `python-docx==1.2.0` ja versionado. Sem migration.
+- **Status**: completed em dev, 1 commit local aguardando push.
