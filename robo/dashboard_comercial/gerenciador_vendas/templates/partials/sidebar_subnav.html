@@ -257,9 +257,6 @@ Uso em template que extende layout_app:
         <a href="{% url 'people:vagas_lista' %}" class="app-subnav-item {% if 'vaga' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-megaphone"></i><span>Vagas</span>
         </a>
-        <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
-          <i class="bi bi-bar-chart"></i><span>Análises</span>
-        </a>
         {% comment %}
           Fluxo, Quadro, Campos e Captacao continua sao abas de um hub so
           (config_recrutamento). O slice evita casar com `config_fluxo`, que e a
@@ -279,6 +276,13 @@ Uso em template que extende layout_app:
         {% endcomment %}
         <a href="{% url 'people:board' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'board' or request.resolver_match.url_name|slice:':11' == 'colaborador' %}is-active{% endif %}">
           <i class="bi bi-columns-gap"></i><span>Ciclo de vida</span>
+        </a>
+        {% comment %}
+          Analises e do DP: le HistoricoSituacao (ciclo de vida do colaborador),
+          nao tem relacao com recrutamento. Estava no grupo errado ate 23/07.
+        {% endcomment %}
+        <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
+          <i class="bi bi-bar-chart"></i><span>Análises</span>
         </a>
         <a href="{% url 'people:links_lista' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':4' == 'link' %}is-active{% endif %}">
           <i class="bi bi-link-45deg"></i><span>Cadastro via link</span>

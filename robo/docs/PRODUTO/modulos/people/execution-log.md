@@ -690,3 +690,11 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Fix**: estilo de selecionado (fundo primary + texto branco), escopado por `[data-saida-opcao].is-selected` pra nao pegar `.is-selected` de tabs/sidebar, com `:hover` repetido pra vencer o hover do btn-secondary. Verificado no browser: o fundo muda de branco pra primary, o valor grava, e trocar de opcao mantem so uma selecionada.
 - **Output**: `pipeline_board.html` (so CSS). Sem migration, sem mudanca de markup nem de JS.
 - **Status**: completed em dev, aguardando push.
+
+## 2026-07-23 — Fix: Analises estava no grupo errado do menu (era DP, nao recrutamento)
+
+- **Bug** (erro meu): ao reorganizar o menu em duas areas, coloquei "Analises" em "Recrutamento e selecao". Mas a pagina de Analises e do Departamento Pessoal: le `Colaborador` + `HistoricoSituacao` (ciclo de vida do colaborador), sem relacao com recrutamento. A descricao errada que dei ("triagem por IA de recrutamento") induziu a escolha errada.
+- **Fix**: movida pra o grupo Departamento Pessoal, logo apos "Ciclo de vida" (junta os dois views da area). Sidebar + flyout. Verificado no browser: em /analises/ ela acende certo, no grupo certo.
+- **Nota**: a pagina vazia em prod NAO era bug, e falta de dado. aurora-hq tem 0 colaboradores e 0 HistoricoSituacao (DP nunca operado em prod), enquanto recrutamento tem 16 candidatos. A tela le dados de DP, entao fica vazia ate haver colaborador no board.
+- **Output**: `sidebar_subnav.html` + flyout de `layout_app.html`. Sem migration.
+- **Status**: completed em dev, aguardando push.
