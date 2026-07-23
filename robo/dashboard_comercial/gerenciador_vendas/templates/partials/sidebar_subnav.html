@@ -242,52 +242,59 @@ Uso em template que extende layout_app:
       </nav>
 
     {% elif modulo_atual == 'people' %}
+      {% comment %}
+        Duas areas espelhadas, cada uma com seu board + ferramentas +
+        Configuracoes: Recrutamento e Selecao (candidato, do 1o contato ate a
+        admissao) e Departamento Pessoal (colaborador, do cadastro ao
+        desligamento). Sao dois "Configuracoes", um por area, e nao ha ambiguidade
+        porque a secao desambigua. Cadastro embaixo e a base compartilhada.
+      {% endcomment %}
+      <div class="app-subnav-section">Recrutamento e seleção</div>
       <nav class="app-subnav-list">
-        <a href="{% url 'people:board' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'board' %}is-active{% endif %}">
-          <i class="bi bi-columns-gap"></i><span>Board</span>
-        </a>
-      </nav>
-      <div class="app-subnav-section">Recrutamento</div>
-      <nav class="app-subnav-list">
-        <a href="{% url 'people:vagas_lista' %}" class="app-subnav-item {% if 'vaga' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-megaphone"></i><span>Vagas</span>
-        </a>
         <a href="{% url 'people:pipeline_board' %}" class="app-subnav-item {% if 'pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-diagram-3"></i><span>Candidatos</span>
         </a>
+        <a href="{% url 'people:vagas_lista' %}" class="app-subnav-item {% if 'vaga' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-megaphone"></i><span>Vagas</span>
+        </a>
+        <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
+          <i class="bi bi-bar-chart"></i><span>Análises</span>
+        </a>
         {% comment %}
-          Fluxo, Quadro, Campos e Captacao continua viraram abas de um hub so
+          Fluxo, Quadro, Campos e Captacao continua sao abas de um hub so
           (config_recrutamento). O slice evita casar com `config_fluxo`, que e a
-          config do Departamento Pessoal, em outro grupo: `config_fluxo|slice:5`
-          e "confi", nao "fluxo".
+          config do Departamento Pessoal: `config_fluxo|slice:5` e "confi", nao
+          "fluxo".
         {% endcomment %}
         <a href="{% url 'people:fluxo_config' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':5' == 'fluxo' or request.resolver_match.url_name|slice:':6' == 'quadro' or request.resolver_match.url_name|slice:':5' == 'campo' or 'banco_talentos' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-sliders"></i><span>Configurações</span>
         </a>
       </nav>
 
-      <div class="app-subnav-section">Cadastro</div>
+      <div class="app-subnav-section">Departamento pessoal</div>
       <nav class="app-subnav-list">
+        {% comment %}
+          "Ciclo de vida" e o board de colaboradores por situacao (era o "Board"
+          solto no topo). E o equivalente do "Candidatos" pro DP: o board da area.
+        {% endcomment %}
+        <a href="{% url 'people:board' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'board' or request.resolver_match.url_name|slice:':11' == 'colaborador' %}is-active{% endif %}">
+          <i class="bi bi-columns-gap"></i><span>Ciclo de vida</span>
+        </a>
         <a href="{% url 'people:links_lista' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':4' == 'link' %}is-active{% endif %}">
           <i class="bi bi-link-45deg"></i><span>Cadastro via link</span>
         </a>
+        <a href="{% url 'people:config_home' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':7' == 'config_' %}is-active{% endif %}">
+          <i class="bi bi-sliders"></i><span>Configurações</span>
+        </a>
+      </nav>
+
+      <div class="app-subnav-section">Cadastro</div>
+      <nav class="app-subnav-list">
         <a href="{% url 'people:unidades_lista' %}" class="app-subnav-item {% if 'unidade' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-shop"></i><span>Unidades</span>
         </a>
         <a href="{% url 'people:cargos_lista' %}" class="app-subnav-item {% if 'cargo' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-briefcase"></i><span>Cargos</span>
-        </a>
-      </nav>
-      <div class="app-subnav-section">Inteligência</div>
-      <nav class="app-subnav-list">
-        <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
-          <i class="bi bi-bar-chart"></i><span>Análises</span>
-        </a>
-      </nav>
-      <div class="app-subnav-section">Sistema</div>
-      <nav class="app-subnav-list">
-        <a href="{% url 'people:config_home' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':7' == 'config_' %}is-active{% endif %}">
-          <i class="bi bi-sliders"></i><span>Configurações</span>
         </a>
       </nav>
 

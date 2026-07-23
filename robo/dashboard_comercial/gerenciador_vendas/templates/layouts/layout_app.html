@@ -386,24 +386,22 @@ Com subnav:
           ]},
         ]},
         people: { title: 'People', groups: [
-          { section: null, items: [
-            { icon: 'bi-columns-gap', label: 'Board', url: '/people/' },
+          // O flyout le `it.url` (nao `href`): os itens de Recrutamento estavam
+          // com href e linkavam pra "#". Corrigido aqui usando url em todos.
+          { section: 'Recrutamento e seleção', items: [
+            { icon: 'bi-diagram-3', label: 'Candidatos', url: '/people/candidatos/' },
+            { icon: 'bi-megaphone', label: 'Vagas', url: '/people/vagas/' },
+            { icon: 'bi-bar-chart', label: 'Análises', url: '/people/analises/' },
+            { icon: 'bi-sliders', label: 'Configurações', url: '/people/fluxo/' },
           ]},
-          { section: 'Recrutamento', items: [
-            { icon: 'bi-megaphone', label: 'Vagas', href: '/people/vagas/' },
-            { icon: 'bi-diagram-3', label: 'Candidatos', href: '/people/candidatos/' },
-            { icon: 'bi-sliders', label: 'Configurações', href: '/people/fluxo/' },
-          ] },
-          { section: 'Cadastro', items: [
+          { section: 'Departamento pessoal', items: [
+            { icon: 'bi-columns-gap', label: 'Ciclo de vida', url: '/people/' },
             { icon: 'bi-link-45deg', label: 'Cadastro via link', url: '/people/links/' },
+            { icon: 'bi-sliders', label: 'Configurações', url: '/people/config/' },
+          ]},
+          { section: 'Cadastro', items: [
             { icon: 'bi-shop', label: 'Unidades', url: '/people/unidades/' },
             { icon: 'bi-briefcase', label: 'Cargos', url: '/people/cargos/' },
-          ]},
-          { section: 'Inteligência', items: [
-            { icon: 'bi-bar-chart', label: 'Análises', url: '/people/analises/' },
-          ]},
-          { section: 'Sistema', items: [
-            { icon: 'bi-sliders', label: 'Configurações', url: '/people/config/' },
           ]},
         ]},
       };

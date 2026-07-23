@@ -664,3 +664,21 @@ O botao Filtrar continua existindo de proposito: trocar o select ja aplica, pore
 - **Consequencia**: as 5 abas do hub agora seguem o mesmo padrao (Etapas, Campos, Quadro, Captacao com botao+modal; Mensagens edita inline por design, nao e cadastro). Regra salva na memoria como padrao do produto, nao so desta tela.
 - **Output**: `_config_tab_captacao.html` e `config_recrutamento.html` e `config_recrutamento.js` ajustados. 15 testes de captacao verdes (endpoint de criar inalterado). Sem migration.
 - **Status**: completed em dev, aguardando push.
+
+## 2026-07-23 — Menu do People: duas areas espelhadas (Recrutamento e Selecao / Departamento Pessoal)
+
+- **Acao**: o Lucas pediu um grupo "Departamento Pessoal" com as coisas de DP que ja existiam, espelhando Recrutamento. As pecas do DP estavam espalhadas: o board ("Ciclo de vida") solto no topo, "Cadastro via link" em CADASTRO, e a config do DP la embaixo em SISTEMA.
+- **Escolha do Lucas (opcao C)**: DP espelha Recrutamento, e Analises (triagem de curriculo por IA, que e de recrutamento) migra pro grupo Recrutamento. Sumiu o grupo Inteligencia.
+
+Menu novo, simetrico:
+- **Recrutamento e selecao**: Candidatos, Vagas, Analises, Configuracoes (hub fluxo_config).
+- **Departamento pessoal**: Ciclo de vida (o board de colaboradores por situacao, era "Board" no topo), Cadastro via link, Configuracoes (config_home).
+- **Cadastro** (base compartilhada): Unidades, Cargos.
+
+Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide (`config_*` do DP vs `fluxo/quadro/campo/banco_talentos` do recrutamento). Confirmado no browser: cada URL destaca exatamente um item.
+
+**BUG DE BRINDE**: o flyout do sidebar colapsado le `it.url`, mas os itens de Recrutamento estavam com `href` e linkavam pra "#". Corrigido usando `url` em todos.
+
+- **Output**: `sidebar_subnav.html` e o flyout de `layout_app.html` reescritos. Sem view/rota nova (so reagrupou o que existia). Nenhum teste depende do menu. Sem migration.
+- **Nota**: o DP (Ciclo de vida, colaboradores, config do DP) ja existia em codigo mas estava meio escondido no menu; agora tem grupo proprio. A config do DP (config_home) ainda NAO e um hub em tabs como a de recrutamento, e um hub-com-cards; unificar o padrao fica pra depois.
+- **Status**: completed em dev, aguardando push.
