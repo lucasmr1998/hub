@@ -682,3 +682,11 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Output**: `sidebar_subnav.html` e o flyout de `layout_app.html` reescritos. Sem view/rota nova (so reagrupou o que existia). Nenhum teste depende do menu. Sem migration.
 - **Nota**: o DP (Ciclo de vida, colaboradores, config do DP) ja existia em codigo mas estava meio escondido no menu; agora tem grupo proprio. A config do DP (config_home) ainda NAO e um hub em tabs como a de recrutamento, e um hub-com-cards; unificar o padrao fica pra depois.
 - **Status**: completed em dev, aguardando push.
+
+## 2026-07-23 — Fix: opcao "Para onde" do modal de saida nao mostrava selecao
+
+- **Bug** (reportado pelo Lucas): no modal "Tirar do processo" do board, clicar numa opcao de "Para onde" (Admitido, Banco de talentos, Inapto, Arquivado) nao selecionava nada visivelmente.
+- **Causa**: o `pipeline.js` JA marcava `.is-selected` e gravava o valor no campo escondido (funcionava de verdade), mas nao havia CSS pra `.is-selected` nesses botoes. A selecao acontecia e nao aparecia, entao o usuario achava que nao tinha selecionado.
+- **Fix**: estilo de selecionado (fundo primary + texto branco), escopado por `[data-saida-opcao].is-selected` pra nao pegar `.is-selected` de tabs/sidebar, com `:hover` repetido pra vencer o hover do btn-secondary. Verificado no browser: o fundo muda de branco pra primary, o valor grava, e trocar de opcao mantem so uma selecionada.
+- **Output**: `pipeline_board.html` (so CSS). Sem migration, sem mudanca de markup nem de JS.
+- **Status**: completed em dev, aguardando push.

@@ -70,6 +70,21 @@
       border-radius: var(--radius); background: var(--color-bg);
       margin-bottom: var(--sp-3);
     }
+    {% comment %}
+      Estado SELECIONADO das opcoes de saida do modal. O JS ja marcava
+      `.is-selected` e gravava o valor, mas nao havia estilo: a selecao
+      acontecia de verdade e nao aparecia, entao o usuario achava que nao tinha
+      selecionado nada. Preenchido (fundo primary), que e o sinal mais claro.
+      Escopado por [data-saida-opcao] pra nao pegar `.is-selected` de tabs ou
+      sidebar. O :hover repete pra a selecao vencer o hover do btn-secondary.
+    {% endcomment %}
+    [data-saida-opcao].is-selected,
+    [data-saida-opcao].is-selected:hover {
+      border-color: var(--color-primary);
+      background: var(--color-primary);
+      color: #fff;
+      font-weight: var(--fw-semibold);
+    }
   </style>
 {% endblock %}
 
