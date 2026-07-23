@@ -229,3 +229,45 @@ def test_nome_real_ja_preenchido_continua_protegido():
     assert r.output['motivo_skip'] == 'ja_preenchido'
     lead.refresh_from_db()
     assert lead.nome_razaosocial == 'Maria da Silva'
+
+
+# ── renderização de {placeholder} na pergunta (serviço checklist) ──
+
+@pytest.mark.django_db
+def test_renderiza_placeholders_da_ficha_do_lead():
+    """"Confira: {rua}, {bairro}, {cidade}" vira o endereço real, e "{nome}" o
+    nome do lead. É o que o `viacep` + `definir_propriedade_lead` alimentam."""
+    from apps.automacao.services.checklist import renderizar_placeholders
+
+    tenant = TenantFactory()
+    lead = LeadProspectoFactory(
+        tenant=tenant, nome_razaosocial='João', rua='Av. Paulista',
+        bairro='Bela Vista', cidade='São Paulo', cep='01310-100')
+
+    texto = 'Oi {nome}! Confira: {rua}, {bairro}, {cidade} (CEP {cep})'
+    assert renderizar_placeholders(texto, lead) == (
+        'Oi João! Confira: Av. Paulista, Bela Vista, São Paulo (CEP 01310-100)')
+
+
+@pytest.mark.django_db
+def test_placeholder_desconhecido_ou_vazio_some_nao_vaza_cru():
+    from apps.automacao.services.checklist import renderizar_placeholders
+
+    tenant = TenantFactory()
+    lead = LeadProspectoFactory(tenant=tenant, nome_razaosocial='Ana', rua='')
+
+    # {rua} vazio no lead e {inexistente} sem campo: ambos somem, nada de {xyz}.
+    assert renderizar_placeholders('{nome} mora na {rua}{inexistente}', lead) == 'Ana mora na '
+
+
+@pytest.mark.django_db
+def test_render_nao_toca_template_da_engine_nem_lead_ausente():
+    from apps.automacao.services.checklist import renderizar_placeholders
+
+    tenant = TenantFactory()
+    lead = LeadProspectoFactory(tenant=tenant, cidade='Salto')
+
+    # `{{...}}` (chave dupla) é template da engine, não pode ser tocado aqui.
+    assert renderizar_placeholders('{{var.x}} em {cidade}', lead) == '{{var.x}} em Salto'
+    # Sem lead, texto intacto (nada pra resolver).
+    assert renderizar_placeholders('Oi {nome}', None) == 'Oi {nome}'

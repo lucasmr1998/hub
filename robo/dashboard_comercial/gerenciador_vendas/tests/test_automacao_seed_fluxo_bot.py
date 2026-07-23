@@ -952,3 +952,64 @@ def test_e2e_falha_ao_gravar_na_ficha_nao_derruba_o_atendimento(mock_grava):
     corpo = _corpo_resposta(ctx)
     assert corpo['resposta_correta'] == 'true'
     assert corpo['needsReception'] == 'false'
+
+
+@pytest.mark.django_db
+@mock.patch('apps.comercial.viabilidade.services.buscar_endereco_por_cep')
+def test_e2e_cep_busca_endereco_e_grava_no_lead(mock_viacep):
+    """Turno do CEP: o ViaCEP roda, acha o endereço e grava na ficha, pra que a
+    pergunta de confirmação (turno seguinte) já encontre os campos."""
+    tenant = TenantFactory()
+    checklist, _i1, _i2 = _checklist_minimo(tenant)
+    item_cep = ItemChecklist.all_tenants.create(
+        tenant=tenant, checklist=checklist, chave='cep', ordem=3,
+        pergunta='Qual o CEP?', tipo_resposta='texto_livre',
+        tipo_validacao='nenhuma', obrigatorio=True)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    lead = LeadProspectoFactory(tenant=tenant, telefone='5589999990040', rua='', cidade='')
+    mock_viacep.return_value = {
+        'cep': '13327450', 'logradouro': 'Rua das Flores',
+        'bairro': 'Centro', 'cidade': 'Salto', 'uf': 'SP'}
+
+    resultado, _ctx = _rodar(fluxo, tenant, {
+        'acao': 'validar', 'cellphone': '5589999990040',
+        'question_id': item_cep.pk, 'answer': '13327-450'})
+
+    assert resultado.status == 'completado', resultado.erro
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['e_cep'].branch == 'true'
+    assert passos['viacep_lookup'].branch == 'encontrado'
+    lead.refresh_from_db()
+    assert lead.rua == 'Rua das Flores'
+    assert lead.cidade == 'Salto'
+    assert lead.estado == 'SP'
+
+
+@pytest.mark.django_db
+def test_e2e_pergunta_de_confirmacao_renderiza_o_endereco_do_lead():
+    """Turno da confirmação: a pergunta com {rua}/{bairro}/{cidade} sai
+    preenchida com o que o ViaCEP gravou no turno anterior, não com `{rua}` cru.
+    Fecha o bug real: o cliente via os placeholders literais."""
+    tenant = TenantFactory()
+    checklist = Checklist.all_tenants.create(
+        tenant=tenant, slug=SLUG_CHECKLIST, nome='x', contexto='bot_vendas',
+        modo_preenchimento='ia', entidade_alvo='lead', ativo=False)
+    ItemChecklist.all_tenants.create(
+        tenant=tenant, checklist=checklist, chave='endereco_confirmado', ordem=1,
+        pergunta='Confira: {rua}, {bairro}, {cidade}. Certo, {nome}?',
+        tipo_resposta='texto_livre', tipo_validacao='nenhuma', obrigatorio=True)
+    call_command('seed_fluxo_bot_venda', tenant=tenant.slug)
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_FLUXO)
+    # lead com o endereço já gravado (como estaria depois do turno do CEP)
+    LeadProspectoFactory(
+        tenant=tenant, telefone='5589999990041', nome_razaosocial='Ana',
+        rua='Rua das Flores', bairro='Centro', cidade='Salto')
+
+    resultado, ctx = _rodar(fluxo, tenant, {
+        'acao': 'proximo_passo', 'cellphone': '5589999990041', 'ultima_mensagem': 'oi'})
+
+    assert resultado.status == 'completado', resultado.erro
+    corpo = _corpo_resposta(ctx)
+    assert corpo['mensagem_inicial'] == 'Confira: Rua das Flores, Centro, Salto. Certo, Ana?'
+    assert '{rua}' not in corpo['mensagem_inicial']

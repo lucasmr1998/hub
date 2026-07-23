@@ -101,6 +101,22 @@ def _buscar_viacep(cep_digits: str) -> dict:
 
 # ----- API publica -----
 
+def buscar_endereco_por_cep(cep: str) -> dict:
+    """Endereco de um CEP pelo ViaCEP: `{cep, logradouro, bairro, cidade, uf}`.
+
+    Dict VAZIO quando o CEP nao tem 8 digitos ou o ViaCEP nao acha/erra. Wrapper
+    publico fino sobre `_normalizar_cep` + `_buscar_viacep` (que ja normaliza e
+    trata falha), pro no `viacep` da engine nao alcancar funcao privada nem
+    reimplementar a chamada. So leitura, nao toca em tenant nem em banco."""
+    cep_digits = _normalizar_cep(cep)
+    if not cep_digits:
+        return {}
+    dados = _buscar_viacep(cep_digits)
+    if not dados:
+        return {}
+    return {'cep': cep_digits, **dados}
+
+
 def consultar_viabilidade(
     tenant,
     cep: str,

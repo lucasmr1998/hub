@@ -129,6 +129,39 @@ def respostas_por_entidade(checklist, entidades):
     return mapa
 
 
+import re as _re
+
+# `{campo}` de UMA palavra (chave simples). Não casa `{{...}}` (template da
+# engine, chave dupla) nem `{ com espaço }`. Achado no bot: o texto de
+# confirmação de endereço usa `{cep}`/`{rua}`/`{cidade}` e a mensagem de plano
+# usa `{nome}`, esperando substituição pelo dado já coletado.
+_PLACEHOLDER = _re.compile(r'\{([a-z_][a-z0-9_]*)\}')
+
+# Placeholders com nome diferente do campo do lead. `{nome}` no texto, mas o
+# campo é `nome_razaosocial`. O resto (`cep`, `rua`, `bairro`, `cidade`) já bate
+# direto com o atributo do lead.
+_ALIAS_CAMPO_LEAD = {
+    'nome': 'nome_razaosocial',
+}
+
+
+def renderizar_placeholders(texto, lead):
+    """Troca `{campo}` no texto pelo valor do campo no lead. Placeholder que não
+    corresponde a campo nenhum some (vira ''), pra nunca vazar `{xyz}` cru pro
+    cliente. `{{...}}` (template da engine) não é tocado — chave dupla não casa
+    o padrão. `lead` None devolve o texto intacto."""
+    if not texto or lead is None or '{' not in texto:
+        return texto
+
+    def _sub(m):
+        chave = m.group(1)
+        atributo = _ALIAS_CAMPO_LEAD.get(chave, chave)
+        valor = getattr(lead, atributo, None)
+        return '' if valor in (None, '') else str(valor)
+
+    return _PLACEHOLDER.sub(_sub, texto)
+
+
 def proximo_item_de(itens, respostas):
     """Mesma regra de `proximo_item`, sobre itens e respostas JÁ carregados."""
     for item in itens_elegiveis_de(itens, respostas):

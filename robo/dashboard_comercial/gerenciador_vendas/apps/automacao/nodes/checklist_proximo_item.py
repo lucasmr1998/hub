@@ -11,7 +11,7 @@ grafo, encadeando os nós depois deste.
 from .base import BaseNode, NodeResult, registrar
 from .checklist_base import campo_checklist, campo_entidade, carregar_checklist, entidade_de
 from ..models import Checklist
-from ..services.checklist import proximo_item
+from ..services.checklist import proximo_item, renderizar_placeholders
 
 
 @registrar
@@ -46,10 +46,19 @@ class ChecklistProximoItemNode(BaseNode):
             # Nada elegível ficou sem resposta: fim do roteiro pra essa entidade.
             return NodeResult(output={'checklist': checklist.slug}, branch='completo')
 
+        # Renderiza `{campo}` na pergunta a partir da ficha do lead. É o que
+        # preenche "Confira: {rua}, {bairro}, {cidade}" com o endereço que o nó
+        # `viacep` gravou, e o `{nome}` da mensagem de plano. Placeholder sem
+        # campo correspondente some, pra nunca vazar `{xyz}` cru pro cliente.
+        # Só pra lead: a entidade do bot é sempre lead, e é dela que vêm os
+        # campos citados nos textos.
+        lead = contexto.lead if entidade_tipo == 'lead' else None
+        pergunta = renderizar_placeholders(item.pergunta, lead)
+
         output = {
             'item_id': item.pk,
             'chave': item.chave,
-            'pergunta': item.pergunta,
+            'pergunta': pergunta,
             'tipo_resposta': item.tipo_resposta,
             'opcoes': item.opcoes,
             # Contagem pronta pra montar blocos tipo `ura` de contratos externos

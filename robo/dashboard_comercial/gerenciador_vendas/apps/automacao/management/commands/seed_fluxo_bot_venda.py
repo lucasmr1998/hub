@@ -132,6 +132,7 @@ LIMITE_TENTATIVAS_RECONTATO = 2
 # "validar". Ficam aqui porque o grafo referencia as duas; no fluxo em si elas
 # viram config de um nó `if`, editável no editor sem passar por deploy.
 CHAVE_CPF = 'cpf_cnpj'
+CHAVE_CEP = 'cep'
 CHAVE_ENDERECO_CONFIRMADO = 'endereco_confirmado'
 
 DESCRICAO_AGENTE = (
@@ -564,6 +565,31 @@ def _grafo_bot_venda(agente_id):
         },
         # ── Checagem de cobertura, so quando o cliente confirma o endereco ──
         # Portado do N8N, que consulta viabilidade logo apos a confirmacao.
+        # ── Endereco a partir do CEP, so quando a resposta validada e o CEP ──
+        # O cliente digita so o CEP; a pergunta seguinte confirma o endereco
+        # ("Confira: {rua}, {bairro}, {cidade}"). O ViaCEP busca esses campos e
+        # grava no lead, pra que a pergunta de confirmacao (um turno depois)
+        # ja encontre a ficha preenchida (`checklist_proximo_item` renderiza os
+        # `{campo}`). Sem isso a confirmacao mostrava `{rua}` cru pro cliente.
+        'e_cep': {
+            'tipo': 'if',
+            'config': {
+                'esquerda': '{{nodes.validar.chave}}',
+                'operador': 'igual',
+                'direita': CHAVE_CEP,
+            },
+            'pos': {'x': 1250, 'y': 200},
+            'label': 'A resposta era o CEP?',
+        },
+        'viacep_lookup': {
+            'tipo': 'viacep',
+            'config': {
+                'cep': '{{nodes.validar.valor_processado}}',
+                'gravar_no_lead': True,
+            },
+            'pos': {'x': 1550, 'y': 200},
+            'label': 'ViaCEP: busca e grava o endereço',
+        },
         'e_endereco': {
             'tipo': 'if',
             'config': {
@@ -571,7 +597,7 @@ def _grafo_bot_venda(agente_id):
                 'operador': 'igual',
                 'direita': CHAVE_ENDERECO_CONFIRMADO,
             },
-            'pos': {'x': 1250, 'y': 200},
+            'pos': {'x': 1250, 'y': 360},
             'label': 'Confirmou o endereço?',
         },
         # O endereco foi montado ao longo da conversa, em turnos anteriores.
@@ -730,7 +756,16 @@ def _grafo_bot_venda(agente_id):
         # checagem (uma chamada de API por resposta seria desperdicio, e o bot
         # tem 45s de teto por turno).
         {'de': 'e_cpf', 'para': 'consultar_cliente', 'saida': 'true'},
-        {'de': 'e_cpf', 'para': 'e_endereco', 'saida': 'false'},
+        {'de': 'e_cpf', 'para': 'e_cep', 'saida': 'false'},
+        # Era o CEP: busca o endereco e grava no lead, depois responde normal.
+        # Os tres desfechos do ViaCEP (achou, nao achou, erro) seguem pro mesmo
+        # `resp_ok`: a resposta do cliente (o CEP) estava valida de qualquer
+        # forma, o enriquecimento e best effort e nunca barra a conversa.
+        {'de': 'e_cep', 'para': 'viacep_lookup', 'saida': 'true'},
+        {'de': 'e_cep', 'para': 'e_endereco', 'saida': 'false'},
+        {'de': 'viacep_lookup', 'para': 'resp_ok', 'saida': 'encontrado'},
+        {'de': 'viacep_lookup', 'para': 'resp_ok', 'saida': 'nao_encontrado'},
+        {'de': 'viacep_lookup', 'para': 'resp_ok', 'saida': 'erro'},
         {'de': 'consultar_cliente', 'para': 'e_cliente', 'saida': 'sucesso'},
         # HubSoft fora do ar NAO pode travar a venda: segue o fluxo normal.
         # Perder a checagem de cliente e menos grave que perder o atendimento.
