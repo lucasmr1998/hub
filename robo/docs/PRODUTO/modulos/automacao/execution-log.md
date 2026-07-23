@@ -1063,3 +1063,41 @@ documentado no `definir_motivo_perda` do piloto do fluxo 25.
   `carregar_lead` cria passa no criterio do signal (exige score minimo ou
   `status_api='sucesso'`), senao nasce sem oportunidade.
 - **Status:** completed
+
+## 2026-07-22 — ViaCEP no fluxo + confirmacao de endereco preenchida
+
+- **Contexto:** testando pelo emulador, a pergunta de confirmacao de endereco
+  chegava ao cliente com `{cep}`/`{rua}`/`{bairro}`/`{cidade}` CRUS. Esses
+  campos nao sao perguntados: vem do CEP. O robo original busca o endereco e
+  preenche antes de mostrar; o nosso servia o texto literal.
+- **Insight do dono do produto:** teve dois: (1) "ter um no do ViaCEP que
+  traz o endereco pro fluxo" e (2) "como salvar isso pra depois?". O segundo e
+  a chave: cada mensagem do Matrix e uma EXECUCAO NOVA, entao o dado buscado no
+  turno do CEP precisa ficar salvo no lead pra sobreviver ate o turno da
+  confirmacao. O lead e a memoria entre turnos.
+- **Tres pecas (commit `3ebfe0f3`):**
+  - No `viacep`: embrulha `buscar_endereco_por_cep`, funcao que ja existia
+    dentro do service de viabilidade (usada no auto completar), agora exposta
+    como API publica em vez de reimplementar a chamada ao ViaCEP. Opcao
+    `gravar_no_lead` persiste rua/bairro/cidade/uf na ficha (mapa fixo
+    ViaCEP->lead: `logradouro`->`rua`, `uf`->`estado`), sem sobrescrever campo
+    que ja tem valor.
+  - Renderizacao de `{campo}`: `services/checklist.renderizar_placeholders` +
+    `checklist_proximo_item` passam a preencher os placeholders da pergunta a
+    partir da ficha do lead. Decisao do dono: le da FICHA DO LEAD (nao das
+    respostas) e placeholder desconhecido SOME (nunca vaza `{xyz}` cru). Alias
+    `{nome}`->`nome_razaosocial`; o resto bate direto. `{{...}}` da engine
+    (chave dupla) nao casa o padrao, entao nao e tocado. Resolve de quebra o
+    `{nome}` da mensagem de plano.
+  - Grafo (ramo validar): quando a resposta e o CEP, dispara o ViaCEP com
+    `gravar_no_lead`. Os tres desfechos (achou/nao achou/erro) seguem pro mesmo
+    responder: o enriquecimento e best effort e NUNCA barra a conversa (o CEP
+    ja foi validado).
+- **Ciclo dos dois turnos:** turno do CEP grava o endereco no lead; turno da
+  confirmacao le do lead e renderiza. Sem gravar, o endereco estaria certo no
+  turno 1 e vazio no turno 2, que era exatamente o bug.
+- **Mesma protecao de template nao resolvido** do `viabilidade_consultar`:
+  `{{...}}` que nao resolve vira CEP vazio, nao um CEP literal.
+- **Testes:** 65 verdes (bot + viacep + propriedade_lead), 10 novos, incluindo
+  o ciclo dos dois turnos ponta a ponta.
+- **Status:** completed
