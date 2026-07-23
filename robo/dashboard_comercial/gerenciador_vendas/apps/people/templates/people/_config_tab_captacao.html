@@ -4,11 +4,20 @@ Aba Captacao continua do hub de Configuracoes.
 Link e QR que funcionam o ano inteiro, sem depender de ter vaga aberta. Quem se
 candidata por aqui entra direto no banco de talentos.
 
-O "Novo link" fica inline, e nao num modal como Etapas e Campos: e um formulario
-so de CRIAR, sem edicao a reusar, entao nao paga a complexidade do modal. Editar
-link nao existe: se errou, desativa e cria outro (o QR ja impresso do antigo tem
-que parar de valer, e desativar e o unico jeito honesto de fazer isso).
+Criar um link acontece NUM MODAL (ver o shell), como em todas as abas: a regra
+aqui e "cadastrar = botao + modal, nunca formulario solto na tela". Editar link
+nao existe: se errou, desativa e cria outro (o QR ja impresso do antigo tem que
+parar de valer, e desativar e o unico jeito honesto de fazer isso).
 {% endcomment %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3);">
+  <h2 class="form-section-title" style="margin: 0;">Captação contínua</h2>
+  {% if pode_gerir %}
+    <button type="button" class="btn btn-primary btn-sm" data-novo-link>
+      <i class="bi bi-plus-lg"></i> Novo link
+    </button>
+  {% endif %}
+</div>
 
 <div class="section-card" style="margin-bottom: var(--sp-4);">
   <div class="section-card-body">
@@ -105,25 +114,3 @@ que parar de valer, e desativar e o unico jeito honesto de fazer isso).
   </div>
 </div>
 
-{% if pode_gerir %}
-  <div class="section-card" style="max-width: 620px;">
-    <div class="section-card-header">
-      <h2 class="section-card-title">Novo link de captação</h2>
-    </div>
-    <div class="section-card-body">
-      <form method="post" action="{% url 'people:banco_talentos_link_criar' %}" class="form-stack">
-        {% csrf_token %}
-        <div class="form-grid-2">
-          {% include "components/select.html" with name="canal" label="Canal" options=captacao_canais blank_label="Selecione" required=True helper="É o que permite saber depois qual canal trouxe candidato." %}
-          {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes blank_label="Selecione" required=True helper="Qual loja recebe estes candidatos." %}
-        </div>
-        {% include "components/input.html" with name="apelido_interno" label="Apelido interno" placeholder="Ex: QR do balcão, loja Centro" helper="Como você distingue este link dos outros. O candidato não vê." %}
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg"></i> Criar link
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-{% endif %}

@@ -127,6 +127,14 @@
     abrir('modal-quadro');
   }
 
+  function abrirLinkNovo() {
+    // Link nao tem edicao: se errou, desativa e cria outro. So cria.
+    const form = document.getElementById('form-link');
+    if (!form) return;
+    form.reset();
+    abrir('modal-link');
+  }
+
   function abrirCampoEdicao(dados) {
     const form = document.getElementById('form-campo');
     document.getElementById('campo-pk').value = dados.pk;
@@ -149,6 +157,7 @@
     if (evento.target.closest('[data-nova-etapa]')) { abrirEtapaNova(); return; }
     if (evento.target.closest('[data-novo-campo]')) { abrirCampoNovo(); return; }
     if (evento.target.closest('[data-novo-quadro]')) { abrirQuadroNovo(); return; }
+    if (evento.target.closest('[data-novo-link]')) { abrirLinkNovo(); return; }
 
     const editarEtapa = evento.target.closest('[data-editar-etapa]');
     if (editarEtapa) { abrirEtapaEdicao(editarEtapa.dataset.editarEtapa); return; }

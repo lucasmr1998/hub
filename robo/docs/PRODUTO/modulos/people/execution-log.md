@@ -657,3 +657,10 @@ O botao Filtrar continua existindo de proposito: trocar o select ja aplica, pore
 - **Menu**: Quadro saiu do grupo Recrutamento (era item proprio); agora e aba. O is-active de Configuracoes passou a cobrir `quadro*` tambem. Flyout do sidebar idem. `quadro_lista.html` removido (orfao).
 - **Output**: `_config_tab_quadro.html` novo; `quadro.py`, `fluxo.py`, shell, JS, sidebar e flyout ajustados. Testes do hub atualizados pra 5 abas + redirect do quadro; 2 testes de `test_people_quadro` repontados pro hub. 32 verdes (fluxo_config + quadro). Verificado no browser: 5 abas, Quadro troca sem reload, seletor de unidade aparece, modal abre. Sem migration.
 - **Status**: completed em dev, aguardando push.
+
+## 2026-07-23 — "Novo link" de Captacao vira botao + modal (regra geral)
+
+- **Acao**: o Lucas viu o "Novo link de captacao" que eu tinha deixado inline e mandou a regra: "tudo que e para cadastrar deve ser como modal + botao, nao nesse formato". Convertido: cabecalho da aba Captacao ganhou "+ Novo link", o form foi pro modal (`modal-link`), com handler `data-novo-link`.
+- **Consequencia**: as 5 abas do hub agora seguem o mesmo padrao (Etapas, Campos, Quadro, Captacao com botao+modal; Mensagens edita inline por design, nao e cadastro). Regra salva na memoria como padrao do produto, nao so desta tela.
+- **Output**: `_config_tab_captacao.html` e `config_recrutamento.html` e `config_recrutamento.js` ajustados. 15 testes de captacao verdes (endpoint de criar inalterado). Sem migration.
+- **Status**: completed em dev, aguardando push.

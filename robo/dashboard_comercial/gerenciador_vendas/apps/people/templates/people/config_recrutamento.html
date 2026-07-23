@@ -194,6 +194,37 @@
       </div>
     </div>
 
+    {# ── Modal: novo link de captacao ── #}
+    <div id="modal-link" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <h3 class="modal-title">Novo link de captação</h3>
+          <button type="button" class="modal-close" onclick="fecharModal('modal-link')" aria-label="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form method="post" action="{% url 'people:banco_talentos_link_criar' %}" id="form-link">
+          {% csrf_token %}
+          <div class="modal-body form-stack">
+            {% comment %}
+              Link nao tem editar-reusa: se errou, desativa e cria outro (o QR
+              impresso do antigo tem que parar de valer). Por isso o modal so
+              cria, e nao popula.
+            {% endcomment %}
+            <div class="form-grid-2">
+              {% include "components/select.html" with name="canal" label="Canal" options=captacao_canais blank_label="Selecione" required=True helper="É o que permite saber depois qual canal trouxe candidato." %}
+              {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes blank_label="Selecione" required=True helper="Qual loja recebe estes candidatos." %}
+            </div>
+            {% include "components/input.html" with name="apelido_interno" label="Apelido interno" placeholder="Ex: QR do balcão, loja Centro" helper="Como você distingue este link dos outros. O candidato não vê." %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-link')">Cancelar</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Criar link</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     {# ── Modal: definir quadro ── #}
     <div id="modal-quadro" class="modal-overlay" role="dialog" aria-modal="true" hidden>
       <div class="modal modal-md">
