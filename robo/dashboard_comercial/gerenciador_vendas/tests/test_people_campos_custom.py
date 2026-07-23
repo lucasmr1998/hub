@@ -305,7 +305,9 @@ def test_quem_so_ve_nao_configura(cenario):
     cliente = _cliente(cenario, username='so_ve_campos',
                        funcionalidades=('people.ver',))
 
-    assert cliente.get(reverse('people:campos_config')).status_code == 200
+    # A aba Campos vive no hub de Configuracoes; a rota antiga so redireciona.
+    assert cliente.get(reverse('people:fluxo_config'),
+                       {'tab': 'campos'}).status_code == 200
     assert cliente.post(reverse('people:campo_salvar'),
                         {'nome': 'X'}).status_code == 403
 

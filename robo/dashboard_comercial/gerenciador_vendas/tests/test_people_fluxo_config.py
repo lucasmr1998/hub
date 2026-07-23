@@ -243,3 +243,59 @@ def test_quem_so_ve_nao_configura(cenario):
     assert cliente.get(reverse('people:fluxo_config')).status_code == 200
     assert cliente.post(reverse('people:fluxo_etapa_salvar'),
                         {'nome': 'X'}).status_code == 403
+
+
+# ── Hub de Configuracoes: as tres telas viraram abas ─────────────────────────
+
+@pytest.mark.django_db
+def test_hub_renderiza_as_quatro_abas(cenario):
+    """
+    Etapas, Mensagens, Campos e Captacao numa pagina so. As abas sao
+    client-side, entao os quatro paineis vem no HTML; o JS mostra um por vez.
+    """
+    corpo = _cliente(cenario).get(reverse('people:fluxo_config')).content.decode()
+
+    for aba in ['etapas', 'mensagens', 'campos', 'captacao']:
+        assert f'data-tab="{aba}"' in corpo
+        assert f'class="config-painel" id="{aba}"' in corpo
+    # Criar/editar etapa e campo acontecem em modal, e nao mais inline.
+    assert 'id="modal-etapa"' in corpo and 'id="modal-campo"' in corpo
+
+
+@pytest.mark.django_db
+def test_tab_invalido_cai_na_primeira_aba(cenario):
+    """`?tab=` forjado nao pode deixar dois paineis abertos nem nenhum."""
+    corpo = _cliente(cenario).get(
+        reverse('people:fluxo_config'), {'tab': 'inexistente'}).content.decode()
+
+    # Etapas ativa (sem hidden); as demais escondidas.
+    assert 'id="etapas" hidden' not in corpo
+    assert 'id="mensagens" hidden' in corpo
+    assert 'id="campos" hidden' in corpo
+    assert 'id="captacao" hidden' in corpo
+
+
+@pytest.mark.django_db
+def test_rotas_antigas_redirecionam_pro_hub(cenario):
+    """Fluxo, Campos e Captacao eram URLs proprias; agora levam ao hub na aba."""
+    cliente = _cliente(cenario)
+
+    r_campos = cliente.get(reverse('people:campos_config'))
+    assert r_campos.status_code == 302 and r_campos['Location'].endswith('tab=campos')
+
+    r_capt = cliente.get(reverse('people:banco_talentos_links'))
+    assert r_capt.status_code == 302 and r_capt['Location'].endswith('tab=captacao')
+
+
+@pytest.mark.django_db
+def test_salvar_mensagem_volta_pra_aba_mensagens(cenario):
+    """
+    Sem o ?tab, salvar uma mensagem devolveria o RH pra aba Etapas, e ele leria
+    isso como "cade o que eu salvei".
+    """
+    etapa = EtapaPipeline.objects.filter(tenant=cenario['tenant']).first()
+    resposta = _cliente(cenario).post(reverse('people:fluxo_mensagem_salvar'),
+                                      {'etapa': etapa.pk, 'texto': 'Oi {{primeiro_nome}}'})
+
+    assert resposta.status_code == 302
+    assert resposta['Location'].endswith('tab=mensagens')

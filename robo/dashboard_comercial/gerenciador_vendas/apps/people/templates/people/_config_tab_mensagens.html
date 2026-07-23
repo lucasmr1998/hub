@@ -1,0 +1,58 @@
+{% comment %}
+Aba Mensagens do hub de Configuracoes.
+
+Mensagem sugerida por etapa e por saida. Ficam AQUI, e nao na ficha do candidato,
+porque sao configuracao do fluxo: a ficha so exibe a mensagem ja pronta pra
+edicao daquele candidato. A origem diz o mesmo na propria tela ("segue o padrao
+configurado no Fluxo do Processo Seletivo para esta etapa").
+{% endcomment %}
+
+<h2 class="form-section-title" style="margin-top: 0;">Mensagens de WhatsApp</h2>
+<p class="field-helper" style="margin-bottom: var(--sp-3);">
+  Sugestão que aparece na ficha do candidato quando ele chega nesta etapa ou
+  saída. <strong>Nada é enviado automaticamente:</strong> o RH revisa, ajusta se
+  quiser e o botão abre o WhatsApp. Aceita
+  {% verbatim %}<code>{{nome}}</code>, <code>{{primeiro_nome}}</code>,
+  <code>{{vaga}}</code>, <code>{{unidade}}</code> e
+  <code>{{cargo}}</code>.{% endverbatim %} Deixar em branco remove a sugestão.
+</p>
+
+{% if pode_gerir %}
+  <div class="form-stack" style="gap: var(--sp-3); margin-bottom: var(--sp-5);">
+    {% for linha in etapas_linhas %}
+      <form method="post" action="{% url 'people:fluxo_mensagem_salvar' %}"
+            class="section-card">
+        {% csrf_token %}
+        {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+        <input type="hidden" name="etapa" value="{{ linha.etapa.pk }}">
+        <div class="section-card-body">
+          {% include "components/textarea.html" with name="texto" label=linha.etapa.nome value=linha.mensagem.texto rows=3 placeholder="Sem mensagem sugerida para esta etapa" %}
+          <div class="form-actions">
+            <button type="submit" class="btn btn-ghost btn-sm">
+              <i class="bi bi-check-lg"></i> Salvar
+            </button>
+          </div>
+        </div>
+      </form>
+    {% endfor %}
+
+    {% for saida in saidas %}
+      <form method="post" action="{% url 'people:fluxo_mensagem_salvar' %}"
+            class="section-card">
+        {% csrf_token %}
+        {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+        <input type="hidden" name="saida" value="{{ saida.valor }}">
+        <div class="section-card-body">
+          {% include "components/textarea.html" with name="texto" label=saida.rotulo value=saida.mensagem.texto rows=3 placeholder="Sem mensagem sugerida para esta saída" %}
+          <div class="form-actions">
+            <button type="submit" class="btn btn-ghost btn-sm">
+              <i class="bi bi-check-lg"></i> Salvar
+            </button>
+          </div>
+        </div>
+      </form>
+    {% endfor %}
+  </div>
+{% else %}
+  {% include "components/empty_state.html" with icon="bi-chat-left-text" text="Sem permissão para editar as mensagens" %}
+{% endif %}

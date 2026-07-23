@@ -12,7 +12,7 @@ ANTES, porque e o tipo de efeito que surpreende.
 """
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -32,15 +32,29 @@ def _unidade_do_request(request):
     return None
 
 
-def _voltar(unidade):
-    destino = '/people/fluxo/'
-    return redirect(f'{destino}?unidade={unidade.pk}' if unidade else destino)
+def _voltar(unidade, tab='etapas'):
+    """
+    Volta pro hub de configuracoes, na aba certa.
+
+    O `tab` importa porque as tabs sao client-side: sem ele, salvar uma mensagem
+    devolveria o usuario pra aba Etapas, e ele leria isso como "cadê o que eu
+    salvei". A unidade viaja junto pra nao perder o escopo do fluxo no caminho.
+    """
+    destino = f'/people/fluxo/?tab={tab}'
+    if unidade:
+        destino += f'&unidade={unidade.pk}'
+    return redirect(destino)
 
 
 @requer_people()
-def configurar(request):
-    unidade = _unidade_do_request(request)
+def contexto_fluxo(request, unidade):
+    """
+    Contexto das abas Etapas e Mensagens, namespaceado.
 
+    Vive separado da view porque o hub de Configuracoes reune quatro abas numa
+    tela so, e as chaves genericas (`linhas`) colidiriam entre elas. Prefixo
+    `etapas_` deixa cada aba dona das suas chaves.
+    """
     # Todas, inclusive inativas: a tela e onde se reativa.
     etapas = list(EtapaPipeline.do_escopo(request.tenant, unidade,
                                           somente_ativas=False)
@@ -80,9 +94,8 @@ def configurar(request):
     herda = bool(unidade) and not EtapaPipeline.all_tenants.filter(
         tenant=request.tenant, unidade=unidade).exists()
 
-    return render(request, 'people/fluxo_config.html', {
-        'pagetitle': 'Fluxo do processo seletivo',
-        'linhas': linhas,
+    return {
+        'etapas_linhas': linhas,
         'unidade': unidade,
         'herda_do_tenant': herda,
         'unidades_opcoes': list(
@@ -94,8 +107,38 @@ def configurar(request):
              'mensagem': por_saida.get(v)}
             for v, r in estados_rs.SAIDAS
         ],
+    }
+
+
+# Abas validas do hub, e a ordem em que aparecem. Lista, e nao set, porque a
+# ordem importa e um `tab=` invalido cai na primeira.
+ABAS = ['etapas', 'mensagens', 'campos', 'captacao']
+
+
+def configurar(request):
+    """
+    Hub de Configuracoes do recrutamento: Etapas, Mensagens, Campos, Captacao.
+
+    Antes eram tres telas soltas no menu (Fluxo, Campos, Captacao continua).
+    Aqui viram abas de uma pagina so, client-side: trocar de aba nao recarrega,
+    porque recarregar numa troca de aba incomoda tanto quanto no filtro do board.
+    """
+    from apps.people.views import campos, vagas
+
+    unidade = _unidade_do_request(request)
+    aba = request.GET.get('tab')
+    if aba not in ABAS:
+        aba = 'etapas'
+
+    contexto = {
+        'pagetitle': 'Configurações do recrutamento',
+        'aba_ativa': aba,
         'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
-    })
+    }
+    contexto.update(contexto_fluxo(request, unidade))
+    contexto.update(campos.contexto_campos(request))
+    contexto.update(vagas.contexto_captacao(request))
+    return render(request, 'people/config_recrutamento.html', contexto)
 
 
 @require_POST
@@ -305,11 +348,11 @@ def mensagem_salvar(request):
     # devolver IntegrityError na cara do usuario.
     if bool(etapa_pk) == bool(saida):
         messages.error(request, 'Escolha uma etapa ou uma saída.')
-        return _voltar(unidade)
+        return _voltar(unidade, 'mensagens')
 
     if saida and saida not in estados_rs.ROTULOS_SAIDA:
         messages.error(request, 'Saída inválida.')
-        return _voltar(unidade)
+        return _voltar(unidade, 'mensagens')
 
     filtro = {'etapa_id': int(etapa_pk)} if etapa_pk else {'saida': saida}
     if etapa_pk:
@@ -323,7 +366,7 @@ def mensagem_salvar(request):
         if existente:
             existente.delete()
             messages.success(request, 'Mensagem removida.')
-        return _voltar(unidade)
+        return _voltar(unidade, 'mensagens')
 
     if existente:
         existente.texto = texto
@@ -337,4 +380,4 @@ def mensagem_salvar(request):
     registrar_acao('people', 'editar', 'mensagem_recrutamento', 0,
                    'Mensagem do fluxo de recrutamento ajustada.', request=request)
     messages.success(request, 'Mensagem salva.')
-    return _voltar(unidade)
+    return _voltar(unidade, 'mensagens')

@@ -1,0 +1,96 @@
+{% comment %}
+Aba Campos do hub de Configuracoes.
+
+Campos que o tenant inventa, alem dos que ja vem prontos. Aqui se DEFINE o campo
+(rotulo, tipo, opcoes); em cada vaga se escolhe se ela pede e se e obrigatorio.
+
+Criar e editar acontecem NUM MODAL (ver o shell), mesmo padrao da aba Etapas: num
+hub com quatro abas, um formulario inline embaixo de uma aba e um botao que abre
+modal na outra seria inconsistente na mesma tela.
+{% endcomment %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3);">
+  <h2 class="form-section-title" style="margin: 0;">Seus campos</h2>
+  {% if pode_gerir %}
+    <button type="button" class="btn btn-primary btn-sm" data-novo-campo>
+      <i class="bi bi-plus-lg"></i> Novo campo
+    </button>
+  {% endif %}
+</div>
+
+{% if campos_linhas %}
+  <div class="form-stack" style="gap: var(--sp-2); margin-bottom: var(--sp-4);">
+    {% for linha in campos_linhas %}
+      <div class="campo-linha{% if not linha.campo.ativo %} is-inativa{% endif %}">
+        <div class="campo-nome">
+          <strong>{{ linha.campo.nome }}</strong>
+          {% if not linha.campo.ativo %}
+            {% include "components/badge.html" with variant="neutral" label="Desativado" size="sm" %}
+          {% endif %}
+          <span class="field-helper" style="display: block;">
+            {{ linha.respostas }} resposta{{ linha.respostas|pluralize }}
+            {% if linha.campo.opcoes %} · {{ linha.campo.opcoes|length }} opções{% endif %}
+            {% if linha.campo.ajuda %} · {{ linha.campo.ajuda }}{% endif %}
+          </span>
+        </div>
+
+        <span class="campo-tipo">{{ linha.campo.get_tipo_display }}</span>
+
+        {% if pode_gerir %}
+          <div class="campo-acoes">
+            <form method="post" action="{% url 'people:campo_mover' linha.campo.pk %}" style="display: inline;">
+              {% csrf_token %}
+              <input type="hidden" name="direcao" value="cima">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Subir"
+                      {% if forloop.first %}disabled{% endif %}><i class="bi bi-arrow-up"></i></button>
+            </form>
+            <form method="post" action="{% url 'people:campo_mover' linha.campo.pk %}" style="display: inline;">
+              {% csrf_token %}
+              <input type="hidden" name="direcao" value="baixo">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Descer"
+                      {% if forloop.last %}disabled{% endif %}><i class="bi bi-arrow-down"></i></button>
+            </form>
+
+            <button type="button" class="btn btn-ghost btn-sm" title="Editar"
+                    data-editar-campo='{"pk": "{{ linha.campo.pk }}", "nome": "{{ linha.campo.nome|escapejs }}", "tipo": "{{ linha.campo.tipo }}", "secao": "{{ linha.campo.secao }}", "ajuda": "{{ linha.campo.ajuda|escapejs }}", "opcoes": "{{ linha.campo.opcoes|join:"\n"|escapejs }}"}'>
+              <i class="bi bi-sliders"></i>
+            </button>
+
+            <form method="post" action="{% url 'people:campo_alternar' linha.campo.pk %}" style="display: inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-sm"
+                      title="{% if linha.campo.ativo %}Desativar{% else %}Ativar{% endif %}">
+                <i class="bi {% if linha.campo.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+              </button>
+            </form>
+
+            <form method="post" action="{% url 'people:campo_remover' linha.campo.pk %}"
+                  style="display: inline;"
+                  onsubmit="return confirm('Apagar o campo \"{{ linha.campo.nome|escapejs }}\"? Só é possível se ninguém tiver respondido.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-sm" title="Apagar"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  {% include "components/empty_state.html" with icon="bi-input-cursor-text" text="Nenhum campo seu ainda" subtext="Os campos prontos continuam valendo. Crie um aqui quando precisar perguntar algo que só a sua operação pede." %}
+{% endif %}
+
+<h2 class="form-section-title">Campos que já vêm prontos</h2>
+<p class="field-helper" style="margin-bottom: var(--sp-3);">
+  Não se apagam nem se renomeiam aqui, porque cada um tem coluna própria e é
+  usado por outras partes do sistema. Na vaga você escolhe quais deles pedir.
+  Nome e WhatsApp são fixos: o WhatsApp é como o sistema sabe que a mesma pessoa
+  se candidatou duas vezes, e é o único jeito de responder pra ela.
+</p>
+<div style="margin-bottom: var(--sp-2);">
+  {% for campo in campos_sistema %}
+    <span class="sistema-chip">
+      {% if campo.travado %}<i class="bi bi-lock-fill"></i>{% endif %}
+      {{ campo.rotulo_padrao }}
+    </span>
+  {% endfor %}
+</div>

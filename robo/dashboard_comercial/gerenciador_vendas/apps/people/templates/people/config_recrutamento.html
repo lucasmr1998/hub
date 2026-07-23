@@ -1,0 +1,230 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}{{ pagetitle }}, Hubtrix{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <style>
+    /* Linha de etapa e de campo: mesma anatomia, item com acoes a direita. */
+    .etapa-linha, .campo-linha {
+      display: flex; align-items: center; gap: var(--sp-3);
+      padding: var(--sp-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius); background: var(--color-bg);
+    }
+    .etapa-linha.is-inativa, .campo-linha.is-inativa { opacity: .55; }
+    .etapa-ordem {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: #fff;
+    }
+    .etapa-nome, .campo-nome { flex: 1; min-width: 0; }
+    .etapa-acoes, .campo-acoes { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
+    .saida-cartao {
+      padding: var(--sp-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius); background: var(--color-bg); min-width: 150px;
+    }
+    .campo-tipo {
+      flex-shrink: 0; font-size: var(--fs-xs); color: var(--color-text-muted);
+      padding: 2px var(--sp-2); border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+    }
+    .sistema-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px var(--sp-2); margin: 0 4px 4px 0;
+      font-size: var(--fs-xs); color: var(--color-text-muted);
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    }
+    /* Painel de aba: escondido quando nao e a aba ativa. O [hidden] depende da
+       regra global em partials/_components_styles.html, que poe !important pra
+       vencer qualquer display. */
+    .config-painel { padding-top: var(--sp-4); }
+  </style>
+{% endblock %}
+
+{% block content %}
+  {% comment %}
+    Hub de Configuracoes do recrutamento. Tres telas que eram itens soltos no
+    menu (Fluxo, Campos, Captacao continua) viraram abas de uma pagina so.
+
+    As abas sao CLIENT-SIDE (o JS troca o painel visivel, ver config_recrutamento.js):
+    trocar de aba nao recarrega, porque recarregar numa troca de aba incomoda
+    tanto quanto no filtro do board. Depois de um POST, a view volta pra ca com
+    ?tab=, e o JS reabre a aba certa: sem isso, salvar uma mensagem devolveria o
+    usuario pra aba Etapas.
+  {% endcomment %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">People · Recrutamento</p>
+        <h1 class="page-title">Configurações</h1>
+        <p class="page-subtitle">
+          Etapas do processo, mensagens, campos da candidatura e captação contínua.
+        </p>
+      </div>
+
+      {% comment %}
+        Seletor de unidade vale so pras abas Etapas e Mensagens (o fluxo e por
+        escopo); Campos e Captacao sao do tenant inteiro. Por isso ele mora no
+        header e o JS o mostra so nessas duas abas. Trocar a unidade RECARREGA
+        (etapas diferentes), levando o ?tab pra nao perder a aba.
+      {% endcomment %}
+      <form method="get" id="filtro-unidade" data-abas="etapas mensagens"
+            style="display: flex; gap: var(--sp-3); align-items: flex-end;{% if aba_ativa != 'etapas' and aba_ativa != 'mensagens' %} display: none;{% endif %}">
+        <input type="hidden" name="tab" value="{{ aba_ativa }}">
+        {% include "components/select.html" with name="unidade" label="Fluxo de" options=unidades_opcoes value=unidade.pk|default:"" blank_label="Todas as unidades" size="sm" %}
+        <noscript><button type="submit" class="btn btn-ghost btn-sm">Trocar</button></noscript>
+      </form>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for mensagem in messages %}
+      <p class="field-helper"><i class="bi bi-info-circle"></i> {{ mensagem }}</p>
+    {% endfor %}
+  {% endif %}
+
+  {# ── Barra de abas (marcacao do components/tabs.html, com contadores) ── #}
+  <div class="tabs tabs-line" role="tablist">
+    <button type="button" class="tabs-item{% if aba_ativa == 'etapas' %} is-active{% endif %}"
+            role="tab" data-tab="etapas" aria-selected="{% if aba_ativa == 'etapas' %}true{% else %}false{% endif %}">
+      <i class="bi bi-diagram-3"></i><span>Etapas</span>
+      {% if etapas_linhas %}<span class="tabs-item-badge">{{ etapas_linhas|length }}</span>{% endif %}
+    </button>
+    <button type="button" class="tabs-item{% if aba_ativa == 'mensagens' %} is-active{% endif %}"
+            role="tab" data-tab="mensagens" aria-selected="{% if aba_ativa == 'mensagens' %}true{% else %}false{% endif %}">
+      <i class="bi bi-chat-left-text"></i><span>Mensagens</span>
+    </button>
+    <button type="button" class="tabs-item{% if aba_ativa == 'campos' %} is-active{% endif %}"
+            role="tab" data-tab="campos" aria-selected="{% if aba_ativa == 'campos' %}true{% else %}false{% endif %}">
+      <i class="bi bi-input-cursor-text"></i><span>Campos</span>
+      {% if campos_linhas %}<span class="tabs-item-badge">{{ campos_linhas|length }}</span>{% endif %}
+    </button>
+    <button type="button" class="tabs-item{% if aba_ativa == 'captacao' %} is-active{% endif %}"
+            role="tab" data-tab="captacao" aria-selected="{% if aba_ativa == 'captacao' %}true{% else %}false{% endif %}">
+      <i class="bi bi-qr-code"></i><span>Captação</span>
+      {% if captacao_links %}<span class="tabs-item-badge">{{ captacao_links|length }}</span>{% endif %}
+    </button>
+  </div>
+
+  <div class="config-painel" id="etapas"{% if aba_ativa != 'etapas' %} hidden{% endif %}>
+    {% include "people/_config_tab_etapas.html" %}
+  </div>
+  <div class="config-painel" id="mensagens"{% if aba_ativa != 'mensagens' %} hidden{% endif %}>
+    {% include "people/_config_tab_mensagens.html" %}
+  </div>
+  <div class="config-painel" id="campos"{% if aba_ativa != 'campos' %} hidden{% endif %}>
+    {% include "people/_config_tab_campos.html" %}
+  </div>
+  <div class="config-painel" id="captacao"{% if aba_ativa != 'captacao' %} hidden{% endif %}>
+    {% include "people/_config_tab_captacao.html" %}
+  </div>
+
+  {% comment %}
+    Modais fora dos paineis de proposito: ficam sempre no DOM, entao abrir um
+    deles nao depende de qual aba esta visivel, e o overlay cobre a tela inteira.
+    Criar e editar reusam o MESMO form: dois forms identicos pra criar e editar
+    e a origem classica de um divergir do outro.
+  {% endcomment %}
+  {% if pode_gerir %}
+    {# ── Modal: nova/editar etapa ── #}
+    <div id="modal-etapa" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <h3 class="modal-title" id="titulo-modal-etapa">Nova etapa</h3>
+          <button type="button" class="modal-close" onclick="fecharModal('modal-etapa')" aria-label="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form method="post" action="{% url 'people:fluxo_etapa_salvar' %}" id="form-etapa">
+          {% csrf_token %}
+          {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+          <input type="hidden" name="pk" id="etapa-pk" value="">
+          <div class="modal-body form-stack">
+            {% include "components/input.html" with name="nome" label="Nome da etapa" required=True placeholder="Ex: Entrevista com RH" %}
+
+            <div class="form-grid-2">
+              <div class="field">
+                <label class="field-label" for="etapa-cor">Cor</label>
+                <div class="field-input-wrap">
+                  <select class="field-input field-select" name="cor" id="etapa-cor">
+                    <option value="">Automática (pela ordem)</option>
+                    {% for chave, rotulo, hexa in cores %}
+                      <option value="{{ chave }}">{{ rotulo }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              {% include "components/input.html" with name="sla_dias" label="Prazo máximo (dias)" type="number" helper="Depois disso o candidato aparece como atrasado. Em branco, sem prazo." %}
+            </div>
+
+            <div class="field">
+              <label class="field-label">O que esta etapa mostra na ficha</label>
+              <div class="form-stack" style="gap: var(--sp-2); margin-top: var(--sp-2);">
+                {% for chave, rotulo, descricao in blocos_disponiveis %}
+                  {% include "components/checkbox.html" with name="blocos" value=chave label=rotulo helper=descricao id=chave %}
+                {% endfor %}
+              </div>
+            </div>
+
+            <div id="bloco-roteiro" hidden>
+              {% include "components/textarea.html" with name="roteiro" label="Perguntas do roteiro" rows=5 placeholder="Uma pergunta por linha" helper="Aparecem como lista para o entrevistador marcar." %}
+            </div>
+            <div id="bloco-checklist" hidden>
+              {% include "components/textarea.html" with name="checklist" label="Requisitos a validar" rows=4 placeholder="Um item por linha" helper="Itens objetivos que confirmam se a pessoa pode ocupar a vaga." %}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-etapa')">Cancelar</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar etapa</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# ── Modal: novo/editar campo ── #}
+    <div id="modal-campo" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <h3 class="modal-title" id="titulo-modal-campo">Novo campo</h3>
+          <button type="button" class="modal-close" onclick="fecharModal('modal-campo')" aria-label="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form method="post" action="{% url 'people:campo_salvar' %}" id="form-campo">
+          {% csrf_token %}
+          <input type="hidden" name="pk" id="campo-pk" value="">
+          <div class="modal-body form-stack">
+            {% include "components/input.html" with name="nome" label="Rótulo do campo" required=True placeholder="Ex: Tem CNH categoria B?" helper="O que o candidato lê." %}
+
+            <div class="form-grid-2">
+              {% include "components/select.html" with name="tipo" label="Tipo" options=campos_tipos value="text" id="campo-tipo" %}
+              {% include "components/select.html" with name="secao" label="Aparece no bloco" options=campos_secoes value="experiencia" id="campo-secao" %}
+            </div>
+
+            <div id="bloco-opcoes" hidden>
+              {% include "components/textarea.html" with name="opcoes" label="Opções da lista" rows=4 placeholder="Uma por linha&#10;Ex: Manhã&#10;Tarde&#10;Noite" helper="Uma opção por linha." %}
+            </div>
+
+            {% include "components/input.html" with name="ajuda" label="Texto de ajuda" placeholder="Opcional, aparece abaixo do campo" %}
+
+            <p class="field-helper">
+              <i class="bi bi-info-circle"></i>
+              Campo novo nasce <strong>desligado</strong> nas vagas. Ele só passa a
+              ser perguntado nas vagas em que você marcar "Pedir", pra criar um
+              campo não mexer sozinho em vaga que já está recebendo gente.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-campo')">Cancelar</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar campo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  <script src="{% static 'people/js/config_recrutamento.js' %}"></script>
+{% endblock %}

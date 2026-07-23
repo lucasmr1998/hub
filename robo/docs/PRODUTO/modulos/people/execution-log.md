@@ -629,3 +629,21 @@ O botao Filtrar continua existindo de proposito: trocar o select ja aplica, pore
 - **Contexto que mudou no meio**: outra sessao PUSHOU a triagem (831638c7) pra origin. Ela nao esta mais "esperando push". Este commit do docx (8cedeb4e) e o unico local, e precisa subir junto: origin tem "aceita docx" + "so le pdf", entao um deploy sem ele poe o bug da analise cega em prod.
 - **Output**: `triagem_ia.py` e `campos_candidatura.py` alterados; 6 testes novos (22 no arquivo). 77 testes verdes no total (triagem + formato + candidatura), `check` limpo. `python-docx==1.2.0` ja versionado. Sem migration.
 - **Status**: completed em dev, 1 commit local aguardando push.
+
+## 2026-07-22 — Fluxo, Campos e Captacao viram um hub de Configuracoes em tabs
+
+- **Acao**: o Lucas pediu pra transformar a pagina de Fluxo numa pagina de Configuracoes, quebrada em tabs, com "Nova etapa" em modal. Escopo escolhido por ele: consolidar os TRES itens do menu de Recrutamento (Fluxo, Campos, Captacao continua) numa pagina so.
+
+**Arquitetura: tabs client-side.** Trocar de aba mostra/esconde painel, sem recarregar. E deliberado e ecoa o pedido anterior dele no board ("no filtro n deveria trocar de pagina"): recarregar numa troca de aba incomoda igual. Depois de um POST, a view volta com `?tab=`, e o JS reabre a aba certa. Sem isso, salvar uma mensagem devolveria o RH pra aba Etapas.
+
+**Uma view, quatro contextos namespaceados.** `fluxo.configurar` virou o hub e junta `contexto_fluxo` + `campos.contexto_campos` + `vagas.contexto_captacao`. Os contextos foram extraidos das tres views antigas pra helpers reusaveis. Namespacear (`etapas_linhas`, `campos_linhas`) foi obrigatorio: as tres usavam `linhas` e colidiriam numa tela so.
+
+**Nova etapa e Novo campo viraram modal.** Antes eram formularios inline embaixo da lista, que apareciam gigantes mesmo sem ninguem ir criar nada. Campo virou modal tambem, por consistencia: numa tela com quatro abas, botao-que-abre-modal numa e form-inline noutra e inconsistente. Captacao mantem "Novo link" inline (form so de criar, sem edicao a reusar).
+
+**BUG LATENTE CORRIGIDO DE QUEBRA**: o fluxo antigo CHAMAVA `sincronizarBlocos()` mas nunca a definia. Resultado: marcar o bloco "Roteiro" ou "Requisitos a validar" nao revelava o textarea, entao o RH marcava e nao tinha onde escrever. O JS novo implementa a funcao. Confirmado no browser.
+
+**Rotas antigas preservadas**: `/people/campos/` e `/people/captacao/` redirecionam pro hub na aba certa (bookmark antigo nao quebra); os POST de salvar voltam pro hub com `?tab=`. Menu: 3 itens viraram 1 ("Configuracoes"). Flyout do sidebar colapsado idem.
+
+- **Output**: `config_recrutamento.html` + 4 partials de aba + `config_recrutamento.js` novos; `fluxo_config.html`, `campos_config.html`, `banco_talentos_links.html` removidos (orfaos); views `fluxo/campos/vagas` refatoradas; sidebar e flyout consolidados. 4 testes novos no hub (`test_people_fluxo_config`), 3 testes de rota antiga atualizados. Verificado no browser: 4 abas trocam sem reload, seletor de unidade some fora de Etapas/Mensagens, modal abre, sync de blocos funciona. Sem migration.
+- **Nota**: ha DOIS itens "Configuracoes" no menu do People agora, um em Recrutamento (este) e um em Sistema (o do Departamento Pessoal). Convivem porque a secao desambigua, mas vale unificar quando o DP tambem virar hub.
+- **Status**: completed em dev, aguardando push.

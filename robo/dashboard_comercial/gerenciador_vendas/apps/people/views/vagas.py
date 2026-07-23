@@ -439,20 +439,28 @@ def banco_talentos_links(request):
     Tem valor proprio: um QR fixo no balcao da loja capta o ano inteiro, sem
     depender de haver vaga aberta naquele dia.
     """
+    return redirect('/people/fluxo/?tab=captacao')
+
+
+def contexto_captacao(request):
+    """
+    Contexto da aba Captacao continua, namespaceado com prefixo `captacao_`.
+
+    `unidades_opcoes` fica sem prefixo de proposito: e a MESMA lista de unidades
+    que a aba Etapas usa, e duplicar seria duas consultas pro mesmo dado. O hub
+    monta essa chave uma vez.
+    """
     links = (LinkCandidatura.objects
              .filter(vaga__isnull=True)
              .select_related('unidade')
              .order_by('-ativo', '-criado_em'))
 
-    return render(request, 'people/banco_talentos_links.html', {
-        'pagetitle': 'Captação contínua',
-        'links': [{'link': l, 'url': request.build_absolute_uri(l.caminho_publico)}
-                  for l in links],
-        'canais': CANAL_CHOICES,
-        'unidades_opcoes': list(
-            Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
-        'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
-    })
+    return {
+        'captacao_links': [
+            {'link': l, 'url': request.build_absolute_uri(l.caminho_publico)}
+            for l in links],
+        'captacao_canais': CANAL_CHOICES,
+    }
 
 
 @require_POST
@@ -464,14 +472,14 @@ def banco_talentos_link_criar(request):
 
     if canal not in dict(CANAL_CHOICES):
         messages.error(request, 'Escolha um canal para o link.')
-        return redirect('people:banco_talentos_links')
+        return redirect('/people/fluxo/?tab=captacao')
 
     # A unidade e obrigatoria mesmo sem vaga: o candidato do banco precisa estar
     # ligado a uma loja, senao nao ha como o RH daquela loja encontrar ele.
     unidade = Unidade.objects.filter(pk=unidade_id).first() if unidade_id.isdigit() else None
     if unidade is None:
         messages.error(request, 'Escolha a unidade que vai receber os candidatos.')
-        return redirect('people:banco_talentos_links')
+        return redirect('/people/fluxo/?tab=captacao')
 
     link = LinkCandidatura(
         tenant=request.tenant,
@@ -491,7 +499,7 @@ def banco_talentos_link_criar(request):
                    f'Link de captação contínua ({link.get_canal_display()}) '
                    f'criado para {unidade.nome}.', request=request)
     messages.success(request, f'Link de {link.get_canal_display()} criado.')
-    return redirect('people:banco_talentos_links')
+    return redirect('/people/fluxo/?tab=captacao')
 
 
 @requer_people()

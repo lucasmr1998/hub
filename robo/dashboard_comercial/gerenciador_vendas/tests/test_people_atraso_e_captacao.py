@@ -228,8 +228,9 @@ def test_a_tela_so_lista_link_sem_vaga(cenario):
         canal='instagram', apelido_interno='QR do balcao',
         token=secrets.token_urlsafe(16))
 
+    # A captacao virou aba do hub de Configuracoes; a rota antiga redireciona.
     corpo = _cliente(cenario).get(
-        reverse('people:banco_talentos_links')).content.decode()
+        reverse('people:fluxo_config'), {'tab': 'captacao'}).content.decode()
 
     assert 'QR do balcao' in corpo
     assert 'Link da vaga' not in corpo
@@ -255,6 +256,8 @@ def test_quem_so_ve_nao_cria_link(cenario):
     cliente = _cliente(cenario, username='so_ve_217',
                        funcionalidades=('people.ver',))
 
-    assert cliente.get(reverse('people:banco_talentos_links')).status_code == 200
+    # A aba Captacao vive no hub de Configuracoes; a rota antiga so redireciona.
+    assert cliente.get(reverse('people:fluxo_config'),
+                       {'tab': 'captacao'}).status_code == 200
     assert cliente.post(reverse('people:banco_talentos_link_criar'),
                         {'canal': 'instagram'}).status_code == 403

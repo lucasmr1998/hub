@@ -10,18 +10,20 @@ DIVISAO DE PAPEL, a mesma dos campos de sistema: aqui o tenant DEFINE o campo
 divisao seriam dois modelos mentais pra mesma tabela de configuracao.
 """
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from apps.people import campos_candidatura as catalogo
 from apps.people.models import CampoCandidatura, Candidato
-from apps.people.permissoes import pode_acessar, requer_people
+from apps.people.permissoes import requer_people
 from apps.sistema.utils import registrar_acao
 
 
 def _voltar():
-    return redirect('people:campos_config')
+    # Aba Campos do hub de Configuracoes. Client-side, entao o `?tab=` diz ao JS
+    # qual painel reabrir depois do POST.
+    return redirect('/people/fluxo/?tab=campos')
 
 
 def _slug_livre(tenant, base, ignorar_pk=None):
@@ -57,7 +59,14 @@ def _ler_opcoes(bruto):
 
 
 @requer_people()
-def configurar(request):
+def contexto_campos(request):
+    """
+    Contexto da aba Campos, namespaceado com prefixo `campos_`.
+
+    Separado da view porque quem monta a tela e o hub de Configuracoes
+    (`fluxo.configurar`), que junta quatro abas. Chave generica como `linhas`
+    colidiria com a das Etapas; o prefixo resolve.
+    """
     campos = list(CampoCandidatura.objects.all().order_by('ordem', 'nome'))
 
     # Quantos candidatos ja responderam cada campo. E o que a tela precisa pra
@@ -70,17 +79,18 @@ def configurar(request):
             if slug in respostas:
                 respostas[slug] += 1
 
-    linhas = [{'campo': campo, 'respostas': respostas.get(campo.slug, 0)}
-              for campo in campos]
-
-    return render(request, 'people/campos_config.html', {
-        'pagetitle': 'Campos da candidatura',
-        'linhas': linhas,
-        'tipos': CampoCandidatura.TIPO_CHOICES,
-        'secoes': [(s['chave'], s['titulo']) for s in catalogo.SECOES],
+    return {
+        'campos_linhas': [{'campo': campo, 'respostas': respostas.get(campo.slug, 0)}
+                          for campo in campos],
+        'campos_tipos': CampoCandidatura.TIPO_CHOICES,
+        'campos_secoes': [(s['chave'], s['titulo']) for s in catalogo.SECOES],
         'campos_sistema': catalogo.CAMPOS_SISTEMA,
-        'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
-    })
+    }
+
+
+def configurar(request):
+    """Rota antiga: a tela virou aba do hub de Configuracoes."""
+    return redirect('/people/fluxo/?tab=campos')
 
 
 @require_POST

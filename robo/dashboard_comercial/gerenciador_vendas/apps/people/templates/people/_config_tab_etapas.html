@@ -1,0 +1,136 @@
+{% comment %}
+Aba Etapas do hub de Configuracoes.
+
+Lista as etapas do fluxo, as saidas fixas e o botao de restaurar. Criar e editar
+etapa acontecem NUM MODAL (ver o shell config_recrutamento.html), e nao mais num
+formulario inline: com o formulario inline, a pagina abria com um form gigante
+embaixo da lista mesmo quando ninguem ia criar nada, e editar exigia rolar ate
+ele. O modal deixa a aba ser so a lista, que e o que o RH vem ver.
+
+O `unidade` selector nao esta aqui: fica no header do hub, porque vale tambem pra
+aba Mensagens, e duplicar o mesmo select em duas abas convidaria as duas a
+divergirem.
+{% endcomment %}
+
+{% if herda_do_tenant %}
+  {% comment %}
+    Aviso ANTES, nao depois: criar a primeira etapa da unidade faz ela parar de
+    herdar o fluxo do tenant, e descobrir isso pelo efeito e ruim.
+  {% endcomment %}
+  <div class="section-card section-card-info" style="margin-bottom: var(--sp-4);">
+    <div class="section-card-body">
+      <p class="field-helper" style="margin: 0;">
+        <i class="bi bi-info-circle"></i>
+        <strong>{{ unidade.nome }}</strong> está usando o fluxo geral do tenant.
+        Ao criar a primeira etapa aqui, esta unidade passa a ter um fluxo próprio
+        e deixa de acompanhar o geral.
+      </p>
+    </div>
+  </div>
+{% endif %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3);">
+  <h2 class="form-section-title" style="margin: 0;">Etapas do fluxo</h2>
+  {% if pode_gerir %}
+    <button type="button" class="btn btn-primary btn-sm" data-nova-etapa>
+      <i class="bi bi-plus-lg"></i> Nova etapa
+    </button>
+  {% endif %}
+</div>
+
+{% if etapas_linhas %}
+  <div class="form-stack" style="gap: var(--sp-2); margin-bottom: var(--sp-4);">
+    {% for linha in etapas_linhas %}
+      <div class="etapa-linha{% if not linha.etapa.ativa %} is-inativa{% endif %}">
+        <span class="etapa-ordem" style="background: {{ linha.etapa.cor_hex }};">{{ forloop.counter }}</span>
+
+        <div class="etapa-nome">
+          <strong>{{ linha.etapa.nome }}</strong>
+          {% if not linha.etapa.ativa %}
+            {% include "components/badge.html" with variant="neutral" label="Desativada" size="sm" %}
+          {% endif %}
+          <span class="field-helper" style="display: block;">
+            {% if linha.etapa.sla_dias %}Prazo de {{ linha.etapa.sla_dias }} dias{% else %}Sem prazo definido{% endif %}
+            · {{ linha.candidatos }} candidato{{ linha.candidatos|pluralize }}
+          </span>
+        </div>
+
+        {% if pode_gerir %}
+          <div class="etapa-acoes">
+            <form method="post" action="{% url 'people:fluxo_etapa_mover' linha.etapa.pk %}" style="display: inline;">
+              {% csrf_token %}
+              {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+              <input type="hidden" name="direcao" value="cima">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Subir"
+                      {% if forloop.first %}disabled{% endif %}><i class="bi bi-arrow-up"></i></button>
+            </form>
+            <form method="post" action="{% url 'people:fluxo_etapa_mover' linha.etapa.pk %}" style="display: inline;">
+              {% csrf_token %}
+              {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+              <input type="hidden" name="direcao" value="baixo">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Descer"
+                      {% if forloop.last %}disabled{% endif %}><i class="bi bi-arrow-down"></i></button>
+            </form>
+
+            {{ linha.dados_edicao|json_script:linha.id_json }}
+            <button type="button" class="btn btn-ghost btn-sm" title="Editar"
+                    data-editar-etapa="{{ linha.id_json }}">
+              <i class="bi bi-sliders"></i>
+            </button>
+
+            <form method="post" action="{% url 'people:fluxo_etapa_alternar' linha.etapa.pk %}"
+                  style="display: inline;"
+                  {% if linha.etapa.ativa and linha.candidatos %}onsubmit="return confirm('{{ linha.candidatos }} candidato(s) estão nesta etapa. Eles não somem: passam a aparecer como Fora de etapa no board, para serem realocados. Continuar?');"{% endif %}>
+              {% csrf_token %}
+              {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+              <button type="submit" class="btn btn-ghost btn-sm"
+                      title="{% if linha.etapa.ativa %}Desativar{% else %}Ativar{% endif %}">
+                <i class="bi {% if linha.etapa.ativa %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+              </button>
+            </form>
+
+            <form method="post" action="{% url 'people:fluxo_etapa_remover' linha.etapa.pk %}"
+                  style="display: inline;"
+                  onsubmit="return confirm('Apagar a etapa \"{{ linha.etapa.nome|escapejs }}\"? Só é possível se estiver vazia.');">
+              {% csrf_token %}
+              {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+              <button type="submit" class="btn btn-ghost btn-sm" title="Apagar"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  {% include "components/empty_state.html" with icon="bi-diagram-3" text="Nenhuma etapa neste fluxo" subtext="Crie a primeira etapa, ou restaure o padrão de sete etapas." %}
+{% endif %}
+
+<h2 class="form-section-title">Saídas do processo</h2>
+<p class="field-helper" style="margin-bottom: var(--sp-3);">
+  Fixas, e não configuráveis, porque cada uma tem comportamento próprio: admitir
+  aciona a ponte com o Departamento Pessoal, e o banco de talentos entra na
+  política de retenção. O candidato pode ir para qualquer uma a qualquer momento
+  do fluxo, sempre com motivo registrado.
+</p>
+<div style="display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-5);">
+  {% for saida in saidas %}
+    <div class="saida-cartao">
+      <span class="pipe-chip-nome" style="display: flex; align-items: center; gap: 6px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ saida.cor }};"></span>
+        <strong style="font-size: var(--fs-sm);">{{ saida.rotulo }}</strong>
+      </span>
+      <span class="field-helper">Fase final</span>
+    </div>
+  {% endfor %}
+</div>
+
+{% if pode_gerir %}
+  <form method="post" action="{% url 'people:fluxo_resetar' %}"
+        onsubmit="return confirm('Restaurar as sete etapas padrão? Só funciona com o fluxo vazio de candidatos.');">
+    {% csrf_token %}
+    {% if unidade %}<input type="hidden" name="unidade" value="{{ unidade.pk }}">{% endif %}
+    <button type="submit" class="btn btn-ghost btn-sm">
+      <i class="bi bi-arrow-counterclockwise"></i> Restaurar padrão
+    </button>
+  </form>
+{% endif %}

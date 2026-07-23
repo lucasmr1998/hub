@@ -258,14 +258,14 @@ Uso em template que extende layout_app:
         <a href="{% url 'people:quadro_lista' %}" class="app-subnav-item {% if 'quadro' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-clipboard-data"></i><span>Quadro</span>
         </a>
-        <a href="{% url 'people:fluxo_config' %}" class="app-subnav-item {% if 'fluxo' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-diagram-3"></i><span>Fluxo</span>
-        </a>
-        <a href="{% url 'people:campos_config' %}" class="app-subnav-item {% if 'campo' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-input-cursor-text"></i><span>Campos</span>
-        </a>
-        <a href="{% url 'people:banco_talentos_links' %}" class="app-subnav-item {% if 'banco_talentos' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-qr-code"></i><span>Captação contínua</span>
+        {% comment %}
+          Fluxo, Campos e Captacao continua viraram abas de um hub so
+          (config_recrutamento). O slice evita casar com `config_fluxo`, que e a
+          config do Departamento Pessoal, em outro grupo: `config_fluxo|slice:5`
+          e "confi", nao "fluxo".
+        {% endcomment %}
+        <a href="{% url 'people:fluxo_config' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':5' == 'fluxo' or request.resolver_match.url_name|slice:':5' == 'campo' or 'banco_talentos' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-sliders"></i><span>Configurações</span>
         </a>
       </nav>
 

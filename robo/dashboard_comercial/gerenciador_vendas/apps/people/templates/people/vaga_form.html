@@ -191,7 +191,7 @@
         O que o candidato preenche nesta vaga. Nome e WhatsApp são fixos: o
         WhatsApp é como o sistema identifica quem já se candidatou e é o único
         jeito de responder pra pessoa. Para criar uma pergunta que não está na
-        lista, vá em <a href="{% url 'people:campos_config' %}">Campos da
+        lista, vá em <a href="{% url 'people:fluxo_config' %}?tab=campos">Campos da
         candidatura</a>.
       </p>
       <form method="post" action="{% url 'people:vaga_campos_salvar' vaga.pk %}"
