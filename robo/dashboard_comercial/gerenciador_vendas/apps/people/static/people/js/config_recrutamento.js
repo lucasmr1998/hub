@@ -116,6 +116,17 @@
     abrir('modal-campo');
   }
 
+  // ── Modal de quadro ─────────────────────────────────────────────────────
+
+  function abrirQuadroNovo() {
+    // So cria: redefinir e re-salvar o mesmo cargo+unidade (o form recusa
+    // duplicata e manda editar o existente), entao nao ha edicao a popular.
+    const form = document.getElementById('form-quadro');
+    if (!form) return;
+    form.reset();
+    abrir('modal-quadro');
+  }
+
   function abrirCampoEdicao(dados) {
     const form = document.getElementById('form-campo');
     document.getElementById('campo-pk').value = dados.pk;
@@ -137,6 +148,7 @@
 
     if (evento.target.closest('[data-nova-etapa]')) { abrirEtapaNova(); return; }
     if (evento.target.closest('[data-novo-campo]')) { abrirCampoNovo(); return; }
+    if (evento.target.closest('[data-novo-quadro]')) { abrirQuadroNovo(); return; }
 
     const editarEtapa = evento.target.closest('[data-editar-etapa]');
     if (editarEtapa) { abrirEtapaEdicao(editarEtapa.dataset.editarEtapa); return; }

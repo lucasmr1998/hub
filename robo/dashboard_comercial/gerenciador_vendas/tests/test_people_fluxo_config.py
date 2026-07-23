@@ -248,18 +248,19 @@ def test_quem_so_ve_nao_configura(cenario):
 # ── Hub de Configuracoes: as tres telas viraram abas ─────────────────────────
 
 @pytest.mark.django_db
-def test_hub_renderiza_as_quatro_abas(cenario):
+def test_hub_renderiza_as_cinco_abas(cenario):
     """
-    Etapas, Mensagens, Campos e Captacao numa pagina so. As abas sao
-    client-side, entao os quatro paineis vem no HTML; o JS mostra um por vez.
+    Etapas, Mensagens, Quadro, Campos e Captacao numa pagina so. As abas sao
+    client-side, entao os cinco paineis vem no HTML; o JS mostra um por vez.
     """
     corpo = _cliente(cenario).get(reverse('people:fluxo_config')).content.decode()
 
-    for aba in ['etapas', 'mensagens', 'campos', 'captacao']:
+    for aba in ['etapas', 'mensagens', 'quadro', 'campos', 'captacao']:
         assert f'data-tab="{aba}"' in corpo
         assert f'class="config-painel" id="{aba}"' in corpo
-    # Criar/editar etapa e campo acontecem em modal, e nao mais inline.
-    assert 'id="modal-etapa"' in corpo and 'id="modal-campo"' in corpo
+    # Criar/editar etapa, campo e quadro acontecem em modal, e nao mais inline.
+    for modal in ['modal-etapa', 'modal-campo', 'modal-quadro']:
+        assert f'id="{modal}"' in corpo
 
 
 @pytest.mark.django_db
@@ -270,9 +271,8 @@ def test_tab_invalido_cai_na_primeira_aba(cenario):
 
     # Etapas ativa (sem hidden); as demais escondidas.
     assert 'id="etapas" hidden' not in corpo
-    assert 'id="mensagens" hidden' in corpo
-    assert 'id="campos" hidden' in corpo
-    assert 'id="captacao" hidden' in corpo
+    for aba in ['mensagens', 'quadro', 'campos', 'captacao']:
+        assert f'id="{aba}" hidden' in corpo
 
 
 @pytest.mark.django_db
@@ -285,6 +285,9 @@ def test_rotas_antigas_redirecionam_pro_hub(cenario):
 
     r_capt = cliente.get(reverse('people:banco_talentos_links'))
     assert r_capt.status_code == 302 and r_capt['Location'].endswith('tab=captacao')
+
+    r_quadro = cliente.get(reverse('people:quadro_lista'))
+    assert r_quadro.status_code == 302 and r_quadro['Location'].endswith('tab=quadro')
 
 
 @pytest.mark.django_db

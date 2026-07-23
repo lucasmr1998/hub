@@ -8,11 +8,11 @@ caminho mais curto pra divergir do real.
 """
 from django import forms
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from apps.people.models import Cargo, QuadroUnidade, Unidade
-from apps.people.permissoes import pode_acessar, requer_people
+from apps.people.permissoes import requer_people
 from apps.sistema.utils import registrar_acao
 
 
@@ -49,27 +49,35 @@ class QuadroForm(forms.ModelForm):
         return dados
 
 
-@requer_people()
-def lista(request):
+def _voltar():
+    # Aba Quadro do hub de Configuracoes. O ?tab= diz ao JS qual painel reabrir
+    # depois do POST.
+    return redirect('/people/fluxo/?tab=quadro')
+
+
+def contexto_quadro(request, unidade):
+    """
+    Contexto da aba Quadro, namespaceado com prefixo `quadro_`.
+
+    Recebe o `unidade` (objeto ou None) do hub, o MESMO que escopa Etapas e
+    Mensagens: um seletor de unidade so no header controla as tres. Sem unidade,
+    lista o quadro de todas.
+    """
     quadros = (QuadroUnidade.objects
                .select_related('unidade', 'cargo')
                .order_by('unidade__nome', 'cargo__nome'))
+    if unidade:
+        quadros = quadros.filter(unidade=unidade)
 
-    unidade_id = (request.GET.get('unidade') or '').strip()
-    if unidade_id.isdigit():
-        quadros = quadros.filter(unidade_id=int(unidade_id))
+    return {
+        'quadro_linhas': [{'quadro': q, 'situacao': q.situacao()} for q in quadros],
+        'quadro_form': QuadroForm(tenant=request.tenant),
+    }
 
-    linhas = [{'quadro': q, 'situacao': q.situacao()} for q in quadros]
 
-    return render(request, 'people/quadro_lista.html', {
-        'pagetitle': 'Quadro por unidade',
-        'linhas': linhas,
-        'form': QuadroForm(tenant=request.tenant),
-        'unidades_opcoes': list(
-            Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
-        'unidade_selecionada': unidade_id,
-        'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
-    })
+def lista(request):
+    """Rota antiga: a tela virou aba do hub de Configuracoes."""
+    return redirect('/people/fluxo/?tab=quadro')
 
 
 @require_POST
@@ -80,7 +88,7 @@ def salvar(request):
         for erros in form.errors.values():
             for erro in erros:
                 messages.error(request, erro)
-        return redirect('people:quadro_lista')
+        return _voltar()
 
     quadro = form.save(commit=False)
     quadro.tenant = request.tenant
@@ -89,7 +97,7 @@ def salvar(request):
                    f'Quadro de {quadro.cargo.nome} em {quadro.unidade.nome} '
                    f'definido em {quadro.quadro_definido}.', request=request)
     messages.success(request, 'Quadro salvo.')
-    return redirect('people:quadro_lista')
+    return _voltar()
 
 
 @require_POST
@@ -98,4 +106,4 @@ def remover(request, pk):
     quadro = get_object_or_404(QuadroUnidade.objects, pk=pk)
     quadro.delete()
     messages.success(request, 'Quadro removido.')
-    return redirect('people:quadro_lista')
+    return _voltar()

@@ -1,0 +1,73 @@
+{% comment %}
+Aba Quadro do hub de Configuracoes.
+
+Quantas posicoes de cada cargo a loja deve ter. E a moldura contra a qual o
+recrutamento e lido: sem quadro, vaga aberta e um numero solto; com quadro, vira
+"faltam 2 de 8". Os derivados (ativos, em processo) sao calculados na hora,
+nunca guardados: contagem em coluna e o caminho mais curto pra divergir do real.
+
+O filtro por unidade nao esta aqui: e o seletor do header, o MESMO que escopa
+Etapas e Mensagens. Definir novo quadro acontece num modal (ver o shell), padrao
+das abas Etapas e Campos.
+{% endcomment %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3);">
+  <h2 class="form-section-title" style="margin: 0;">Quadro por unidade</h2>
+  {% if pode_gerir %}
+    <button type="button" class="btn btn-primary btn-sm" data-novo-quadro>
+      <i class="bi bi-plus-lg"></i> Definir quadro
+    </button>
+  {% endif %}
+</div>
+
+{% if quadro_linhas %}
+  <div class="table-wrap" style="margin-bottom: var(--sp-4);">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Unidade</th>
+          <th>Cargo</th>
+          <th>Definido</th>
+          <th>Ativos</th>
+          <th>Em processo</th>
+          <th>Faltam</th>
+          {% if pode_gerir %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in quadro_linhas %}
+          <tr>
+            <td>{{ linha.quadro.unidade.nome }}</td>
+            <td>{{ linha.quadro.cargo.nome }}</td>
+            <td>{{ linha.situacao.definido }}</td>
+            <td>{{ linha.situacao.ativos }}</td>
+            <td>{{ linha.situacao.em_processo }}</td>
+            <td>
+              {% if linha.situacao.faltam == 0 %}
+                {% include "components/badge.html" with variant="success" label="Completo" size="sm" %}
+              {% elif linha.situacao.cobre_a_falta %}
+                {% include "components/badge.html" with variant="info" label=linha.situacao.faltam size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="warning" label=linha.situacao.faltam size="sm" %}
+              {% endif %}
+            </td>
+            {% if pode_gerir %}
+              <td style="text-align: right;">
+                <form method="post" action="{% url 'people:quadro_remover' linha.quadro.pk %}"
+                      style="display: inline;"
+                      onsubmit="return confirm('Remover o quadro deste cargo nesta unidade?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm" title="Remover">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </form>
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  {% include "components/empty_state.html" with icon="bi-clipboard-data" text="Nenhum quadro definido" subtext="Defina quantas posições cada cargo deve ter para acompanhar o que falta." %}
+{% endif %}

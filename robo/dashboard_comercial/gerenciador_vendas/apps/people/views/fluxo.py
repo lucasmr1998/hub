@@ -112,7 +112,7 @@ def contexto_fluxo(request, unidade):
 
 # Abas validas do hub, e a ordem em que aparecem. Lista, e nao set, porque a
 # ordem importa e um `tab=` invalido cai na primeira.
-ABAS = ['etapas', 'mensagens', 'campos', 'captacao']
+ABAS = ['etapas', 'mensagens', 'quadro', 'campos', 'captacao']
 
 
 def configurar(request):
@@ -123,7 +123,7 @@ def configurar(request):
     Aqui viram abas de uma pagina so, client-side: trocar de aba nao recarrega,
     porque recarregar numa troca de aba incomoda tanto quanto no filtro do board.
     """
-    from apps.people.views import campos, vagas
+    from apps.people.views import campos, quadro, vagas
 
     unidade = _unidade_do_request(request)
     aba = request.GET.get('tab')
@@ -136,6 +136,7 @@ def configurar(request):
         'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
     }
     contexto.update(contexto_fluxo(request, unidade))
+    contexto.update(quadro.contexto_quadro(request, unidade))
     contexto.update(campos.contexto_campos(request))
     contexto.update(vagas.contexto_captacao(request))
     return render(request, 'people/config_recrutamento.html', contexto)

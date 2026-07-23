@@ -195,7 +195,9 @@ def test_tela_do_quadro_renderiza(cenario):
         tenant=cenario['tenant'], unidade=cenario['unidade'],
         cargo=cenario['cargo'], quadro_definido=5)
 
-    resposta = _cliente(cenario).get(reverse('people:quadro_lista'))
+    # O Quadro virou aba do hub de Configuracoes; a rota antiga so redireciona.
+    resposta = _cliente(cenario).get(reverse('people:fluxo_config'),
+                                     {'tab': 'quadro'})
     corpo = resposta.content.decode()
 
     assert resposta.status_code == 200
@@ -260,6 +262,7 @@ def test_quadro_nao_vaza_entre_tenants(cenario):
                                      unidade=cenario['unidade'],
                                      cargo=cenario['cargo'], quadro_definido=5)
 
-    do_primeiro = _cliente(cenario).get(reverse('people:quadro_lista'))
+    do_primeiro = _cliente(cenario).get(reverse('people:fluxo_config'),
+                                        {'tab': 'quadro'})
     assert do_primeiro.content.decode().count('Loja Centro') >= 1
     assert 'Deles' not in do_primeiro.content.decode()

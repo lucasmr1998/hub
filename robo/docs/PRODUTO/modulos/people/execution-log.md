@@ -647,3 +647,13 @@ O botao Filtrar continua existindo de proposito: trocar o select ja aplica, pore
 - **Output**: `config_recrutamento.html` + 4 partials de aba + `config_recrutamento.js` novos; `fluxo_config.html`, `campos_config.html`, `banco_talentos_links.html` removidos (orfaos); views `fluxo/campos/vagas` refatoradas; sidebar e flyout consolidados. 4 testes novos no hub (`test_people_fluxo_config`), 3 testes de rota antiga atualizados. Verificado no browser: 4 abas trocam sem reload, seletor de unidade some fora de Etapas/Mensagens, modal abre, sync de blocos funciona. Sem migration.
 - **Nota**: ha DOIS itens "Configuracoes" no menu do People agora, um em Recrutamento (este) e um em Sistema (o do Departamento Pessoal). Convivem porque a secao desambigua, mas vale unificar quando o DP tambem virar hub.
 - **Status**: completed em dev, aguardando push.
+
+## 2026-07-22 — Quadro entra no hub de Configuracoes como 5a aba
+
+- **Acao**: o Lucas pediu pra levar o Quadro pra dentro do hub tambem. Quadro por unidade e configuracao de headcount (quantas posicoes de cada cargo a loja deve ter, a moldura que vira "faltam 2 de 8"), entao encaixa nas Configuracoes junto de Etapas, Mensagens, Campos e Captacao.
+
+- **Mesma mecanica das outras abas**: `contexto_quadro(request, unidade)` namespaceado (`quadro_linhas`, `quadro_form`), `quadro.lista` vira redirect pro hub, POST de salvar/remover voltam com `?tab=quadro`. Aba client-side, tabela + "+ Definir quadro" em modal.
+- **Seletor de unidade UNIFICADO**: era "Fluxo de", valia so pra Etapas/Mensagens. Virou "Unidade" e passou a controlar tambem o Quadro (as tres sao por unidade), num seletor so no header. Campos e Captacao seguem do tenant inteiro, e o seletor some nelas.
+- **Menu**: Quadro saiu do grupo Recrutamento (era item proprio); agora e aba. O is-active de Configuracoes passou a cobrir `quadro*` tambem. Flyout do sidebar idem. `quadro_lista.html` removido (orfao).
+- **Output**: `_config_tab_quadro.html` novo; `quadro.py`, `fluxo.py`, shell, JS, sidebar e flyout ajustados. Testes do hub atualizados pra 5 abas + redirect do quadro; 2 testes de `test_people_quadro` repontados pro hub. 32 verdes (fluxo_config + quadro). Verificado no browser: 5 abas, Quadro troca sem reload, seletor de unidade aparece, modal abre. Sem migration.
+- **Status**: completed em dev, aguardando push.

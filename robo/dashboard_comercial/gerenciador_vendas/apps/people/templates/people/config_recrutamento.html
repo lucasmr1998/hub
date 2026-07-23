@@ -61,20 +61,22 @@
         <p class="page-eyebrow">People · Recrutamento</p>
         <h1 class="page-title">Configurações</h1>
         <p class="page-subtitle">
-          Etapas do processo, mensagens, campos da candidatura e captação contínua.
+          Etapas do processo, mensagens, quadro por unidade, campos da
+          candidatura e captação contínua.
         </p>
       </div>
 
       {% comment %}
-        Seletor de unidade vale so pras abas Etapas e Mensagens (o fluxo e por
-        escopo); Campos e Captacao sao do tenant inteiro. Por isso ele mora no
-        header e o JS o mostra so nessas duas abas. Trocar a unidade RECARREGA
-        (etapas diferentes), levando o ?tab pra nao perder a aba.
+        Seletor de unidade vale pras abas Etapas, Mensagens e Quadro (as tres
+        sao por unidade); Campos e Captacao sao do tenant inteiro. Um seletor so
+        no header controla as tres, e o JS o mostra so nelas (data-abas). Trocar
+        a unidade RECARREGA (dados diferentes), levando o ?tab pra nao perder a
+        aba.
       {% endcomment %}
-      <form method="get" id="filtro-unidade" data-abas="etapas mensagens"
-            style="display: flex; gap: var(--sp-3); align-items: flex-end;{% if aba_ativa != 'etapas' and aba_ativa != 'mensagens' %} display: none;{% endif %}">
+      <form method="get" id="filtro-unidade" data-abas="etapas mensagens quadro"
+            style="display: flex; gap: var(--sp-3); align-items: flex-end;{% if aba_ativa != 'etapas' and aba_ativa != 'mensagens' and aba_ativa != 'quadro' %} display: none;{% endif %}">
         <input type="hidden" name="tab" value="{{ aba_ativa }}">
-        {% include "components/select.html" with name="unidade" label="Fluxo de" options=unidades_opcoes value=unidade.pk|default:"" blank_label="Todas as unidades" size="sm" %}
+        {% include "components/select.html" with name="unidade" label="Unidade" options=unidades_opcoes value=unidade.pk|default:"" blank_label="Todas as unidades" size="sm" %}
         <noscript><button type="submit" class="btn btn-ghost btn-sm">Trocar</button></noscript>
       </form>
     </div>
@@ -97,6 +99,11 @@
             role="tab" data-tab="mensagens" aria-selected="{% if aba_ativa == 'mensagens' %}true{% else %}false{% endif %}">
       <i class="bi bi-chat-left-text"></i><span>Mensagens</span>
     </button>
+    <button type="button" class="tabs-item{% if aba_ativa == 'quadro' %} is-active{% endif %}"
+            role="tab" data-tab="quadro" aria-selected="{% if aba_ativa == 'quadro' %}true{% else %}false{% endif %}">
+      <i class="bi bi-clipboard-data"></i><span>Quadro</span>
+      {% if quadro_linhas %}<span class="tabs-item-badge">{{ quadro_linhas|length }}</span>{% endif %}
+    </button>
     <button type="button" class="tabs-item{% if aba_ativa == 'campos' %} is-active{% endif %}"
             role="tab" data-tab="campos" aria-selected="{% if aba_ativa == 'campos' %}true{% else %}false{% endif %}">
       <i class="bi bi-input-cursor-text"></i><span>Campos</span>
@@ -114,6 +121,9 @@
   </div>
   <div class="config-painel" id="mensagens"{% if aba_ativa != 'mensagens' %} hidden{% endif %}>
     {% include "people/_config_tab_mensagens.html" %}
+  </div>
+  <div class="config-painel" id="quadro"{% if aba_ativa != 'quadro' %} hidden{% endif %}>
+    {% include "people/_config_tab_quadro.html" %}
   </div>
   <div class="config-painel" id="campos"{% if aba_ativa != 'campos' %} hidden{% endif %}>
     {% include "people/_config_tab_campos.html" %}
@@ -179,6 +189,35 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-etapa')">Cancelar</button>
             <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar etapa</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# ── Modal: definir quadro ── #}
+    <div id="modal-quadro" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <h3 class="modal-title">Definir quadro</h3>
+          <button type="button" class="modal-close" onclick="fecharModal('modal-quadro')" aria-label="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form method="post" action="{% url 'people:quadro_salvar' %}" id="form-quadro">
+          {% csrf_token %}
+          <div class="modal-body form-stack">
+            {% comment %}
+              Quadro nao tem editar-reusa como Etapas/Campos: redefinir e
+              re-salvar o mesmo cargo+unidade (o form recusa duplicata e pede pra
+              editar o existente). Por isso o modal so cria, e nao popula.
+            {% endcomment %}
+            {% include "components/select.html" with name="unidade" label="Unidade" options=quadro_form.unidade.field.choices required=True %}
+            {% include "components/select.html" with name="cargo" label="Cargo" options=quadro_form.cargo.field.choices required=True %}
+            {% include "components/input.html" with name="quadro_definido" label="Quantas posições" type="number" value=0 %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-quadro')">Cancelar</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar quadro</button>
           </div>
         </form>
       </div>
