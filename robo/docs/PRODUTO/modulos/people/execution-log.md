@@ -698,3 +698,9 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Nota**: a pagina vazia em prod NAO era bug, e falta de dado. aurora-hq tem 0 colaboradores e 0 HistoricoSituacao (DP nunca operado em prod), enquanto recrutamento tem 16 candidatos. A tela le dados de DP, entao fica vazia ate haver colaborador no board.
 - **Output**: `sidebar_subnav.html` + flyout de `layout_app.html`. Sem migration.
 - **Status**: completed em dev, aguardando push.
+
+## 2026-07-23 — Leva de correcoes (item 1): ordem do menu
+
+- **Acao**: pedido do Lucas. Em Recrutamento, **Vagas** passa a ser o primeiro item (a vaga nasce antes; candidato so existe depois que ha vaga). Em Departamento Pessoal, **Analises** passa a ser o primeiro.
+- **Output**: `sidebar_subnav.html` + flyout de `layout_app.html`. Sem migration.
+- **Status**: completed em dev.

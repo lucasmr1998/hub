@@ -251,11 +251,15 @@ Uso em template que extende layout_app:
       {% endcomment %}
       <div class="app-subnav-section">Recrutamento e seleção</div>
       <nav class="app-subnav-list">
-        <a href="{% url 'people:pipeline_board' %}" class="app-subnav-item {% if 'pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-diagram-3"></i><span>Candidatos</span>
-        </a>
+        {% comment %}
+          Ordem pedida pelo Lucas: Vagas primeiro. A vaga e o que nasce antes;
+          candidato so existe depois que ha vaga publicada.
+        {% endcomment %}
         <a href="{% url 'people:vagas_lista' %}" class="app-subnav-item {% if 'vaga' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-megaphone"></i><span>Vagas</span>
+        </a>
+        <a href="{% url 'people:pipeline_board' %}" class="app-subnav-item {% if 'pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-diagram-3"></i><span>Candidatos</span>
         </a>
         {% comment %}
           Fluxo, Quadro, Campos e Captacao continua sao abas de um hub so
@@ -271,18 +275,18 @@ Uso em template que extende layout_app:
       <div class="app-subnav-section">Departamento pessoal</div>
       <nav class="app-subnav-list">
         {% comment %}
+          Ordem pedida pelo Lucas: Analises primeiro no DP. Ela e do DP (le
+          HistoricoSituacao, o ciclo de vida do colaborador), nao de
+          recrutamento: estava ate no grupo errado ate 23/07.
+
           "Ciclo de vida" e o board de colaboradores por situacao (era o "Board"
           solto no topo). E o equivalente do "Candidatos" pro DP: o board da area.
         {% endcomment %}
-        <a href="{% url 'people:board' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'board' or request.resolver_match.url_name|slice:':11' == 'colaborador' %}is-active{% endif %}">
-          <i class="bi bi-columns-gap"></i><span>Ciclo de vida</span>
-        </a>
-        {% comment %}
-          Analises e do DP: le HistoricoSituacao (ciclo de vida do colaborador),
-          nao tem relacao com recrutamento. Estava no grupo errado ate 23/07.
-        {% endcomment %}
         <a href="{% url 'people:analises' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'analises' %}is-active{% endif %}">
           <i class="bi bi-bar-chart"></i><span>Análises</span>
+        </a>
+        <a href="{% url 'people:board' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'board' or request.resolver_match.url_name|slice:':11' == 'colaborador' %}is-active{% endif %}">
+          <i class="bi bi-columns-gap"></i><span>Ciclo de vida</span>
         </a>
         <a href="{% url 'people:links_lista' %}" class="app-subnav-item {% if request.resolver_match.url_name|slice:':4' == 'link' %}is-active{% endif %}">
           <i class="bi bi-link-45deg"></i><span>Cadastro via link</span>
