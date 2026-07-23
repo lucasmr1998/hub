@@ -704,3 +704,14 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Acao**: pedido do Lucas. Em Recrutamento, **Vagas** passa a ser o primeiro item (a vaga nasce antes; candidato so existe depois que ha vaga). Em Departamento Pessoal, **Analises** passa a ser o primeiro.
 - **Output**: `sidebar_subnav.html` + flyout de `layout_app.html`. Sem migration.
 - **Status**: completed em dev.
+
+## 2026-07-23 — Leva de correcoes (item 2): marcar um item do roteiro desmarcava outro
+
+- **Bug** (reportado pelo Lucas, com print): na ficha do candidato, marcar um item do "Roteiro da conversa" ou dos "Requisitos a validar" mexia em outro item.
+- **Causa**: `components/checkbox.html` fazia `id="{{ id|default:name }}"` e o label trazia `for` apontando pra esse id. Roteiro e checklist incluem o componente num `{% for %}` com `name="itens"` e SEM id, entao TODOS os checkboxes ficavam com `id="itens"`. Com id repetido, o `for` do label manda o clique pro PRIMEIRO input da pagina: clicar em qualquer item marcava/desmarcava o primeiro.
+- **Fix, em duas camadas**:
+  1. **Raiz, no componente**: removido o `for` do label. O label ENVOLVE o input, entao a associacao ja e implicita; sem `for`, o clique sempre acerta o input de dentro, imune a id repetido. Corrige os dois blocos de uma vez e previne a mesma classe de bug em qualquer uso futuro.
+  2. **Validade do HTML**: `_itens()` em `views/candidatos.py` passou a gerar `dom_id` unico (`{prefixo}-{etapa.pk}-{i}`), e os blocos passam `id=opcao.dom_id`. A etapa entra no id porque o mesmo roteiro aparece numa aba por etapa.
+- **Verificado no browser**: ids unicos (`checklist-2-0/1/2`) e clicar o 3o item mudou SO o indice 2, sem tocar nos outros.
+- **Output**: `components/checkbox.html`, `views/candidatos.py`, `blocos/_roteiro.html`, `blocos/_checklist.html`. Sem migration.
+- **Status**: completed em dev.

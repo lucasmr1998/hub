@@ -13,7 +13,16 @@ Params:
 Exemplo:
   {% include "components/checkbox.html" with name="ativo" label="Unidade ativa" checked=unidade.ativo helper="Unidade inativa some das listas." %}
 {% endcomment %}
-<label class="field-check{% if disabled %} is-disabled{% endif %}" for="{{ id|default:name }}">
+{% comment %}
+  SEM `for` no label, de proposito. O label ENVOLVE o input, entao a associacao
+  ja e implicita e o `for` era redundante. Pior: quando varios checkboxes
+  compartilham o mesmo `name` num loop (roteiro e checklist da ficha, que usam
+  `name="itens"`), o `id` caia no default e TODOS ficavam com o mesmo id. Ai o
+  `for` mandava o clique pro PRIMEIRO input da pagina, e marcar um item
+  desmarcava outro. Com o label envolvendo, o clique sempre acerta o input de
+  dentro, independente de id repetido.
+{% endcomment %}
+<label class="field-check{% if disabled %} is-disabled{% endif %}">
   <input type="checkbox" name="{{ name }}" id="{{ id|default:name }}"
          value="{{ value|default:'on' }}"
          {% if checked %}checked{% endif %}

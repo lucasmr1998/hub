@@ -17,7 +17,7 @@ locomocao, idade minima). Misturar os dois blocos faria o entrevistador tratar
       </p>
       <div class="form-stack" style="gap: var(--sp-2);">
         {% for opcao in item.checklist_itens %}
-          {% include "components/checkbox.html" with name="itens" value=opcao.texto label=opcao.texto checked=opcao.marcado disabled=nao_pode_anotar %}
+          {% include "components/checkbox.html" with name="itens" value=opcao.texto label=opcao.texto checked=opcao.marcado disabled=nao_pode_anotar id=opcao.dom_id %}
         {% endfor %}
       </div>
     {% else %}

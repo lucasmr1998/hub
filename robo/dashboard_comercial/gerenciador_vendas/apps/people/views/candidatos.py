@@ -76,11 +76,18 @@ def _abas_do_processo(candidato, historico):
         anotacao = anotacoes.get(etapa.pk)
         marcados = set(anotacao.itens_marcados or []) if anotacao else set()
 
-        def _itens(lista):
+        def _itens(lista, prefixo):
             # Resolve "marcado" aqui, e nao no template: filtro custom so pra
             # testar pertinencia numa lista seria peca a mais pra manter.
-            return [{'texto': texto, 'marcado': texto in marcados}
-                    for texto in (lista or [])]
+            #
+            # `dom_id` unico por item: todos os checkboxes compartilham
+            # name="itens", e sem id proprio o componente caia no default (o
+            # name), deixando a pagina com varios id iguais. Alem de HTML
+            # invalido, era o que fazia marcar um item mexer no outro. Entra a
+            # etapa no id porque o mesmo roteiro aparece numa aba por etapa.
+            return [{'texto': texto, 'marcado': texto in marcados,
+                     'dom_id': f'{prefixo}-{etapa.pk}-{i}'}
+                    for i, texto in enumerate(lista or [])]
 
         etapas.append({
             'etapa': etapa,
@@ -88,8 +95,8 @@ def _abas_do_processo(candidato, historico):
             'atual': candidato.etapa_id == etapa.pk and not candidato.saida,
             'passou': etapa.ordem < ordem_atual,
             'blocos': etapa.blocos_validos,
-            'roteiro_itens': _itens(etapa.roteiro),
-            'checklist_itens': _itens(etapa.checklist),
+            'roteiro_itens': _itens(etapa.roteiro, 'roteiro'),
+            'checklist_itens': _itens(etapa.checklist, 'checklist'),
             # O input datetime-local exige este formato exato.
             'agendado_em_input': (anotacao.agendado_em.strftime('%Y-%m-%dT%H:%M')
                                   if anotacao and anotacao.agendado_em else ''),
