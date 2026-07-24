@@ -622,3 +622,99 @@ e compara em memoria.
   dois primeiros destravarem.
 - **Status:** completed (Fases 1 a 5, motor completo com testes). Falta validacao
   live e UI.
+
+## 2026-07-24 — Captura real do template_conversao (destrava os 2 bloqueios da Fase 2)
+
+- **Bug achado e corrigido:** `hubsoft_capturar_template.py::_navegar_ate_converter`
+  buscava o prospecto pelo id_prospecto no campo de busca do painel HubSoft, mas
+  esse campo nao indexa por id, so por nome (nome_razaosocial). A busca sempre
+  voltava vazia, entao a captura nunca chegava no wizard. Fix: `_navegar_ate_converter`
+  agora recebe `nome_busca` e digita o nome no lugar do id; o `Command.handle` resolve
+  o nome via `LeadProspecto.id_hubsoft` (ou aceita `--nome-prospecto` direto). Achado
+  um segundo bug no mesmo fluxo: o clique em "Acoes" acertava o CABECALHO da coluna
+  "Acoes" da tabela (mesmo texto do botao da linha) em vez do botao real, porque
+  `_clicar_texto` nao tinha escopo. Fix: novo param `escopo_xpath` em `_clicar_texto`,
+  usado com `//tbody//...` nesse clique especifico pra restringir a linha de resultado.
+- **Segundo achado:** a API de cadastro de prospecto (`cadastrar_prospecto` /
+  `POST /api/v1/integracao/prospecto`) aceita `data_nascimento`, mas NAO aceita
+  `genero` nem `grupo_cliente` — esses dois so existem no wizard de conversao
+  (`POST /api/v1/cliente`). Ou seja, pra minimizar campo obrigatorio vazio no wizard,
+  o prospecto de teste precisa nascer com `data_nascimento` preenchida (evita ter que
+  navegar o date picker Angular Material, que nao aceita digitacao direta, so
+  selecao via calendario) — genero/grupo continuam manuais.
+- **Acao:** criado prospecto de teste completo (`id_prospecto` 24597, tenant
+  demo-local) via `criar_prospecto_para_lead` (mesmo caminho de producao), com
+  todos os campos que a API aceita preenchidos (endereco, rg, data_nascimento,
+  plano, vencimento). Rodado o comando corrigido contra o painel REAL da Nuvyon
+  (`HubSoft Painel Nuvyon (local)`, `api.artelecom.hubsoft.com.br`); conversao
+  concluida manualmente no wizard (genero + grupo_cliente + Plano/Contrato/
+  Cobranca/Pacotes/OS preenchidos por humano) e o `POST /api/v1/cliente` (30102b,
+  26 chaves) capturado com sucesso via CDP performance log.
+- **Output:** `PerfilConversaoHubsoft` (tenant demo-local, perfil "padrao") agora
+  tem `template_conversao` preenchido (antes vazio, era o 1o bloqueio registrado na
+  entrada anterior). O 2o bloqueio (connect timeout no host `api.artelecom.hubsoft.com.br`
+  em 24/06) nao se repetiu hoje — o host respondeu normalmente tanto pro cadastro de
+  prospecto via API quanto pro painel via Selenium.
+- **Nota lateral:** durante a investigacao, tambem corrigido bug nao relacionado no
+  CRM (modulo `comercial`, ver execution-log de la): busca de leads em Segmentos
+  usava campo inexistente `nome_completo` em vez de `nome_razaosocial`.
+- **Validacao do node (via API interna, sem navegador):** com o template capturado,
+  rodado `HubsoftConverterProspectoNode.executar()` de verdade (mesmo lead 24597,
+  `Contexto(tenant=demo-local, lead=lead)`, `perfil='padrao'`) — a mesma acao que a
+  engine de automacao dispara num fluxo real. Resultado: `branch='dry_run'` (perfil
+  com `dry_run_forcado=True` e allowlist vazia, entao nao escreve de verdade),
+  payload montado por `montar_payload_conversao` batendo com o que foi capturado
+  manualmente (nome, cpf, data_nascimento, genero, grupo RESIDENCIAL, endereco
+  resolvido via `buscar_cep` real, servico NUVYON 100MB, contrato, forma_cobranca,
+  vencimento). Confirma que o caminho de producao (node da engine, sem Selenium
+  clicando em nada, so login via token cacheado) esta pronto pra uso real; falta
+  so decidir quando tirar `dry_run_forcado` ou adicionar CPF na allowlist pra
+  validar uma escrita de verdade.
+- **Status:** completed. `hubsoft_capturar_template.py` corrigido; template de
+  conversao do demo-local capturado e validado ponta a ponta contra o HubSoft real
+  da Nuvyon, tanto via wizard manual quanto via node da engine em dry run. Falta:
+  abrir tarefa correspondente no Workspace (prod), decidir sobre cleanup do
+  prospecto/cliente de teste 24597 na Nuvyon.
+
+## 2026-07-24 — Validacao de escrita real (node via editor) + seed do fluxo de teste
+
+- **Bug de config descoberto no proprio teste:** o campo "Forcar simulacao" do no
+  `hubsoft_converter_prospecto` nasce ligado por padrao (`dry_run` ausente no config
+  do no => `flag(None, True)` => `dry_run_pedido=True`), o que faz
+  `PerfilConversaoHubsoft.dry_run_efetivo` retornar `True` **antes** de checar a
+  allowlist. Ou seja: adicionar o CPF na allowlist do perfil nao basta sozinho pra
+  liberar escrita real num fluxo do editor; o no tambem precisa `dry_run: 'false'`
+  explicito no config. Isso nao e bug de produto (e uma segunda trava de seguranca
+  deliberada, dupla: perfil + no), so nao documentada onde alguem for montar um
+  fluxo de teste do zero. Vale um aviso no editor futuramente.
+- **Acao:** criado um segundo lead de teste completo (`id_prospecto` 24598, CPF
+  valido gerado, mesmos dados do 24597) via API de cadastro; montado fluxo minimo
+  `Carregar lead -> hubsoft_converter_prospecto` no editor de automacao; CPF do lead
+  liberado pontualmente na allowlist do perfil `padrao`; `dry_run: 'false'` setado
+  no no; clicado "Testar" no editor local (`/automacao/editor/`). Rodou de verdade.
+- **Resultado real confirmado via `LogIntegracao`:** `POST /api/v1/cliente` (200,
+  sucesso) criou o cliente **(64250) [TESTE HUB] CONVERSAO REAL PRODUCAO** na
+  Nuvyon, grupo RESIDENCIAL, com endereco/servico/contrato/forma_cobranca corretos
+  (o mesmo template capturado na entrada anterior). Confirma o node da engine
+  funcional ponta a ponta em producao, disparado 100% pela UI do proprio Hubtrix
+  (sem Selenium clicando em nada — so a chamada de API, com login cacheado).
+  Allowlist e o `ativo` do fluxo revertidos pro estado seguro logo em seguida.
+- **Nota sobre "Execucoes":** clique manual em "Testar" no editor NUNCA persiste em
+  `ExecucaoFluxo` (so gatilho real — agenda/webhook/evento). Pra um registro
+  persistido seria preciso `executar_e_persistir()` via um gatilho de verdade
+  (ex: webhook), que ficou fora do escopo desta sessao (ação bloqueada pelo
+  classificador de seguranca do proprio Claude Code por envolver escrita real via
+  endpoint publico).
+- **Seed novo:** `seed_fluxo_demo_conversao_hubsoft` (management command,
+  `apps/automacao`), idempotente por nome, cria o fluxo minimo de 2 nos pra
+  qualquer `--tenant`/`--lead-id`/`--perfil`. Nasce inativo, sem override de
+  `dry_run` no perfil (so no no, se quem chamar decidir setar via `--nome`/edicao
+  manual depois). Fluxo de teste local recriado via esse seed (id=7, lead 24598).
+- **Checkout mixup encontrado e corrigido:** o fix de busca do CRM (Segmentos,
+  entrada anterior no execution-log de `comercial`) tinha sido aplicado em
+  `/hub/` (branch `feat/robo-matrix-venda-automatica`, checkout separado), nao em
+  `/hub-main/` (branch `main`, onde todo o resto deste trabalho vive). Reaplicado
+  em `hub-main` nesta entrada pra ir junto no mesmo commit/branch.
+- **Status:** completed. Falta: cleanup do cliente de teste 64250 na Nuvyon
+  (usuario vai cancelar manualmente), tarefa no Workspace (prod), e decidir a
+  estrategia de merge dessa branch pra `main`.
