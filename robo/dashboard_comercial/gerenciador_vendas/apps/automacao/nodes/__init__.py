@@ -45,6 +45,7 @@ from . import hubsoft_viabilidade  # noqa: F401,E402  (H6 — viabilidade endere
 from . import hubsoft_cliente  # noqa: F401,E402  (H7 — atendimentos/OS/extrato/renegociações)
 from . import hubsoft_globais  # noqa: F401,E402  (H8 — clientes/OS/atendimentos todos + agenda)
 from . import hubsoft_writes  # noqa: F401,E402  (H9 — writes moderados: contrato/renegociação/OS)
+from . import hubsoft_converter_prospecto  # noqa: F401,E402  (HP1 — painel: converter prospecto em cliente)
 from . import condicao_comercial  # noqa: F401,E402  (CC — condições da engine comercial)
 from . import acao_comercial  # noqa: F401,E402  (AC — ações da engine comercial)
 from . import mover_para_perdido_sem_viabilidade  # noqa: F401,E402  (F1 — migração funil: perder por viabilidade)
