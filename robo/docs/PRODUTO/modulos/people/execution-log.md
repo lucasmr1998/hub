@@ -733,3 +733,20 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Reclassificacoes anotadas nas secoes**: 15 virou paridade/UX (mover em lote JA e possivel pela vista de lista); 18/19/21 viraram ACELERADORES, distinguidos de 17/20 dentro do bloco "familia de IA", que antes tratava os cinco como a mesma coisa.
 - **Efeito**: a leitura de "quanto falta pra fechar o recrutamento" cai de 11-12 dias pra 4-5 dias de trabalho que realmente destrava operacao.
 - **Status**: completed.
+
+## 2026-07-24 — Gap 16: requisicao de vaga com aprovacao (backend)
+
+- **Acao**: tarefa #222. O gestor da loja solicita a vaga com justificativa; o RH aprova ou rejeita com motivo. Antes, qualquer um com `people.gerir_vagas` abria vaga direto, sem registro de quem pediu nem por que.
+
+**O item era MENOR do que o GAPS dizia.** O doc pedia "dois status a mais e tres campos". Os tres campos (`justificativa`, `colaborador_substituido`, `criada_por`) JA EXISTIAM desde o passo 2, inclusive com CheckConstraint exigindo o substituido quando a justificativa e substituicao. A maquina de estados tambem ja previa isso: havia comentario dizendo que a aprovacao estava deferida e que, se entrasse, entraria "como estado ANTES de rascunho, sem mexer nos de baixo". Foi exatamente o caminho seguido.
+
+**Decisoes:**
+1. **Aprovar leva pra RASCUNHO, nao pro ar** (escolha do Lucas, opcao A). A requisicao chega crua ("preciso de 1 atendente"); o RH aprova o PEDIDO e depois arruma o ANUNCIO, que e o texto que o candidato le.
+2. **Rejeitada volta pra fila.** O gestor corrige e reenvia na mesma vaga; sem essa aresta o motivo da recusa se perderia.
+3. **Quem solicita nao aprova**: funcionalidade `people.solicitar_vaga` separada de `people.gerir_vagas`.
+
+**ATENCAO OPERACIONAL, precisa de acao manual:** o perfil **Gestor ja tinha `people.gerir_vagas`** (abria vaga direto). O back-fill do seed so ADICIONA permissao, nunca remove, entao os Gestores existentes continuam abrindo direto ate alguem tirar essa permissao na tela. Foi deliberado: arrancar permissao de instalacao que ja funciona, calado, e pior que deixar a governanca opcional. **Pra a governanca valer, remover `people.gerir_vagas` do perfil Gestor.**
+
+- **Output**: estados (`aguardando_aprovacao`, `rejeitada`, transicoes, `STATUS_VAGA_PRE_PROCESSO`), campos `aprovada_por`/`decidida_em`/`motivo_rejeicao`, migration 0025, funcionalidade nova no seed, `services/vagas.py`, 12 testes novos. Regressao: 65 verdes em vaga/vaga_views/candidatura_publica.
+- **Falta**: telas (formulario de solicitacao, fila de aprovacao, aprovar/rejeitar) e testes de view.
+- **Status**: pending (backend completo, UI pendente).

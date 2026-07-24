@@ -58,6 +58,14 @@ FUNCIONALIDADES = [
         'ordem': 60,
     },
     {
+        'codigo': 'people.solicitar_vaga',
+        'nome': 'Solicitar vaga',
+        'descricao': 'Pedir abertura de vaga, com justificativa, para o RH '
+                     'aprovar ou rejeitar. Nao abre vaga direto nem aprova a '
+                     'propria requisicao',
+        'ordem': 65,
+    },
+    {
         'codigo': 'people.avaliar',
         'nome': 'Avaliar candidato',
         'descricao': 'Registrar anotacoes nas etapas do processo seletivo, sem '
@@ -71,10 +79,19 @@ FUNCIONALIDADES = [
 # revisa o que ja veio ligado.
 PERFIL_DEFAULTS = {
     'Admin': [f['codigo'] for f in FUNCIONALIDADES],
-    # Gestor abre vaga: na rede de franquia e o gerente de loja quem sabe que
-    # esta faltando gente. Quem NAO entra e o Supervisor, que so acompanha.
+    # Gestor SOLICITA vaga, e nao abre direto: na rede de franquia e o gerente de
+    # loja quem sabe que esta faltando gente, porem quem responde pelo custo do
+    # quadro e o RH. E o desenho do gap 16. Quem NAO entra e o Supervisor, que so
+    # acompanha.
+    #
+    # CUIDADO AO LER ESTA LISTA: o back-fill so ADICIONA (`.add()`), nunca
+    # remove. Perfil Gestor que ja tinha `people.gerir_vagas` de antes CONTINUA
+    # abrindo vaga direto ate alguem tirar a permissao na tela. E deliberado:
+    # arrancar permissao de instalacao que ja funciona, calado, e pior que
+    # deixar a governanca opcional. Quem quiser a governanca de verdade tira
+    # `people.gerir_vagas` do Gestor pela tela de permissoes.
     'Gestor': ['people.ver', 'people.criar_colaborador',
-               'people.mover_colaborador', 'people.gerir_vagas',
+               'people.mover_colaborador', 'people.solicitar_vaga',
                'people.avaliar'],
     'Supervisor Comercial': ['people.ver'],
 }
