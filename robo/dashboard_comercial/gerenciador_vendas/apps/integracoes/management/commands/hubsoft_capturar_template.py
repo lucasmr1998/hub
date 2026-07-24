@@ -96,6 +96,81 @@ def _login_best_effort(driver, painel_url, usuario, senha, stdout):
         stdout.write(f'  login automatico falhou ({exc}); faca login na janela aberta.')
 
 
+def _clicar_texto(driver, textos, *, timeout=8):
+    """Clica (via JS) no 1o elemento clicavel cujo texto contenha um dos `textos`
+    (case-insensitive). Retorna True se clicou. Defensivo: nunca levanta."""
+    from selenium.webdriver.common.by import By
+    fim = time.time() + timeout
+    alvos = [t.lower() for t in textos]
+    while time.time() < fim:
+        try:
+            for el in driver.find_elements(By.XPATH, "//a|//button|//span|//md-item|//*[@ng-click]"):
+                try:
+                    txt = (el.text or '').strip().lower()
+                    if txt and any(a in txt for a in alvos) and el.is_displayed():
+                        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+                        driver.execute_script("arguments[0].click();", el)
+                        return True
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        time.sleep(0.7)
+    return False
+
+
+def _navegar_ate_converter(driver, painel_url, idp, stdout, shots_dir=None):
+    """Best-effort: Cliente -> Prospectos -> busca idp -> Acoes -> Converter em Cliente.
+
+    Fragil (SPA AngularJS): cada passo e defensivo e a falha nao interrompe. Deixa a
+    janela onde chegou; o operador termina o que faltar e clica SALVAR."""
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
+
+    def shot(nome):
+        if shots_dir:
+            try:
+                driver.save_screenshot(os.path.join(shots_dir, nome))
+            except Exception:
+                pass
+
+    time.sleep(3)
+    shot('nav_00_dashboard.png')
+    stdout.write('  navegando: menu Cliente...')
+    _clicar_texto(driver, ['Cliente'])
+    time.sleep(1.5)
+    stdout.write('  navegando: Prospectos...')
+    _clicar_texto(driver, ['Prospectos', 'Prospecto'])
+    time.sleep(3)
+    shot('nav_01_prospectos.png')
+
+    # busca pelo id do prospecto
+    for sel in ("input[ng-model*='busca']", "input[type='search']",
+                "input[placeholder*='usca']", "input[placeholder*='rospecto']", "input[type='text']"):
+        els = [e for e in driver.find_elements(By.CSS_SELECTOR, sel) if e.is_displayed()]
+        if els:
+            try:
+                els[0].clear(); els[0].send_keys(str(idp)); els[0].send_keys(Keys.ENTER)
+                stdout.write(f'  navegando: busquei o prospecto {idp}.')
+                break
+            except Exception:
+                continue
+    time.sleep(3)
+    shot('nav_02_busca.png')
+
+    stdout.write('  navegando: menu Acoes...')
+    _clicar_texto(driver, ['Ações', 'Acoes', 'Ação'])
+    time.sleep(1.5)
+    stdout.write('  navegando: Converter em Cliente...')
+    ok = _clicar_texto(driver, ['Converter em Cliente', 'Converter'])
+    time.sleep(3)
+    shot('nav_03_wizard.png')
+    if ok:
+        stdout.write('  wizard de conversao aberto. Termine o que faltar e clique SALVAR.')
+    else:
+        stdout.write('  nao confirmei o "Converter em Cliente"; abra manualmente na janela.')
+
+
 def _neutralizar_pii(payload: dict) -> dict:
     """Zera a identidade/endereco do prospecto de teste, mantendo a estrutura +
     objetos da empresa. O que for zerado aqui e reescrito por lead no runtime."""
@@ -137,6 +212,8 @@ class Command(BaseCommand):
                             help='Descarta POSTs cuja URL contenha isto (default /servico).')
         parser.add_argument('--timeout', type=int, default=600,
                             help='Segundos aguardando o operador concluir (default 600).')
+        parser.add_argument('--id-prospecto', default=None,
+                            help='Se informado, auto-navega ate o wizard de conversao desse prospecto.')
         parser.add_argument('--salvar-perfil', action='store_true',
                             help='Grava o payload capturado em perfil.template_conversao.')
 
@@ -161,10 +238,16 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING(
             f'Captura de template, tenant {tenant.slug}, painel {painel_url}'))
 
+        shots_dir = os.path.join(os.environ.get('TMPDIR', '/tmp'), f'captura_template_{tenant.slug}')
+        os.makedirs(shots_dir, exist_ok=True)
+
         driver = None
         try:
             driver = _configurar_chrome_cdp()
             _login_best_effort(driver, painel_url, integ.client_id, integ.client_secret, self.stdout)
+
+            if o['id_prospecto']:
+                _navegar_ate_converter(driver, painel_url, o['id_prospecto'], self.stdout, shots_dir)
 
             self.stdout.write(self.style.WARNING(
                 '\n  ===================== FACA AGORA NA JANELA DO CHROME =====================\n'
