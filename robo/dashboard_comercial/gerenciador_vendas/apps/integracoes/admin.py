@@ -2,7 +2,17 @@ from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft
+from .models import (
+    IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft,
+    PerfilConversaoHubsoft,
+)
+
+
+@admin.register(PerfilConversaoHubsoft)
+class PerfilConversaoHubsoftAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'tenant', 'dry_run_forcado', 'ativo', 'atualizado_em')
+    list_filter = ('ativo', 'dry_run_forcado', 'tenant')
+    search_fields = ('nome',)
 
 
 # =========================================================================

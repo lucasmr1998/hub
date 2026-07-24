@@ -307,16 +307,83 @@ def _oportunidades_paradas(tenant, config):
     return out
 
 
+def _prospectos_por_criterio(tenant, config):
+    """Prospectos (leads) que casam com um critério, pra rotinas de escrita no
+    HubSoft (conversão, novo serviço, upgrade). É o "start por vendedor OU por
+    status" que essas rotinas pedem.
+
+    Filtros da `config` (tudo chega como string do editor):
+    - `vendedor_id`: id do vendedor no HubSoft (`id_vendedor_rp`). É o
+      "todos os prospectos do vendedor X".
+    - `status_api`: um status (`status_api=`) ou vários separados por vírgula
+      (`status_api__in`).
+    - `com_id_hubsoft`: quando ligado, só entram leads com `id_hubsoft` preenchido
+      (pré-requisito da conversão: o prospecto precisa existir no HubSoft).
+    - `exige_vendedor`: quando ligado, só entram leads com `id_vendedor_rp` definido.
+    - `sem_marcador`: exclui leads que já têm essa chave em `dados_custom` (freio de
+      idempotência: o fluxo marca o lead depois de processar, pra não repetir).
+    - `limite`: teto de itens por rodada (default 200).
+
+    Cada item traz o `lead` (entidade reconhecida por `gatilhos._contexto_do_evento`)
+    + escalares úteis no texto do fluxo.
+    """
+    from apps.comercial.leads.models import LeadProspecto
+
+    qs = LeadProspecto.all_tenants.filter(tenant=tenant, ativo=True)
+
+    vendedor_id = (config.get('vendedor_id') or '').strip()
+    if vendedor_id:
+        try:
+            qs = qs.filter(id_vendedor_rp=int(vendedor_id))
+        except (TypeError, ValueError):
+            pass
+
+    status_api = (config.get('status_api') or '').strip()
+    if status_api:
+        valores = [s.strip() for s in status_api.split(',') if s.strip()]
+        qs = qs.filter(status_api__in=valores) if len(valores) > 1 else qs.filter(status_api=valores[0])
+
+    if _verdadeiro(config.get('com_id_hubsoft')):
+        qs = qs.exclude(id_hubsoft__isnull=True).exclude(id_hubsoft='')
+
+    if _verdadeiro(config.get('exige_vendedor')):
+        qs = qs.filter(id_vendedor_rp__isnull=False)
+
+    sem_marcador = (config.get('sem_marcador') or '').strip()
+    if sem_marcador:
+        qs = qs.exclude(dados_custom__has_key=sem_marcador)
+
+    try:
+        limite = int(config.get('limite') or 200)
+    except (TypeError, ValueError):
+        limite = 200
+    limite = max(1, min(limite, 2000))
+
+    qs = qs.order_by('id')[:limite]
+
+    out = []
+    for lead in qs:
+        out.append({
+            'lead': lead,
+            'status_api': lead.status_api,
+            'id_vendedor_rp': lead.id_vendedor_rp,
+            'id_hubsoft': lead.id_hubsoft or '',
+        })
+    return out
+
+
 VARREDURAS = {
     'oportunidades_perdidas': _oportunidades_perdidas,
     'atendimentos_matrix_finalizados': _atendimentos_matrix_finalizados,
     'oportunidades_paradas': _oportunidades_paradas,
+    'prospectos_por_criterio': _prospectos_por_criterio,
 }
 
 _LABELS = {
     'oportunidades_perdidas': 'Oportunidades perdidas (win/loss)',
     'atendimentos_matrix_finalizados': 'Atendimentos Matrix finalizados (sem análise)',
     'oportunidades_paradas': 'Oportunidades paradas no estágio (SLA)',
+    'prospectos_por_criterio': 'Prospectos por critério (vendedor/status)',
 }
 
 

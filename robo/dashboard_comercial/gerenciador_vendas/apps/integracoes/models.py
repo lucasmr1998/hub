@@ -32,6 +32,7 @@ class IntegracaoAPI(TenantMixin):
     """
     TIPO_CHOICES = [
         ('hubsoft', 'HubSoft'),
+        ('hubsoft_painel', 'HubSoft Painel (operador)'),
         ('sgp', 'SGP (inSystem)'),
         ('uazapi', 'Uazapi (WhatsApp)'),
         ('evolution', 'Evolution API (WhatsApp)'),
@@ -912,3 +913,121 @@ class ClienteConsolidado(TenantMixin):
 
     def __str__(self):
         return f'{self.nome} ({self.get_origem_display()} #{self.id_origem})'
+
+
+class PerfilConversaoHubsoft(TenantMixin):
+    """Parametros por tenant das rotinas de escrita no HubSoft (conversao de
+    prospecto, novo servico, upgrade de plano).
+
+    Concentra tudo que no robo_v2 era ID magico hardcoded da Megalink (vendedor,
+    grupo, vencimento, forma de pagamento, status, empresa...). Cada tenant tem o
+    seu HubSoft com IDs proprios (a Nuvyon tem 80 vendedores, 503 planos, grupos e
+    status diferentes), entao NADA fica no codigo: mora aqui, editavel na UI.
+
+    Seguranca: `dry_run_forcado` nasce True. Enquanto True, so os CPFs em
+    `cpf_allowlist` executam de verdade no ERP; todo o resto roda em dry_run
+    (monta o payload mas nao faz o POST). E o mesmo guard do robo_v2, mas por
+    tenant em vez de por variavel de ambiente global.
+    """
+    nome = models.SlugField(
+        max_length=60, verbose_name='Nome do perfil',
+        help_text='Identificador por tenant. Ex: padrao, conversao, upsell.',
+    )
+    ativo = models.BooleanField(default=True, db_index=True)
+
+    # === Integracoes que o perfil usa ===
+    integracao_api = models.ForeignKey(
+        IntegracaoAPI, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='perfis_conversao_api', limit_choices_to={'tipo': 'hubsoft'},
+        verbose_name='Integracao HubSoft (API oficial)',
+        help_text='Usada so pra leitura/espelho (consultar_cliente, sincronizar).',
+    )
+    integracao_painel = models.ForeignKey(
+        IntegracaoAPI, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='perfis_conversao_painel', limit_choices_to={'tipo': 'hubsoft_painel'},
+        verbose_name='Integracao HubSoft Painel (operador)',
+        help_text='Credencial do operador do painel, usada pelas escritas (conversao/servico).',
+    )
+
+    # === Parametros da escrita (IDs do HubSoft do tenant) ===
+    vendedor_id_conversao = models.IntegerField(
+        null=True, blank=True, verbose_name='Vendedor da conversao (id HubSoft)')
+    vendedor_id_novo_servico = models.IntegerField(
+        null=True, blank=True, verbose_name='Vendedor do novo servico/upgrade (id HubSoft)')
+    grupo_servico_id = models.IntegerField(
+        null=True, blank=True, verbose_name='Grupo do servico (id HubSoft)',
+        help_text='Ex: Varejo. O objeto completo fica em grupo_servico_obj.')
+    grupo_servico_obj = models.JSONField(
+        default=dict, blank=True, verbose_name='Grupo do servico (objeto)',
+        help_text='Objeto completo do grupo que o painel exige no payload.')
+    status_servico_novo_id = models.IntegerField(
+        default=6, verbose_name='Status do servico novo (id)',
+        help_text='Padrao 6 = Aguardando Instalacao.')
+    status_servico_migrado_id = models.IntegerField(
+        default=11, verbose_name='Status do servico migrado (id)',
+        help_text='Padrao 11 = Servico Habilitado (upgrade nasce habilitado).')
+    forma_cobranca_id = models.IntegerField(
+        null=True, blank=True, verbose_name='Forma de cobranca (id HubSoft)')
+    vencimentos_map = models.JSONField(
+        default=dict, blank=True, verbose_name='Mapa de vencimentos (dia -> id)',
+        help_text='Ex: {"1": 28, "5": 9, "10": 4}. Traduz o dia escolhido no id_vencimento do ERP.')
+    id_empresa = models.IntegerField(
+        null=True, blank=True, verbose_name='Empresa (id HubSoft)',
+        help_text='Usado em contrato/cancelamento.')
+    motivo_cancelamento_id = models.IntegerField(
+        null=True, blank=True, verbose_name='Motivo de cancelamento (id HubSoft)')
+    validade_meses = models.PositiveSmallIntegerField(
+        default=12, verbose_name='Validade do contrato (meses)')
+    tipo_cobranca = models.CharField(
+        max_length=40, default='postecipada', verbose_name='Tipo de cobranca')
+    agrupamento_fatura = models.CharField(
+        max_length=40, default='agrupado_cliente', verbose_name='Agrupamento de fatura')
+
+    # === Guard de seguranca (por tenant) ===
+    dry_run_forcado = models.BooleanField(
+        default=True, verbose_name='Dry run forcado',
+        help_text='Enquanto ligado, so os CPFs da allowlist executam de verdade. Todo o resto simula.')
+    cpf_allowlist = models.JSONField(
+        default=list, blank=True, verbose_name='Allowlist de CPF (execucao real)',
+        help_text='Lista de CPFs liberados pra escrita real enquanto o dry run forcado estiver ligado.')
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'integracoes_perfil_conversao_hubsoft'
+        verbose_name = 'Perfil de conversao HubSoft'
+        verbose_name_plural = '🔁 Perfis de conversao HubSoft'
+        unique_together = [['tenant', 'nome']]
+        ordering = ['nome']
+
+    def __str__(self):
+        return f'{self.nome} · {self.tenant}'
+
+    def dry_run_efetivo(self, dry_run_pedido: bool, cpf: str) -> bool:
+        """Decide se a execucao roda em dry run. Porte tenant-aware do guard do
+        robo_v2 (executores/base.py): (1) se quem chamou pediu dry run, e dry run;
+        (2) se o perfil nao forca dry run, executa de verdade; (3) forcando, so o
+        CPF na allowlist (comparado so por digitos) executa, o resto vira dry run.
+        """
+        if dry_run_pedido:
+            return True
+        if not self.dry_run_forcado:
+            return False
+        digitos = ''.join(ch for ch in str(cpf or '') if ch.isdigit())
+        permitidos = {
+            ''.join(ch for ch in str(c) if ch.isdigit())
+            for c in (self.cpf_allowlist or [])
+        }
+        return not (digitos and digitos in permitidos)
+
+    def id_vencimento(self, dia) -> int | None:
+        """Traduz o dia de vencimento (int/str) no id_vencimento do ERP pelo mapa
+        do perfil. Retorna None quando o dia nao esta mapeado (o chamador decide
+        o fallback)."""
+        if dia is None:
+            return None
+        chave = str(dia).strip()
+        mapa = self.vencimentos_map or {}
+        valor = mapa.get(chave)
+        return int(valor) if valor is not None else None

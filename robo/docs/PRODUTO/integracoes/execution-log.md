@@ -535,3 +535,37 @@ e compara em memoria.
   a aba depende de: a Nuvyon ainda cria prospecto no HubSoft (camada ERP)?
 - **Output:** 27 testes (ajustados: matriz/divergencia fora), ruff limpo, render ok.
 - **Status:** completed
+
+## 2026-07-24 — Fundacao das rotinas de escrita HubSoft (conversao/novo servico/upgrade)
+
+- **Contexto:** as 3 operacoes de escrita no HubSoft (converter prospecto em
+  cliente, novo servico, upgrade de plano) NAO tem API oficial. So existem no
+  painel do operador (o robo_v2 fazia via API interna scrapeada + Selenium). Vamos
+  reconstruir como rotinas configuraveis na engine de automacao, tudo parametrizado
+  por tenant (outros tenants terao outros HubSofts). Confirmado ao vivo na Nuvyon:
+  catalogo tem 80 vendedores, 503 planos, grupos/status/formas proprios.
+- **Decisao:** as 3 operacoes pelo mesmo caminho (painel), um service
+  `hubsoft_painel.py` tenant-aware. Config por tenant num model tipado (nao em
+  configuracoes_extras), com guard de dry run por tenant (allowlist de CPF).
+- **Acao (Fase 1, fundacao):**
+  - Model `PerfilConversaoHubsoft(TenantMixin)`: vendedor/grupo/status/forma/
+    vencimentos_map/id_empresa por tenant + `dry_run_forcado` (default True) +
+    `cpf_allowlist`. Metodos `dry_run_efetivo` (porte do guard do robo_v2) e
+    `id_vencimento`. Migration 0020.
+  - Novo tipo `hubsoft_painel` em `IntegracaoAPI.TIPO_CHOICES` (credencial do
+    operador; senha em EncryptedCharField; token JWT cacheado em
+    configuracoes_extras.cache.painel_token com exp).
+  - Varredura `prospectos_por_criterio` (por vendedor/status/marcador/com_id_hubsoft)
+    em `apps/automacao/varreduras.py` = o "start por vendedor ou por status".
+  - Service `apps/integracoes/services/hubsoft_painel.py`: login Selenium headless
+    (email/Validar/senha/Entrar) capturando cookies+JWT, cache de token, `_get/_post`
+    com LogIntegracao. Fase 1 so leitura (schema_cache, get_cliente, obter_servico_edit,
+    buscar_cep). Factory `hubsoft_painel_do_tenant`.
+  - Fontes de opcoes `perfis_conversao_hubsoft` e `integracoes_hubsoft_painel` em
+    `apps/automacao/opcoes.py`. Registro do model no admin.
+- **Output:** `manage.py check` ok, 12 testes passando (`tests/test_hubsoft_painel_fundacao.py`:
+  dry_run_efetivo, id_vencimento, varredura com isolamento por tenant, helpers do painel).
+- **Pendente:** spike de login real no painel da Nuvyon (Selenium vs prod, precisa Chrome);
+  UI em /configuracoes/integracoes/ pra editar perfil+credencial (por ora so admin);
+  Fases 2 a 4 (escritas: conversao, novo servico, upgrade) + nos + seeds.
+- **Status:** completed (fundacao); proximo: spike de login e Fase 2 (conversao).

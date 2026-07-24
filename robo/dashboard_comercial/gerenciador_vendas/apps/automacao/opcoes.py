@@ -57,6 +57,17 @@ def _integracoes_hubsoft(tenant):
     return _integracoes_por_tipo(tenant, 'hubsoft')
 
 
+def _integracoes_hubsoft_painel(tenant):
+    return _integracoes_por_tipo(tenant, 'hubsoft_painel')
+
+
+def _perfis_conversao_hubsoft(tenant):
+    """Perfis de conversao HubSoft ativos do tenant (dropdown dos nós de escrita)."""
+    from apps.integracoes.models import PerfilConversaoHubsoft
+    return [{'value': p.nome, 'label': p.nome}
+            for p in PerfilConversaoHubsoft.all_tenants.filter(tenant=tenant, ativo=True).order_by('nome')]
+
+
 def _varreduras(tenant):
     """Catálogo do gatilho `agenda` — não é por tenant, mas segue a assinatura padrão."""
     from .varreduras import opcoes_varreduras
@@ -100,6 +111,8 @@ FONTES = {
     'agentes': _agentes,
     'integracoes_uazapi': _integracoes_uazapi,
     'integracoes_hubsoft': _integracoes_hubsoft,
+    'integracoes_hubsoft_painel': _integracoes_hubsoft_painel,
+    'perfis_conversao_hubsoft': _perfis_conversao_hubsoft,
     'varreduras': _varreduras,
     'motivos_perda': _motivos_perda,
     'propriedades_oportunidade': _propriedades_oportunidade,
