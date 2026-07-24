@@ -600,3 +600,25 @@ e compara em memoria.
 - **Status:** completed (codigo + testes da conversao); pendente validacao live
   (captura de template + acesso ao host da API). Proximo: Fase 3 (novo servico) e
   Fase 4 (upgrade), depois seeds dos 3 fluxos.
+
+## 2026-07-24 — Novo servico, upgrade e seeds dos 3 fluxos (Fases 3 a 5)
+- **Acao:** completou o motor de escrita no painel.
+  - Fase 3/4: builder compartilhado `montar_payload_adicionar_servico` (POST
+    /cliente/servico) serve novo servico E upgrade; upgrade so acrescenta os campos
+    de migracao (id_cliente_servico_antigo, executar_migracao_imediata, status
+    habilitado 11) via param `migracao`. IDs magicos saem do perfil; servico/forma/
+    endereco resolvidos pelo no. Novo campo `forma_cobranca_obj` no perfil (migration
+    0022) com fallback pelo schema do painel. Nos `hubsoft_adicionar_servico` e
+    `hubsoft_migrar_plano` (id_cliente pelo espelho ClienteHubsoft, endereco cadastral
+    via get_cliente, idempotencia por plano ativo, dry run, retry_seguro=False).
+  - Fase 5: `seed_fluxos_hubsoft_escrita` cria os 3 fluxos (conversao/novo servico/
+    upgrade) INATIVOS e em dry run, padrao varredura prospectos_por_criterio -> no ->
+    marcador/tarefa/nota. Idempotente por nome. Doc `rotinas-escrita-hubsoft.md`.
+- **Output:** 38 testes passando (fundacao + conversao + servico/upgrade), golden dos
+  3 payloads. Seed rodado no demo-local: 3 fluxos validados (validar_fluxo) e
+  idempotentes (ids 2/3/4, ativo=False). 2 commits (nos 3/4; seed+doc).
+- **Pendente:** captura do template_conversao real, acesso ao host da API interna,
+  UI de perfil/credencial (hoje admin). Homologar com 1 CPF na allowlist quando os
+  dois primeiros destravarem.
+- **Status:** completed (Fases 1 a 5, motor completo com testes). Falta validacao
+  live e UI.
