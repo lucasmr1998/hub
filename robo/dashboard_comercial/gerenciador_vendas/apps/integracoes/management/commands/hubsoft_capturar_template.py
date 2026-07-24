@@ -22,6 +22,7 @@ Uso (janela visivel obrigatoria pra o operador dirigir):
 prospecto de teste. Sem --salvar-perfil, so grava o JSON num arquivo pra revisao.
 """
 import json
+import os
 import time
 
 from django.core.management.base import BaseCommand, CommandError
