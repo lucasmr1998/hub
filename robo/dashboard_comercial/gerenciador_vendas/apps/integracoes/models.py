@@ -983,6 +983,17 @@ class PerfilConversaoHubsoft(TenantMixin):
     agrupamento_fatura = models.CharField(
         max_length=40, default='agrupado_cliente', verbose_name='Agrupamento de fatura')
 
+    # === Template do payload (capturado por HubSoft, versionado por perfil) ===
+    template_conversao = models.JSONField(
+        default=dict, blank=True, verbose_name='Template do payload de conversao',
+        help_text=(
+            'Payload base do POST /api/v1/cliente capturado UMA vez no painel deste '
+            'HubSoft (objeto completo: servico, contratos, forma_cobranca, empresa). '
+            'A rotina faz deepcopy e sobrepoe so os campos do lead (identidade, '
+            'endereco, vencimento, vendedor). Nada de ID magico no codigo: cada tenant '
+            'captura o seu. Vazio = conversao indisponivel pro perfil.'),
+    )
+
     # === Guard de seguranca (por tenant) ===
     dry_run_forcado = models.BooleanField(
         default=True, verbose_name='Dry run forcado',

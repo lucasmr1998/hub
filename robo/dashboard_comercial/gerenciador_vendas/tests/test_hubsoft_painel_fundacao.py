@@ -97,3 +97,134 @@ class TestClientePainelHelpers:
             client_id='', client_secret='', username='', password='')
         with pytest.raises(HubsoftPainelError):
             HubsoftPainelService(integ)
+
+
+# Template minimo mas representativo do payload de conversao capturado no painel.
+# Valores 'ORIG' marcam o que a rotina DEVE sobrepor; o resto o overlay preserva.
+_TEMPLATE_CONVERSAO = {
+    'tipo_pessoa': 'pf',
+    'data_nascimento': 'ORIG',
+    'cpf_cnpj': 'ORIG', 'nome_razaosocial': 'ORIG', 'nome_fantasia': 'ORIG',
+    'telefone_primario': 'ORIG', 'telefone_secundario': 'ORIG',
+    'email_principal': 'ORIG', 'rg': 'ORIG', 'id_prospecto': 0,
+    'nacionalidade': 'BRASILEIRO', 'valor': 99.9,
+    'cliente_endereco_numeros': [
+        {'tipo': 'cadastral', 'cep': 'ORIG', 'endereco': 'ORIG', 'numero': 'ORIG'},
+        {'tipo': 'cobranca', 'cep': 'ORIG', 'endereco': 'ORIG', 'numero': 'ORIG'},
+    ],
+    'cliente_servico_endereco_instalacao': {'tipo': 'ORIG', 'cep': 'ORIG', 'endereco': 'ORIG'},
+    'cliente_servico': {
+        'servico': {'id_servico': 100, 'valor': 99.9, 'display': 'Plano do Template'},
+        'valor': 99.9,
+        'vencimento': {'id_vencimento': 1, 'dia_vencimento': '1'},
+        'grupos': [{'id': 1, 'descricao': 'Grupo do Template'}],
+        'vendedor': {'id': 111, 'name': 'Vendedor do Template', 'email': 'v@erp'},
+        'id_usuario_vendedor': 111,
+        'data_venda': 'ORIG',
+    },
+}
+
+_ENDERECO = {
+    'cep': '64000000', 'endereco': 'Rua das Flores', 'numero': '10',
+    'bairro': 'Centro', 'cidade': {'id_cidade': 5, 'nome': 'Teresina'},
+}
+
+
+class TestMontarPayloadConversao:
+    def _svc(self, tenant, **perfil_kw):
+        from apps.integracoes.services.hubsoft_painel import HubsoftPainelService
+        integ = IntegracaoAPI.all_tenants.create(
+            tenant=tenant, tipo='hubsoft_painel', nome='Painel',
+            base_url='https://artelecom.hubsoft.com.br',
+            client_id='operador', client_secret='senha', username='', password='')
+        base = dict(nome='padrao', template_conversao=_TEMPLATE_CONVERSAO,
+                    vendedor_id_conversao=1613,
+                    grupo_servico_obj={'id': 29, 'descricao': 'Varejo'},
+                    vencimentos_map={'10': 4})
+        base.update(perfil_kw)
+        perfil = PerfilConversaoHubsoft.all_tenants.create(tenant=tenant, **base)
+        return HubsoftPainelService(integ, perfil)
+
+    def _lead(self, **kw):
+        from types import SimpleNamespace
+        base = dict(cpf_cnpj='111.444.777-35', nome_razaosocial='Fulano de Tal',
+                    telefone='(86) 99999-0001', email='fulano@ex.com', rg='1234567',
+                    id_hubsoft='777', data_nascimento='15/05/1990',
+                    tipo_pessoa='fisica', id_dia_vencimento=10)
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    def test_overlay_identidade_e_endereco(self, db, tenant_a):
+        from datetime import datetime
+        svc = self._svc(tenant_a)
+        p = svc.montar_payload_conversao(
+            self._lead(), _ENDERECO, agora=datetime(2026, 7, 24, 12, 0, 0))
+        assert p['cpf_cnpj'] == '11144477735'
+        assert p['nome_razaosocial'] == 'Fulano de Tal'
+        assert p['nome_fantasia'] == 'Fulano de Tal'
+        assert p['telefone_primario'] == '86999990001'
+        assert p['email_principal'] == 'fulano@ex.com'
+        assert p['id_prospecto'] == 777
+        assert p['tipo_pessoa'] == 'pf'
+        assert p['data_nascimento'] == '1990-05-15'
+        # os 2 enderecos recebem o resolvido mas mantem o tipo
+        assert [e['tipo'] for e in p['cliente_endereco_numeros']] == ['cadastral', 'cobranca']
+        assert all(e['cep'] == '64000000' for e in p['cliente_endereco_numeros'])
+        assert p['cliente_servico_endereco_instalacao']['cep'] == '64000000'
+        assert p['cliente_servico_endereco_instalacao']['tipo'] == 'cadastral'
+
+    def test_vencimento_grupo_vendedor_e_data(self, db, tenant_a):
+        from datetime import datetime
+        svc = self._svc(tenant_a)
+        cs = svc.montar_payload_conversao(
+            self._lead(), _ENDERECO, agora=datetime(2026, 7, 24, 12, 0, 0))['cliente_servico']
+        assert cs['vencimento']['id_vencimento'] == 4
+        assert cs['id_vencimento'] == 4
+        assert cs['grupos'] == [{'id': 29, 'descricao': 'Varejo'}]
+        # vendedor: id do perfil, resto do objeto preservado do template
+        assert cs['vendedor']['id'] == 1613
+        assert cs['vendedor']['name'] == 'Vendedor do Template'
+        assert cs['id_usuario_vendedor'] == 1613
+        assert cs['data_venda'].startswith('2026-07-24') and cs['data_venda'].endswith('Z')
+
+    def test_nao_troca_servico_sem_override(self, db, tenant_a):
+        svc = self._svc(tenant_a)
+        p = svc.montar_payload_conversao(self._lead(), _ENDERECO)
+        assert p['cliente_servico']['servico']['id_servico'] == 100
+
+    def test_override_de_servico(self, db, tenant_a):
+        svc = self._svc(tenant_a)
+        novo = {'id_servico': 250, 'valor': 129.9, 'display': 'Plano 500MB'}
+        p = svc.montar_payload_conversao(self._lead(), _ENDERECO, servico_obj=novo)
+        assert p['cliente_servico']['servico']['id_servico'] == 250
+        assert p['cliente_servico']['valor'] == 129.9
+        assert p['valor'] == 129.9
+
+    def test_pj_zera_campos_pf(self, db, tenant_a):
+        svc = self._svc(tenant_a)
+        lead = self._lead(cpf_cnpj='12.345.678/0001-99', tipo_pessoa='juridica')
+        p = svc.montar_payload_conversao(lead, _ENDERECO)
+        assert p['tipo_pessoa'] == 'pj'
+        assert p['data_nascimento'] is None
+        assert p['cpf_cnpj'] == '12345678000199'
+        assert p['nacionalidade'] is None
+
+    def test_menor_de_18_vira_default(self, db, tenant_a):
+        from datetime import datetime
+        svc = self._svc(tenant_a)
+        lead = self._lead(data_nascimento='15/05/2015')
+        p = svc.montar_payload_conversao(
+            lead, _ENDERECO, agora=datetime(2026, 7, 24, 12, 0, 0))
+        assert p['data_nascimento'] == '1930-01-01'
+
+    def test_template_ausente_levanta(self, db, tenant_a):
+        svc = self._svc(tenant_a, template_conversao={})
+        with pytest.raises(HubsoftPainelError):
+            svc.montar_payload_conversao(self._lead(), _ENDERECO)
+
+    def test_nao_muta_o_template_do_perfil(self, db, tenant_a):
+        svc = self._svc(tenant_a)
+        svc.montar_payload_conversao(self._lead(), _ENDERECO)
+        # o template do perfil segue intacto (deepcopy no montar)
+        assert svc.perfil.template_conversao['cpf_cnpj'] == 'ORIG'
+        assert svc.perfil.template_conversao['cliente_servico']['vendedor']['id'] == 111

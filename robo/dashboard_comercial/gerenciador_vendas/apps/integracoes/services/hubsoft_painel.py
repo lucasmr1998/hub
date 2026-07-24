@@ -12,10 +12,10 @@ os cookies + o JWT e passamos a usar requests puro. O token e cacheado em
 `configuracoes_extras['cache']['painel_token']` com a expiracao do proprio JWT, pra
 nao abrir o navegador a cada execucao.
 
-FASE 1 (esta): so estrutura + login + LEITURA (get_cliente, obter_servico_edit,
-schema_cache, buscar_cep). Nenhum POST de escrita ainda. As escritas (criar cliente,
-adicionar servico, migrar) entram nas fases seguintes, sempre atras do guard de
-dry run do perfil.
+Leitura (get_cliente, obter_servico_edit, schema_cache, buscar_cep) valida o login
+sem escrever. As escritas (Fase 2+: criar cliente/conversao) montam o payload a
+partir do template capturado no perfil e so fazem o POST quando o guard de dry run
+do perfil libera; o no da automacao e quem decide dry run vs real por CPF.
 """
 import base64
 import json
@@ -304,6 +304,180 @@ class HubsoftPainelService:
         cep_digitos = ''.join(ch for ch in str(cep or '') if ch.isdigit())
         return self._post('/api/v1/endereco/cep/buscar',
                           json_body={'cep': cep_digitos, 'tipo_busca': 'cep'})
+
+    def buscar_plano_por_id(self, id_servico, *, lead=None):
+        """GET /api/v1/servico/{id}: objeto servico completo do painel, ou None.
+
+        Sem fallback de banco (o robo_v2 conectava psycopg2 direto no HubSoft; aqui
+        so a API do painel). None sinaliza pro chamador manter o servico do template.
+        """
+        try:
+            resp = self._get(f'/api/v1/servico/{int(id_servico)}', lead=lead)
+        except HubsoftPainelError:
+            return None
+        servico = resp.get('servico') if isinstance(resp, dict) else None
+        if servico:
+            return servico
+        if isinstance(resp, dict) and resp.get('id_servico'):
+            return resp
+        return None
+
+    # ------------------------------------------------------------------
+    # ESCRITA — conversao de prospecto em cliente (POST /api/v1/cliente)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _data_nascimento_valida(valor, agora):
+        """Normaliza a data de nascimento pro formato YYYY-MM-DD que o painel aceita.
+
+        Fora de 18 a 110 anos (ou invalida) cai no default 1930-01-01, mesma regra do
+        robo_v2 (o ERP rejeita menor de 18 e datas muito antigas).
+        """
+        from datetime import datetime, date
+        dt = None
+        if isinstance(valor, datetime):
+            dt = valor.date()
+        elif isinstance(valor, date):
+            dt = valor
+        elif valor:
+            for fmt in ('%d/%m/%Y', '%Y-%m-%d'):
+                try:
+                    dt = datetime.strptime(str(valor)[:10], fmt).date()
+                    break
+                except Exception:
+                    continue
+        if dt is None:
+            return '1930-01-01'
+        hoje = agora.date() if isinstance(agora, datetime) else agora
+        anos = (hoje - dt).days // 365
+        if anos < 18 or anos > 110:
+            return '1930-01-01'
+        return dt.strftime('%Y-%m-%d')
+
+    def montar_payload_conversao(self, lead, endereco_resolvido, *,
+                                 dia_vencimento=None, servico_obj=None, agora=None) -> dict:
+        """Monta o payload do POST /api/v1/cliente que converte o prospecto em cliente.
+
+        Faz deepcopy do `template_conversao` do perfil (capturado uma vez no painel
+        do HubSoft do tenant) e sobrepoe SO os campos que variam por lead: identidade,
+        endereco, vencimento, plano (se pedido) e vendedor. Nao toca a rede, entao da
+        pra golden-testar. Porte tenant-aware do montar_payload do robo_v2 lendo IDs
+        do perfil no lugar dos IDs magicos da Megalink.
+
+        `endereco_resolvido` e o dict de endereco ja resolvido (via buscar_cep); e o
+        no da automacao que resolve e passa aqui.
+        """
+        import copy
+        from datetime import datetime
+
+        if self.perfil is None:
+            raise HubsoftPainelError('montar_payload_conversao exige um PerfilConversaoHubsoft.')
+        template = self.perfil.template_conversao or {}
+        if not template:
+            raise HubsoftPainelError(
+                f"Perfil '{self.perfil.nome}' nao tem template_conversao capturado.")
+
+        payload = copy.deepcopy(template)
+        agora = agora or datetime.now()
+
+        doc = ''.join(c for c in str(lead.cpf_cnpj or '') if c.isdigit())
+        tel = ''.join(c for c in str(lead.telefone or '') if c.isdigit())
+        is_pj = (str(getattr(lead, 'tipo_pessoa', '') or '') in ('juridica', 'pj')) or (len(doc) == 14)
+
+        payload['cpf_cnpj'] = doc
+        payload['nome_razaosocial'] = lead.nome_razaosocial or ''
+        payload['nome_fantasia'] = lead.nome_razaosocial or ''
+        payload['telefone_primario'] = tel
+        payload['email_principal'] = lead.email or ''
+        payload['telefone_secundario'] = ''
+        payload['rg'] = lead.rg or ''
+        # id_prospecto e o que faz o POST ser uma CONVERSAO (linka prospecto -> cliente)
+        payload['id_prospecto'] = int(lead.id_hubsoft) if lead.id_hubsoft else None
+
+        if is_pj:
+            payload['tipo_pessoa'] = 'pj'
+            payload['data_nascimento'] = None
+            payload['indicador_inscricao_estadual'] = '9'   # 9 = nao contribuinte
+            payload['consumidor_final'] = '1'
+            for k in ('genero', 'estado_civil', 'nome_pai', 'nome_mae', 'nacionalidade', 'profissao'):
+                if k in payload:
+                    payload[k] = None
+        else:
+            payload['tipo_pessoa'] = 'pf'
+            payload['data_nascimento'] = self._data_nascimento_valida(lead.data_nascimento, agora)
+
+        # Endereco: as 2 entradas (cadastral/cobranca) + o de instalacao
+        for end_item in payload.get('cliente_endereco_numeros', []) or []:
+            tipo = end_item.get('tipo', 'cadastral')
+            end_item.update(endereco_resolvido or {})
+            end_item['tipo'] = tipo
+        if isinstance(payload.get('cliente_servico_endereco_instalacao'), dict):
+            payload['cliente_servico_endereco_instalacao'].update(endereco_resolvido or {})
+            payload['cliente_servico_endereco_instalacao']['tipo'] = 'cadastral'
+
+        cs = payload.setdefault('cliente_servico', {})
+
+        # Plano: so troca se pediram um servico diferente do que ja vem no template
+        if servico_obj:
+            cs['servico'] = servico_obj
+            valor = servico_obj.get('valor')
+            if valor is not None:
+                cs['valor'] = valor
+                payload['valor'] = valor
+
+        # Vencimento: dia -> id_vencimento do ERP pelo mapa do perfil
+        dia = dia_vencimento if dia_vencimento is not None else getattr(lead, 'id_dia_vencimento', None)
+        id_venc = self.perfil.id_vencimento(dia)
+        if id_venc is not None:
+            v_obj = {
+                'id_vencimento': id_venc, 'dia_vencimento': str(dia),
+                'ativo': True, 'display': str(dia), 'value': id_venc,
+            }
+            cs['vencimento'] = v_obj
+            cs['id_vencimento'] = id_venc
+            payload['id_vencimento'] = id_venc
+
+        # Grupo do servico (objeto completo vem do perfil, se configurado)
+        if self.perfil.grupo_servico_obj:
+            cs['grupos'] = [dict(self.perfil.grupo_servico_obj)]
+
+        cs['data_venda'] = agora.isoformat() + 'Z'
+
+        # Vendedor: so o id (o resto do objeto ja vem valido do template)
+        if self.perfil.vendedor_id_conversao:
+            vend = dict(cs.get('vendedor') or {})
+            vend['id'] = self.perfil.vendedor_id_conversao
+            cs['vendedor'] = vend
+            cs['id_usuario_vendedor'] = self.perfil.vendedor_id_conversao
+
+        return payload
+
+    def cpf_ja_cadastrado(self, cpf, *, lead=None) -> bool:
+        """Pre-check anti-duplicata: consulta o painel se o CPF/CNPJ ja e cliente.
+
+        Best-effort (igual robo_v2): erro na consulta devolve False pra nao travar o
+        fluxo; a idempotencia real fica nas outras checagens do no.
+        """
+        doc = ''.join(c for c in str(cpf or '') if c.isdigit())
+        if not doc:
+            return False
+        try:
+            resp = self._post(
+                '/api/v1/cliente/consulta_adicionar_cliente/cpf_cnpj',
+                json_body={'consulta': doc, 'status': 'todos', 'tipo': 'cpf_cnpj'}, lead=lead)
+        except HubsoftPainelError:
+            return False
+        return len(resp.get('clientes') or []) > 0
+
+    def criar_cliente(self, payload: dict, *, lead=None) -> dict:
+        """POST /api/v1/cliente. Levanta se a resposta nao vier com status success."""
+        resp = self._post('/api/v1/cliente', json_body=payload, lead=lead)
+        status = resp.get('status') if isinstance(resp, dict) else None
+        if status and status != 'success':
+            raise HubsoftPainelError(
+                (resp.get('msg') if isinstance(resp, dict) else None)
+                or 'criar_cliente devolveu status != success')
+        return resp
 
 
 def hubsoft_painel_do_tenant(tenant, *, integracao_id=None, perfil=None):
