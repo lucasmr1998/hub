@@ -60,6 +60,9 @@ class Venda:
     plano: str
     data_venda: str
     status_servico: str
+    # O HubSoft devolve o vendedor dentro de cada servico
+    # (servico.vendedor = {id_vendedor, nome, email}).
+    vendedor: str = ''
     lead_id: int | None = None
     lead_status: str | None = None
     casou_por: str = ''          # 'cpf' | 'telefone' | ''
@@ -152,6 +155,7 @@ def _buscar_vendas_hubsoft(tenant, inicio: date, fim: date) -> list:
                 dv = str(s.get('data_venda') or '')
                 if len(dv) < 10 or dv[3:10] not in meses:
                     continue
+                vend = s.get('vendedor')
                 vendas.append(Venda(
                     codigo_cliente=c.get('codigo_cliente'),
                     nome=(c.get('nome_razaosocial') or '')[:60],
@@ -161,6 +165,7 @@ def _buscar_vendas_hubsoft(tenant, inicio: date, fim: date) -> list:
                     plano=str(s.get('nome') or '')[:50],
                     data_venda=dv,
                     status_servico=str(s.get('status') or '')[:30],
+                    vendedor=(vend.get('nome') or '')[:40] if isinstance(vend, dict) else '',
                 ))
         ultima = (resposta.get('paginacao') or {}).get('ultima_pagina', pagina)
         if pagina >= ultima:
@@ -172,17 +177,17 @@ def _buscar_vendas_hubsoft(tenant, inicio: date, fim: date) -> list:
 
 def _classificar(tenant, vendas: list) -> dict:
     """Cruza cada venda com os nossos leads: CPF primeiro, telefone depois."""
-    from apps.comercial.leads.models import LeadProspecto
     from apps.comercial.crm.models import OportunidadeVenda
+    from apps.comercial.leads.models import LeadProspecto
 
     por_cpf, por_tel = {}, {}
-    for l in LeadProspecto.all_tenants.filter(tenant=tenant):
-        cpf = _so_digitos(l.cpf_cnpj)
+    for lead in LeadProspecto.all_tenants.filter(tenant=tenant):
+        cpf = _so_digitos(lead.cpf_cnpj)
         if cpf:
-            por_cpf.setdefault(cpf, l)
-        tel = _so_digitos(l.telefone)
+            por_cpf.setdefault(cpf, lead)
+        tel = _so_digitos(lead.telefone)
         if len(tel) >= 10:
-            por_tel.setdefault(tel[-8:], l)
+            por_tel.setdefault(tel[-8:], lead)
 
     ganhas = set(
         OportunidadeVenda.all_tenants

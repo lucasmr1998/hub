@@ -718,3 +718,44 @@ e compara em memoria.
 - **Status:** completed. Falta: cleanup do cliente de teste 64250 na Nuvyon
   (usuario vai cancelar manualmente), tarefa no Workspace (prod), e decidir a
   estrategia de merge dessa branch pra `main`.
+
+## 2026-07-24 — Webhook N8N: nao abrir oportunidade se o lead ja e cliente (tarefa 224)
+
+- **Acao:** o `receber_lead` (webhook do Matrix/N8N) passou a checar, antes de
+  criar a oportunidade, se a pessoa ja e cliente no HubSoft. Se for, marca o
+  lead (`dados_custom.eh_cliente_hubsoft`) e **nao cria oportunidade** (retorna
+  `eh_cliente:true`, `oportunidade_id:null`).
+- **Decisoes (dono):** checagem no NOSSO webhook (opcao B, nao no N8N); "e
+  cliente" = **qualquer cadastro** no HubSoft (nao filtra serviço ativo);
+  **fail-open** — erro na consulta devolve None e o fluxo cria a oportunidade
+  normalmente, pra nao perder lead por instabilidade da API.
+- **Codigo:** `HubsoftService.buscar_cliente_qualquer(cpf, telefone)` (novo) —
+  tenta CPF, depois telefone, cada busca isolada. `_telefone_para_busca`
+  normaliza pra 11 digitos SEM o 55 (o HubSoft devolve 0 se vier com o 55, o
+  mesmo falso negativo do caso Vanderlei). Gate no `receber_lead` so quando NAO
+  ha oportunidade ainda; cauda (tags, processar_seguro, return) virou condicional
+  a ter oportunidade.
+- **So checa criacao nova:** se o lead ja tem oportunidade, nao mexe.
+- **Output:** 14 testes (normalizacao de telefone, busca CPF/telefone,
+  fail-open, gate cria/nao cria oportunidade); ruff limpo no arquivo novo; check
+  ok. Sem migration.
+- **Pendente:** marcacao do lead e via `dados_custom` (nao e tag visivel na UI).
+  Se quiserem um status/tag visivel, e follow-up pequeno.
+- **Status:** completed
+
+## 2026-07-24 — Inconsistencias: coluna Vendedor (e status do servico nos recuperaveis)
+
+- **Acao:** as duas tabelas da aba Vendas ganharam a coluna **Vendedor**. A de
+  recuperaveis ganhou tambem **Status HubSoft**.
+- **Fonte:** o proprio payload do HubSoft traz o vendedor **dentro do servico**
+  (`servico.vendedor = {id_vendedor, nome, email}`). Por isso serve as duas
+  tabelas, inclusive a "nao existem no CRM", onde nao ha lead nem oportunidade
+  nossa pra consultar responsavel.
+- **Por que o Status HubSoft nos recuperaveis:** e o campo que separa "venda
+  esquecida" de "venda em andamento". Sem ele a lista parece fila de pendencia
+  que nao e: em 23/07, 7 dos 8 recuperaveis estavam Aguardando
+  Instalacao/Assinatura, ou seja, corretos.
+- **Limpeza junto:** `_classificar` usava `l` como variavel (E741) e imports
+  fora de ordem (I001). Corrigido; ruff limpo no arquivo.
+- **Output:** 49 testes passando, check ok. Sem migration.
+- **Status:** completed

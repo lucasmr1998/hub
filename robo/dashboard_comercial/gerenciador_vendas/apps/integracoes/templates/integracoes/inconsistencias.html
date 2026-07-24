@@ -151,6 +151,7 @@
           <th>Plano</th>
           <th data-tipo="data">Venda</th>
           <th>Status</th>
+          <th>Vendedor</th>
         </tr>
       </thead>
       <tbody>
@@ -167,6 +168,7 @@
             <td>{{ v.plano }}</td>
             <td>{{ v.data_venda }}</td>
             <td>{{ v.status_servico|default:"—" }}</td>
+            <td>{{ v.vendedor|default:"—" }}</td>
           </tr>
         {% endfor %}
       </tbody>
@@ -203,6 +205,8 @@
           <th>Status do lead</th>
           <th>Casou por</th>
           <th data-tipo="data">Venda</th>
+          <th>Vendedor</th>
+          <th>Status HubSoft</th>
         </tr>
       </thead>
       <tbody>
@@ -213,6 +217,13 @@
             <td>{{ v.lead_status }}</td>
             <td>{{ v.casou_por }}</td>
             <td>{{ v.data_venda }}</td>
+            <td>{{ v.vendedor|default:"—" }}</td>
+            {% comment %}
+              O status do servico e o que separa "venda esquecida" de "venda em
+              andamento": so quem esta Habilitado deveria cobrar acao. Sem ele a
+              lista parece uma fila de pendencia que nao e.
+            {% endcomment %}
+            <td>{{ v.status_servico|default:"—" }}</td>
           </tr>
         {% endfor %}
       </tbody>

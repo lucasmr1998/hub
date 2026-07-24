@@ -715,3 +715,49 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Verificado no browser**: ids unicos (`checklist-2-0/1/2`) e clicar o 3o item mudou SO o indice 2, sem tocar nos outros.
 - **Output**: `components/checkbox.html`, `views/candidatos.py`, `blocos/_roteiro.html`, `blocos/_checklist.html`. Sem migration.
 - **Status**: completed em dev.
+
+## 2026-07-23 — Item 13 do GAPS reclassificado: era configuracao, nao gap
+
+- **Acao**: o Lucas questionou ("entao isso dos campos nao e gap de produto?") e estava certo. O item 13 (Campos do Perfil que faltam, 4h, ABERTO) foi reclassificado pra **NAO E GAP** e fechado.
+- **Por que era erro**: gap de produto e quando o produto NAO CONSEGUE fazer. Cargo pretendido, categoria de experiencia, "ja trabalhou aqui?" e trajetoria profissional sao criaveis hoje pela tela de Campos, sem codigo e sem deploy. O documento foi escrito comparando print a print, e nessa leitura "campo que eles mostram e a gente nao" virou gap, confundindo **capacidade que falta** com **configuracao que ninguem fez**.
+- **O que sobrou**: endereco com rua e numero em coluna propria (unico que exigiria codigo; fica ABERTO E OPCIONAL, porque e mais PII no formulario publico e mais peso pro expurgo LGPD, entao so vale com uso concreto declarado). E a nota de que campos nascem vazios pro tenant novo, o que e falta de DEFAULT (decisao de onboarding), nao de capacidade.
+- **Efeito na conta**: tira ~4h fantasma do backlog de recrutamento.
+- **Pendente (oferecido, nao autorizado)**: auditar o resto da lista com a mesma regua, separando capacidade que falta vs configuracao vs decisao. Suspeita de que 13 nao e o unico mal classificado.
+- **Status**: completed.
+
+## 2026-07-23 — Auditoria de classificacao do GAPS de recrutamento
+
+- **Acao**: depois do item 13 se revelar configuracao disfarcada de gap, o Lucas pediu a mesma regua no resto da lista. Regua: gap e o que o produto NAO CONSEGUE fazer; o resto e configuracao, decisao ou enfeite.
+- **Resultado**: dos ~11 dias que a lista aparentava, so **16 (requisicao de vaga com aprovacao) e 23 (auto agendamento), cerca de 4 a 5 dias**, sao capacidade que falta E bloqueia operar. O resto se separou em: capacidade que nao bloqueia (17, 20, ~4d), acelerador de IA sobre coisa que ja funciona manual (18, 19, 21, ~2,5d), paridade/UX com a capacidade ja existente em outra tela (15, 3h), decisao (22), discovery (24), descartado (25).
+- **Duas ressalvas levantadas**: o 17 (perfil comportamental) tem evidencia CONTRA no proprio material da origem (a cliente esperava binario e a IA devolve nuance); o 20 (artes por IA) e marketing competindo com ferramenta de design que o cliente ja usa, por 2 dias de custo.
+- **Reclassificacoes anotadas nas secoes**: 15 virou paridade/UX (mover em lote JA e possivel pela vista de lista); 18/19/21 viraram ACELERADORES, distinguidos de 17/20 dentro do bloco "familia de IA", que antes tratava os cinco como a mesma coisa.
+- **Efeito**: a leitura de "quanto falta pra fechar o recrutamento" cai de 11-12 dias pra 4-5 dias de trabalho que realmente destrava operacao.
+- **Status**: completed.
+
+## 2026-07-24 — Gap 16: requisicao de vaga com aprovacao (backend)
+
+- **Acao**: tarefa #222. O gestor da loja solicita a vaga com justificativa; o RH aprova ou rejeita com motivo. Antes, qualquer um com `people.gerir_vagas` abria vaga direto, sem registro de quem pediu nem por que.
+
+**O item era MENOR do que o GAPS dizia.** O doc pedia "dois status a mais e tres campos". Os tres campos (`justificativa`, `colaborador_substituido`, `criada_por`) JA EXISTIAM desde o passo 2, inclusive com CheckConstraint exigindo o substituido quando a justificativa e substituicao. A maquina de estados tambem ja previa isso: havia comentario dizendo que a aprovacao estava deferida e que, se entrasse, entraria "como estado ANTES de rascunho, sem mexer nos de baixo". Foi exatamente o caminho seguido.
+
+**Decisoes:**
+1. **Aprovar leva pra RASCUNHO, nao pro ar** (escolha do Lucas, opcao A). A requisicao chega crua ("preciso de 1 atendente"); o RH aprova o PEDIDO e depois arruma o ANUNCIO, que e o texto que o candidato le.
+2. **Rejeitada volta pra fila.** O gestor corrige e reenvia na mesma vaga; sem essa aresta o motivo da recusa se perderia.
+3. **Quem solicita nao aprova**: funcionalidade `people.solicitar_vaga` separada de `people.gerir_vagas`.
+
+**ATENCAO OPERACIONAL, precisa de acao manual:** o perfil **Gestor ja tinha `people.gerir_vagas`** (abria vaga direto). O back-fill do seed so ADICIONA permissao, nunca remove, entao os Gestores existentes continuam abrindo direto ate alguem tirar essa permissao na tela. Foi deliberado: arrancar permissao de instalacao que ja funciona, calado, e pior que deixar a governanca opcional. **Pra a governanca valer, remover `people.gerir_vagas` do perfil Gestor.**
+
+- **Output**: estados (`aguardando_aprovacao`, `rejeitada`, transicoes, `STATUS_VAGA_PRE_PROCESSO`), campos `aprovada_por`/`decidida_em`/`motivo_rejeicao`, migration 0025, funcionalidade nova no seed, `services/vagas.py`, 12 testes novos. Regressao: 65 verdes em vaga/vaga_views/candidatura_publica.
+- **Falta**: telas (formulario de solicitacao, fila de aprovacao, aprovar/rejeitar) e testes de view.
+- **Status**: pending (backend completo, UI pendente).
+
+## 2026-07-24 — Gap 16: telas de requisicao, aprovacao e recusa (fecha a tarefa #222)
+
+- **Acao**: UI do fluxo. Na lista de Vagas: botao "Solicitar vaga" (modal) pra quem tem `people.solicitar_vaga`; aviso no topo com a fila pro RH; por linha, Aprovar e Rejeitar (modal com motivo) pra quem tem `people.gerir_vagas`; e, na rejeitada, o motivo visivel mais o botao Reenviar pro solicitante.
+- **Detalhes de desenho**: dois botoes distintos no cabecalho (Solicitar x Nova vaga), porque um perfil costuma ter so um dos dois. "Quem saiu" so aparece quando a justificativa e substituicao, ja que o banco tem CheckConstraint exigindo. Modais ficam FORA da tabela: overlay dentro de `<td>` herda o empilhamento da celula e aparece cortado. Botoes de rejeitar usam delegacao, porque as linhas mudam a cada filtro.
+- **Views**: `solicitar`, `reenviar` (com `people.solicitar_vaga`), `aprovar`, `rejeitar` (com `people.gerir_vagas`). Aprovar redireciona pra EDICAO, e nao pra lista: aprovar e o meio do caminho, e escrever o anuncio e do RH que acabou de aprovar.
+- **Output**: `RequisicaoVagaForm` (subconjunto do VagaForm; `VagaForm.__init__` ficou tolerante a subconjunto), 4 rotas, UI na lista, 6 testes de view. 18 testes no arquivo, todos verdes. Verificado no browser.
+
+**ARMADILHA DE AMBIENTE que custou um ciclo:** `pkill -f "runserver"` do Git Bash NAO mata o processo no Windows, e falha calado. O servidor antigo continuou segurando a 8001, o novo nao bindou, e o browser ficou recebendo TEMPLATE ANTIGO. O sintoma parecia bug de permissao. Matar sempre via PowerShell (`Get-CimInstance ... | Stop-Process -Force`) e conferir que sobrou zero antes de subir.
+
+- **Status**: completed (backend + UI). Falta so o Lucas remover `people.gerir_vagas` do perfil Gestor pra a governanca valer.

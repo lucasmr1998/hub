@@ -334,6 +334,31 @@ class Vaga(TenantMixin):
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='vagas_criadas',
     )
+
+    # ── Aprovacao da requisicao (gap 16) ────────────────────────────────────
+    #
+    # `criada_por` JA E o solicitante: quem cria a requisicao e quem pede. Campo
+    # `solicitada_por` separado seria a mesma informacao com dois nomes, e o
+    # classico de os dois divergirem.
+    #
+    # `justificativa` e `colaborador_substituido` ja existiam desde o inicio,
+    # com constraint exigindo o substituido quando e substituicao. A requisicao
+    # so passou a EXIGIR o preenchimento; o schema ja estava pronto.
+    aprovada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='vagas_aprovadas',
+        verbose_name="Aprovada ou rejeitada por",
+    )
+    decidida_em = models.DateTimeField(
+        null=True, blank=True, verbose_name="Decidida em",
+        help_text="Quando o RH aprovou ou rejeitou a requisição.",
+    )
+    motivo_rejeicao = models.TextField(
+        blank=True, default='', verbose_name="Motivo da rejeição",
+        help_text="Obrigatório ao rejeitar. É o que o gestor lê para corrigir "
+                  "e reenviar.",
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

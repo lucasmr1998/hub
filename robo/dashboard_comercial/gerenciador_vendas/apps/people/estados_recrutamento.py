@@ -256,16 +256,20 @@ COR_DA_SAIDA = {
 # esta formalmente deferido. Nao entra aqui. Se entrar depois, entra como estado
 # ANTES de rascunho, sem mexer nos de baixo.
 
+STATUS_VAGA_AGUARDANDO = 'aguardando_aprovacao'
 STATUS_VAGA_RASCUNHO = 'rascunho'
 STATUS_VAGA_PUBLICADA = 'publicada'
 STATUS_VAGA_PAUSADA = 'pausada'
 STATUS_VAGA_ENCERRADA = 'encerrada'
+STATUS_VAGA_REJEITADA = 'rejeitada'
 
 STATUS_VAGA = [
+    (STATUS_VAGA_AGUARDANDO, 'Aguardando aprovação'),
     (STATUS_VAGA_RASCUNHO,  'Rascunho'),
     (STATUS_VAGA_PUBLICADA, 'Publicada'),
     (STATUS_VAGA_PAUSADA,   'Pausada'),
     (STATUS_VAGA_ENCERRADA, 'Encerrada'),
+    (STATUS_VAGA_REJEITADA, 'Rejeitada'),
 ]
 
 VALORES_STATUS_VAGA = [valor for valor, _ in STATUS_VAGA]
@@ -276,6 +280,18 @@ ROTULOS_STATUS_VAGA = dict(STATUS_VAGA)
 STATUS_VAGA_ACEITA_CANDIDATURA = (STATUS_VAGA_PUBLICADA,)
 
 TRANSICOES_VAGA = {
+    # Aprovacao entrou como estado ANTES de rascunho, do jeito que o comentario
+    # acima previa: quem tem `people.gerir_vagas` (o RH) continua criando direto
+    # em rascunho, e quem so tem `people.solicitar_vaga` (o gestor da loja) cria
+    # aqui. Aprovar manda pra RASCUNHO, e nao pra PUBLICADA, de proposito: o RH
+    # ainda revisa texto e requisitos antes de a vaga ir pro ar. Aprovar e
+    # publicar de uma vez tiraria a ultima conferencia de quem responde pela vaga.
+    STATUS_VAGA_AGUARDANDO: {STATUS_VAGA_RASCUNHO, STATUS_VAGA_REJEITADA,
+                             STATUS_VAGA_ENCERRADA},
+    # Rejeitada volta pra fila depois de ajustada: o gestor corrige o que o RH
+    # apontou e reenvia. Sem essa aresta, corrigir exigiria abrir outra vaga e o
+    # motivo da recusa se perderia.
+    STATUS_VAGA_REJEITADA:  {STATUS_VAGA_AGUARDANDO, STATUS_VAGA_ENCERRADA},
     STATUS_VAGA_RASCUNHO:  {STATUS_VAGA_PUBLICADA, STATUS_VAGA_ENCERRADA},
     STATUS_VAGA_PUBLICADA: {STATUS_VAGA_PAUSADA, STATUS_VAGA_ENCERRADA},
     STATUS_VAGA_PAUSADA:   {STATUS_VAGA_PUBLICADA, STATUS_VAGA_ENCERRADA},
@@ -284,6 +300,11 @@ TRANSICOES_VAGA = {
     # abre vaga nova, que e o registro honesto de que e outro processo.
     STATUS_VAGA_ENCERRADA: set(),
 }
+
+# Vaga que ainda nao virou processo: nao recebe candidatura, nao entra em funil e
+# nao aparece pra quem so acompanha. Existe pra o board e os filtros nao terem
+# que enumerar status a cada consulta.
+STATUS_VAGA_PRE_PROCESSO = (STATUS_VAGA_AGUARDANDO, STATUS_VAGA_REJEITADA)
 
 
 def rotulo_status_vaga(status):
