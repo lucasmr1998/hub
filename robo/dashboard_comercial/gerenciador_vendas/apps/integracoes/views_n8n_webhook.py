@@ -140,6 +140,42 @@ def _baixar_midia_uazapi(tenant, mensagem, message_id):
         logger.warning(f'Falha ao baixar midia {message_id} do Uazapi: {e}')
 
 
+def _ja_e_cliente_hubsoft(tenant, lead):
+    """Devolve o cliente do HubSoft (dict) se o lead ja e cliente, por CPF ou
+    telefone; senao None.
+
+    Fail-open: qualquer erro (integracao ausente, API fora) devolve None e loga,
+    pra o webhook seguir e criar a oportunidade em vez de perder o lead por
+    instabilidade da API. 'Qualquer cadastro' conta (nao filtra serviço ativo),
+    por decisao do dono (tarefa 224).
+    """
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        from apps.integracoes.services.hubsoft import HubsoftService
+        integ = IntegracaoAPI.all_tenants.filter(
+            tenant=tenant, tipo='hubsoft', ativa=True,
+        ).first()
+        if not integ:
+            return None
+        svc = HubsoftService(integ)
+        return svc.buscar_cliente_qualquer(
+            cpf_cnpj=lead.cpf_cnpj, telefone=lead.telefone, lead=lead)
+    except Exception as exc:
+        logger.warning('[receber_lead] checagem de cliente HubSoft falhou (fail-open): %s', exc)
+        return None
+
+
+def _marcar_lead_como_cliente(lead, cliente):
+    """Marca no lead que a pessoa ja e cliente no HubSoft (sem criar oportunidade)."""
+    dados = dict(lead.dados_custom or {})
+    dados['eh_cliente_hubsoft'] = True
+    cod = cliente.get('codigo_cliente') if isinstance(cliente, dict) else None
+    if cod:
+        dados['codigo_cliente_hubsoft'] = cod
+    lead.dados_custom = dados
+    lead.save(update_fields=['dados_custom'])
+
+
 @csrf_exempt
 @require_POST
 def receber_lead(request):
@@ -267,7 +303,17 @@ def receber_lead(request):
             tenant=tenant, lead=lead,
         ).first()
 
+        # Nao abrir oportunidade nova se a pessoa ja e cliente no HubSoft (por
+        # CPF ou telefone). So checa quando NAO ha oportunidade ainda: se ja
+        # existe uma, o lead ja esta no funil e a gente nao mexe. Fail-open: erro
+        # na consulta devolve None e o fluxo cria normalmente (tarefa 224).
+        cliente_hubsoft = None
         if not oportunidade:
+            cliente_hubsoft = _ja_e_cliente_hubsoft(tenant, lead)
+            if cliente_hubsoft:
+                _marcar_lead_como_cliente(lead, cliente_hubsoft)
+
+        if not oportunidade and not cliente_hubsoft:
             pipeline = Pipeline.all_tenants.filter(tenant=tenant, padrao=True).first()
             if not pipeline:
                 pipeline = Pipeline.all_tenants.filter(tenant=tenant).first()
@@ -311,7 +357,7 @@ def receber_lead(request):
         # Sinais extras pro motor de pipeline (usado pela Nuvyon: o bot N8N
         # reporta progresso a cada etapa). Dirigem as regras de automacao.
         tags_in = payload.get('tags') or []
-        if isinstance(tags_in, list):
+        if oportunidade and isinstance(tags_in, list):
             for tag_nome in tags_in:
                 tag_nome = str(tag_nome).strip()
                 if not tag_nome:
@@ -356,14 +402,30 @@ def receber_lead(request):
 
         # Log de auditoria
         try:
+            if oportunidade:
+                detalhe = f'Oport #{oportunidade.id}.'
+            else:
+                detalhe = 'Ja e cliente no HubSoft, oportunidade nao criada.'
             registrar_acao(
                 'integracao', 'criar_lead' if not ja_existia else 'atualizar_lead', 'lead',
                 lead.id,
-                f'Lead via N8N webhook: {nome} ({telefone}). Oport #{oportunidade.id}.',
+                f'Lead via N8N webhook: {nome} ({telefone}). {detalhe}',
                 request=request,
             )
         except Exception:
             pass
+
+    # Cliente ja existente: nao ha oportunidade pra reavaliar nem devolver.
+    if not oportunidade:
+        return JsonResponse({
+            'sucesso': True,
+            'tenant': tenant.slug,
+            'lead_id': lead.id,
+            'oportunidade_id': None,
+            'eh_cliente': True,
+            'codigo_cliente_hubsoft': (cliente_hubsoft or {}).get('codigo_cliente'),
+            'ja_existia': ja_existia,
+        }, status=200)
 
     # Re-avalia as regras de pipeline com os sinais aplicados (fora da
     # transacao — o motor faz seus proprios saves/IO).
@@ -386,6 +448,7 @@ def receber_lead(request):
         'oportunidade_id': oportunidade.id,
         'estagio_id': oportunidade.estagio_id,
         'estagio_nome': oportunidade.estagio.nome if oportunidade.estagio_id else None,
+        'eh_cliente': False,
         'ja_existia': ja_existia,
     }, status=status)
 

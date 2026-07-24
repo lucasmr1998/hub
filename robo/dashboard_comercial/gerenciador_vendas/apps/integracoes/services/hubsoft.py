@@ -376,6 +376,49 @@ class HubsoftService:
             )
         return resposta
 
+    def _telefone_para_busca(self, telefone) -> str:
+        """Normaliza telefone pro formato que a busca de cliente do HubSoft aceita:
+        11 digitos (DDD + numero, sem o 55). Fixo vira 10.
+
+        Descoberto na marra: com o 55 na frente a busca de cliente devolve 0.
+        Nosso lead guarda `5519998142113`; o HubSoft quer `19998142113`.
+        """
+        d = self._somente_numeros(telefone)
+        if d.startswith('55') and len(d) in (12, 13):
+            d = d[2:]
+        return d
+
+    def buscar_cliente_qualquer(self, *, cpf_cnpj=None, telefone=None, lead=None) -> dict | None:
+        """Primeiro cliente do HubSoft que casa por CPF **ou** por telefone, ou None.
+
+        Serve pra decidir se um lead ja e cliente (nao abrir oportunidade). Tenta
+        CPF primeiro (mais especifico), depois telefone. Cada busca e isolada:
+        erro numa nao impede a outra. NAO filtra por status de servico — "qualquer
+        cadastro" conta como cliente, por decisao do dono.
+        """
+        buscas = []
+        cpf = self._somente_numeros(cpf_cnpj) if cpf_cnpj else ''
+        if cpf:
+            buscas.append(('cpf_cnpj', cpf))
+        tel = self._telefone_para_busca(telefone)
+        if len(tel) >= 10:
+            buscas.append(('telefone', tel))
+
+        for busca, termo in buscas:
+            try:
+                resposta = self._get(
+                    self.ENDPOINT_CLIENTE,
+                    params={'busca': busca, 'termo_busca': termo}, lead=lead,
+                )
+            except HubsoftServiceError as exc:
+                logger.warning('[buscar_cliente_qualquer] busca=%s termo=%s falhou: %s',
+                               busca, termo, exc)
+                continue
+            clientes = (resposta.get('clientes') if isinstance(resposta, dict) else None) or []
+            if clientes:
+                return clientes[0]
+        return None
+
     def sincronizar_cliente(self, lead) -> ClienteHubsoft | None:
         """
         Consulta o HubSoft pelo CPF/CNPJ do lead e cria/atualiza
