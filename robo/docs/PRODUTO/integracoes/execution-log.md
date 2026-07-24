@@ -559,3 +559,20 @@ e compara em memoria.
 - **Pendente:** marcacao do lead e via `dados_custom` (nao e tag visivel na UI).
   Se quiserem um status/tag visivel, e follow-up pequeno.
 - **Status:** completed
+
+## 2026-07-24 — Inconsistencias: coluna Vendedor (e status do servico nos recuperaveis)
+
+- **Acao:** as duas tabelas da aba Vendas ganharam a coluna **Vendedor**. A de
+  recuperaveis ganhou tambem **Status HubSoft**.
+- **Fonte:** o proprio payload do HubSoft traz o vendedor **dentro do servico**
+  (`servico.vendedor = {id_vendedor, nome, email}`). Por isso serve as duas
+  tabelas, inclusive a "nao existem no CRM", onde nao ha lead nem oportunidade
+  nossa pra consultar responsavel.
+- **Por que o Status HubSoft nos recuperaveis:** e o campo que separa "venda
+  esquecida" de "venda em andamento". Sem ele a lista parece fila de pendencia
+  que nao e: em 23/07, 7 dos 8 recuperaveis estavam Aguardando
+  Instalacao/Assinatura, ou seja, corretos.
+- **Limpeza junto:** `_classificar` usava `l` como variavel (E741) e imports
+  fora de ordem (I001). Corrigido; ruff limpo no arquivo.
+- **Output:** 49 testes passando, check ok. Sem migration.
+- **Status:** completed
