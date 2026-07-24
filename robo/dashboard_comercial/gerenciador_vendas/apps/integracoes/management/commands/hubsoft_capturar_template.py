@@ -167,17 +167,28 @@ class Command(BaseCommand):
             _login_best_effort(driver, painel_url, integ.client_id, integ.client_secret, self.stdout)
 
             self.stdout.write(self.style.WARNING(
-                '\n  AGORA, NA JANELA: converta um prospecto de TESTE (Prospectos -> Acoes\n'
-                '  -> Converter em Cliente -> wizard -> SALVAR). Aguardando o POST '
-                f'{o["url_contem"]}...\n'))
+                '\n  ===================== FACA AGORA NA JANELA DO CHROME =====================\n'
+                '  1. Se pedir login, entre (a janela ja tentou logar sozinha).\n'
+                '  2. Menu Cliente -> Prospectos.\n'
+                '  3. Busque o prospecto de TESTE (ex: 24596) e clique em Acoes.\n'
+                '  4. Converter em Cliente -> preencha o wizard (plano, vencimento,\n'
+                '     grupo, banco) -> avance ate o fim -> clique SALVAR.\n'
+                f'  Estou escutando a rede e capturo o POST {o["url_contem"]} sozinho.\n'
+                f'  Voce tem {o["timeout"]}s. NAO feche a janela nem este terminal.\n'
+                '  =========================================================================\n'))
 
             driver.get_log('performance')  # zera o que veio do login
             alvo, fim = None, time.time() + o['timeout']
+            prox_aviso = time.time() + 30
             while time.time() < fim:
                 posts = _posts_de(driver, o['url_contem'], o['excluir'])
                 if posts:
                     alvo = posts[-1]
                     break
+                if time.time() >= prox_aviso:
+                    restante = int(fim - time.time())
+                    self.stdout.write(f'  ...ainda aguardando o SALVAR ({restante}s restantes)')
+                    prox_aviso += 30
                 time.sleep(2.0)
 
             if alvo is None:
