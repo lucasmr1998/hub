@@ -724,3 +724,12 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Efeito na conta**: tira ~4h fantasma do backlog de recrutamento.
 - **Pendente (oferecido, nao autorizado)**: auditar o resto da lista com a mesma regua, separando capacidade que falta vs configuracao vs decisao. Suspeita de que 13 nao e o unico mal classificado.
 - **Status**: completed.
+
+## 2026-07-23 — Auditoria de classificacao do GAPS de recrutamento
+
+- **Acao**: depois do item 13 se revelar configuracao disfarcada de gap, o Lucas pediu a mesma regua no resto da lista. Regua: gap e o que o produto NAO CONSEGUE fazer; o resto e configuracao, decisao ou enfeite.
+- **Resultado**: dos ~11 dias que a lista aparentava, so **16 (requisicao de vaga com aprovacao) e 23 (auto agendamento), cerca de 4 a 5 dias**, sao capacidade que falta E bloqueia operar. O resto se separou em: capacidade que nao bloqueia (17, 20, ~4d), acelerador de IA sobre coisa que ja funciona manual (18, 19, 21, ~2,5d), paridade/UX com a capacidade ja existente em outra tela (15, 3h), decisao (22), discovery (24), descartado (25).
+- **Duas ressalvas levantadas**: o 17 (perfil comportamental) tem evidencia CONTRA no proprio material da origem (a cliente esperava binario e a IA devolve nuance); o 20 (artes por IA) e marketing competindo com ferramenta de design que o cliente ja usa, por 2 dias de custo.
+- **Reclassificacoes anotadas nas secoes**: 15 virou paridade/UX (mover em lote JA e possivel pela vista de lista); 18/19/21 viraram ACELERADORES, distinguidos de 17/20 dentro do bloco "familia de IA", que antes tratava os cinco como a mesma coisa.
+- **Efeito**: a leitura de "quanto falta pra fechar o recrutamento" cai de 11-12 dias pra 4-5 dias de trabalho que realmente destrava operacao.
+- **Status**: completed.

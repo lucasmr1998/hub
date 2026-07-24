@@ -70,6 +70,39 @@ TR Carrion antes de construir mais coisa especifica de vertical.
 
 ---
 
+## Auditoria de classificacao (23/07)
+
+Depois que o item 13 se revelou configuracao disfarcada de gap, o Lucas pediu a
+mesma regua no resto da lista. A regua: **gap e o que o produto NAO CONSEGUE
+fazer**. O resto e configuracao, decisao, ou enfeite.
+
+| Categoria | Itens | Custo | O que significa |
+|---|---|---|---|
+| **Capacidade que falta E bloqueia operar** | 16, 23 | ~4 a 5 dias | Sem isso, alguem nao consegue fazer o trabalho |
+| **Capacidade que falta, NAO bloqueia** | 17, 20 | ~4 dias | Novo, porem ninguem para se nao existir |
+| **Acelerador de IA (o manual ja funciona)** | 18, 19, 21 | ~2,5 dias | So deixa mais rapido o que ja da pra fazer |
+| **Paridade/UX (a capacidade existe em outra tela)** | 15 | 3h | Ninguem fica sem conseguir |
+| **Decisao, nao build** | 22 | — | Ver secao propria |
+| **Discovery** | 24 | — | Nao construir por adivinhacao |
+| **Descartado** | 25 | — | A propria origem quer remover |
+
+**A conclusao que muda a leitura do modulo:** o que realmente falta pra o
+recrutamento OPERAR sao **dois itens, 16 e 23, cerca de 4 a 5 dias**. Os outros
+~7 dias sao acelerador, vitrine ou polimento. A lista aparentava 11 a 12 dias de
+"falta"; a maior parte disso nao impede ninguem de trabalhar.
+
+**Duas ressalvas que sairam da auditoria:**
+
+- **17 (perfil comportamental) tem evidencia CONTRA**, registrada no proprio
+  material da origem: a cliente esperava resposta binaria (recomenda ou nao) e a
+  IA devolve nuance. Construir sabendo que o usuario original nao gostou e
+  comecar com a objecao ja conhecida.
+- **20 (banco de artes por IA)** e marketing, nao recrutamento, e concorre com
+  ferramenta de design que o cliente provavelmente ja usa. Custo alto (2 dias)
+  pra um problema que nao e nosso.
+
+---
+
 ## Os que estao abertos
 
 ### 13. Campos do Perfil, RECLASSIFICADO em 23/07 (nao era gap)
@@ -106,6 +139,11 @@ pelo link de origem, que e mais confiavel que memoria de quem preencheu.
 
 Temos selecao em lote na LISTA, e nao no kanban. Eles tem nos dois.
 
+**Classificacao: paridade/UX, e nao capacidade que falta.** Mover ou dar saida
+em lote JA E POSSIVEL hoje: o RH troca pra vista de lista e faz. O que falta e a
+mesma acao sem trocar de vista. Ninguem fica impedido de trabalhar, entao nao
+disputa prioridade com 16 e 23.
+
 ### 16. Requisicao de vaga com aprovacao
 
 **O maior gap de governanca.** O gestor da loja clica "Solicitar Vaga", a vaga
@@ -134,6 +172,17 @@ O que a origem faz com IA, alem da triagem que ja temos:
 O provedor de IA nao e bloqueio: ja chamamos OpenAI e Groq por tenant. O que
 sobra e custo por chamada, e a `AnaliseCandidato` ja grava tokens pra essa
 pergunta se responder com dado real.
+
+**Classificacao (auditoria 23/07), porque os cinco nao sao a mesma coisa:**
+
+- **17 perfil comportamental** e **20 artes**: capacidade que realmente falta,
+  porem nenhuma das duas bloqueia operar. Ver as ressalvas na secao de
+  auditoria: a 17 tem objecao registrada da propria cliente da origem, e a 20 e
+  marketing competindo com ferramenta de design.
+- **18 roteiro, 19 descricao da vaga, 21 chamada de redes**: sao
+  **ACELERADORES**, nao capacidades ausentes. O roteiro ja existe (lista
+  configuravel por etapa), a descricao da vaga ja se escreve, e o texto de redes
+  tambem. A IA so deixa mais rapido. Adiar nao impede ninguem de contratar.
 
 **Aceitar imagem de curriculo esta amarrado aqui**: foi decidido em 21/07
 recusar imagem porque a IA le PDF e nao le foto. Reabrir exige OCR no mesmo
