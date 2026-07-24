@@ -97,15 +97,19 @@ def _login_best_effort(driver, painel_url, usuario, senha, stdout):
         stdout.write(f'  login automatico falhou ({exc}); faca login na janela aberta.')
 
 
-def _clicar_texto(driver, textos, *, timeout=8):
+def _clicar_texto(driver, textos, *, timeout=8, escopo_xpath=None):
     """Clica (via JS) no 1o elemento clicavel cujo texto contenha um dos `textos`
-    (case-insensitive). Retorna True se clicou. Defensivo: nunca levanta."""
+    (case-insensitive). Retorna True se clicou. Defensivo: nunca levanta.
+
+    `escopo_xpath` restringe a busca (ex: so dentro de `//tbody`, pra evitar
+    casar com cabecalho de coluna que tem o mesmo texto do botao de acao)."""
     from selenium.webdriver.common.by import By
     fim = time.time() + timeout
     alvos = [t.lower() for t in textos]
+    xp = escopo_xpath or "//a|//button|//span|//md-item|//*[@ng-click]"
     while time.time() < fim:
         try:
-            for el in driver.find_elements(By.XPATH, "//a|//button|//span|//md-item|//*[@ng-click]"):
+            for el in driver.find_elements(By.XPATH, xp):
                 try:
                     txt = (el.text or '').strip().lower()
                     if txt and any(a in txt for a in alvos) and el.is_displayed():
@@ -120,8 +124,12 @@ def _clicar_texto(driver, textos, *, timeout=8):
     return False
 
 
-def _navegar_ate_converter(driver, painel_url, idp, stdout, shots_dir=None):
-    """Best-effort: Cliente -> Prospectos -> busca idp -> Acoes -> Converter em Cliente.
+def _navegar_ate_converter(driver, painel_url, idp, stdout, shots_dir=None, nome_busca=None):
+    """Best-effort: Cliente -> Prospectos -> busca por nome -> Acoes -> Converter em Cliente.
+
+    O campo de busca do painel HubSoft nao indexa por id_prospecto (nao encontra
+    nada), so por nome. Por isso a busca usa `nome_busca` (nome_razaosocial do
+    lead); `idp` continua servindo so de identificacao/log.
 
     Fragil (SPA AngularJS): cada passo e defensivo e a falha nao interrompe. Deixa a
     janela onde chegou; o operador termina o que faltar e clica SALVAR."""
@@ -135,8 +143,20 @@ def _navegar_ate_converter(driver, painel_url, idp, stdout, shots_dir=None):
             except Exception:
                 pass
 
+    termo_busca = (nome_busca or '').strip() or str(idp)
+
+    def drena():
+        # Drena o buffer de performance log a cada passo. Sem isto ele acumula todo o
+        # trafego (login + navegacao + carga pesada do wizard) e o get_log seguinte
+        # puxa um buffer gigante que derruba o chromedriver (connection refused).
+        try:
+            driver.get_log('performance')
+        except Exception:
+            pass
+
     time.sleep(3)
     shot('nav_00_dashboard.png')
+    drena()
     stdout.write('  navegando: menu Cliente...')
     _clicar_texto(driver, ['Cliente'])
     time.sleep(1.5)
@@ -144,28 +164,39 @@ def _navegar_ate_converter(driver, painel_url, idp, stdout, shots_dir=None):
     _clicar_texto(driver, ['Prospectos', 'Prospecto'])
     time.sleep(3)
     shot('nav_01_prospectos.png')
+    drena()
 
-    # busca pelo id do prospecto
+    # busca pelo nome do lead (o campo do painel nao indexa por id_prospecto)
     for sel in ("input[ng-model*='busca']", "input[type='search']",
                 "input[placeholder*='usca']", "input[placeholder*='rospecto']", "input[type='text']"):
         els = [e for e in driver.find_elements(By.CSS_SELECTOR, sel) if e.is_displayed()]
         if els:
             try:
-                els[0].clear(); els[0].send_keys(str(idp)); els[0].send_keys(Keys.ENTER)
-                stdout.write(f'  navegando: busquei o prospecto {idp}.')
+                els[0].clear(); els[0].send_keys(termo_busca); els[0].send_keys(Keys.ENTER)
+                stdout.write(f'  navegando: busquei o prospecto "{termo_busca}" (id {idp}).')
                 break
             except Exception:
                 continue
     time.sleep(3)
     shot('nav_02_busca.png')
+    drena()
 
-    stdout.write('  navegando: menu Acoes...')
-    _clicar_texto(driver, ['Ações', 'Acoes', 'Ação'])
+    stdout.write('  navegando: botao Acoes da linha...')
+    # escopo restrito ao tbody: o cabecalho da coluna tambem se chama "Ações" e,
+    # sem restricao, o clique acerta o cabecalho (sort) em vez do botao da linha.
+    clicou_acoes = _clicar_texto(
+        driver, ['Ações', 'Acoes', 'Ação'],
+        escopo_xpath="//tbody//a|//tbody//button|//tbody//*[@ng-click]")
     time.sleep(1.5)
+    shot('nav_02b_acoes.png')
+    if not clicou_acoes:
+        stdout.write('  nao encontrei o botao Acoes da linha; abra manualmente na janela.')
     stdout.write('  navegando: Converter em Cliente...')
     ok = _clicar_texto(driver, ['Converter em Cliente', 'Converter'])
     time.sleep(3)
+    drena()  # CRITICO: drena a carga pesada do wizard antes do loop de espera
     shot('nav_03_wizard.png')
+    drena()
     if ok:
         stdout.write('  wizard de conversao aberto. Termine o que faltar e clique SALVAR.')
     else:
@@ -214,7 +245,11 @@ class Command(BaseCommand):
         parser.add_argument('--timeout', type=int, default=600,
                             help='Segundos aguardando o operador concluir (default 600).')
         parser.add_argument('--id-prospecto', default=None,
-                            help='Se informado, auto-navega ate o wizard de conversao desse prospecto.')
+                            help='Se informado, auto-navega ate o wizard de conversao desse prospecto '
+                                 '(usado pra log/lookup; a busca no painel e feita pelo nome).')
+        parser.add_argument('--nome-prospecto', default=None,
+                            help='Nome do prospecto pra digitar no campo de busca do painel. Se omitido, '
+                                 'resolve automaticamente via LeadProspecto.id_hubsoft = --id-prospecto.')
         parser.add_argument('--salvar-perfil', action='store_true',
                             help='Grava o payload capturado em perfil.template_conversao.')
 
@@ -248,24 +283,54 @@ class Command(BaseCommand):
             _login_best_effort(driver, painel_url, integ.client_id, integ.client_secret, self.stdout)
 
             if o['id_prospecto']:
-                _navegar_ate_converter(driver, painel_url, o['id_prospecto'], self.stdout, shots_dir)
+                nome_busca = (o['nome_prospecto'] or '').strip()
+                if not nome_busca:
+                    from apps.comercial.leads.models import LeadProspecto
+                    lead = LeadProspecto.objects.filter(
+                        tenant=tenant, id_hubsoft=o['id_prospecto']).first()
+                    nome_busca = (lead.nome_razaosocial if lead else '') or ''
+                    if nome_busca:
+                        self.stdout.write(f'  nome resolvido via LeadProspecto: "{nome_busca}"')
+                    else:
+                        self.stdout.write(self.style.WARNING(
+                            f'  lead com id_hubsoft={o["id_prospecto"]} nao encontrado e '
+                            '--nome-prospecto nao informado; a busca por id pode nao localizar '
+                            'nada no painel (o campo nao indexa por id).'))
+                _navegar_ate_converter(
+                    driver, painel_url, o['id_prospecto'], self.stdout, shots_dir,
+                    nome_busca=nome_busca)
 
             self.stdout.write(self.style.WARNING(
                 '\n  ===================== FACA AGORA NA JANELA DO CHROME =====================\n'
                 '  1. Se pedir login, entre (a janela ja tentou logar sozinha).\n'
                 '  2. Menu Cliente -> Prospectos.\n'
-                '  3. Busque o prospecto de TESTE (ex: 24596) e clique em Acoes.\n'
+                '  3. Busque o prospecto de TESTE PELO NOME (o campo nao indexa por id) e clique em Acoes.\n'
                 '  4. Converter em Cliente -> preencha o wizard (plano, vencimento,\n'
                 '     grupo, banco) -> avance ate o fim -> clique SALVAR.\n'
                 f'  Estou escutando a rede e capturo o POST {o["url_contem"]} sozinho.\n'
                 f'  Voce tem {o["timeout"]}s. NAO feche a janela nem este terminal.\n'
                 '  =========================================================================\n'))
 
-            driver.get_log('performance')  # zera o que veio do login
+            try:
+                driver.get_log('performance')  # zera o que veio do login
+            except Exception:
+                pass
             alvo, fim = None, time.time() + o['timeout']
             prox_aviso = time.time() + 30
+            falhas = 0
             while time.time() < fim:
-                posts = _posts_de(driver, o['url_contem'], o['excluir'])
+                try:
+                    posts = _posts_de(driver, o['url_contem'], o['excluir'])
+                    falhas = 0
+                except Exception:
+                    # hiccup transitorio do chromedriver; so desiste apos varias seguidas
+                    falhas += 1
+                    if falhas >= 8:
+                        raise CommandError(
+                            'Perdi a conexao com o Chrome (a janela foi fechada ou travou). '
+                            'Reabra rodando o comando de novo.')
+                    time.sleep(2.0)
+                    continue
                 if posts:
                     alvo = posts[-1]
                     break
