@@ -51,9 +51,12 @@ codigo.
 
 1. Cadastrar a `IntegracaoAPI` tipo `hubsoft_painel` (credencial do operador).
 2. Criar o `PerfilConversaoHubsoft` do tenant com os IDs do HubSoft dele.
-3. **Capturar o `template_conversao`** uma vez naquele HubSoft (payload completo do
-   POST /cliente do wizard "Converter em Cliente") e colar no perfil. Sem ele, o no
-   de conversao sai por `erro` "sem template".
+3. **Capturar o `template_conversao`** uma vez naquele HubSoft. Use o comando
+   `hubsoft_capturar_template --tenant <slug> --perfil <nome> --salvar-perfil`: ele
+   abre o painel numa janela, faz login, e o operador converte um prospecto de TESTE
+   no wizard; o comando fareja o POST /cliente, **neutraliza o PII** do prospecto de
+   teste (cpf/nome/endereco viram vazio, so a estrutura + objetos da empresa ficam) e
+   grava no perfil. Sem o template, o no de conversao sai por `erro` "sem template".
 4. Rodar o seed, revisar os filtros da varredura e o `id_servico`/`id_servico_novo`
    nos nos de servico/upgrade.
 5. Homologar com 1 CPF na `cpf_allowlist` (execucao real de 1 caso), conferir no
