@@ -569,3 +569,34 @@ e compara em memoria.
   UI em /configuracoes/integracoes/ pra editar perfil+credencial (por ora so admin);
   Fases 2 a 4 (escritas: conversao, novo servico, upgrade) + nos + seeds.
 - **Status:** completed (fundacao); proximo: spike de login e Fase 2 (conversao).
+
+## 2026-07-24 — Rotina de conversao de prospecto (Fase 2)
+- **Acao:** primeira rotina de escrita completa (prospecto -> cliente) via API interna
+  do painel, ponta a ponta no codigo.
+  - `PerfilConversaoHubsoft.template_conversao` (JSONField, migration 0021): o payload
+    do POST /api/v1/cliente e gigante e cheio de dados da empresa (servico, contratos,
+    forma_cobranca, empresa/CNPJ). Vira template capturado UMA vez por HubSoft e mora
+    no perfil, nao no codigo. Decisao de arquitetura: nada de ID magico da Megalink;
+    cada tenant captura o seu (alinhado ao plano "templates versionados por perfil").
+  - `hubsoft_painel.py`: `montar_payload_conversao` (deepcopy do template + overlay so
+    dos campos do lead: identidade, endereco, vencimento, plano opcional, vendedor;
+    funcao pura, golden testada). Helpers de escrita `cpf_ja_cadastrado` (pre-check),
+    `criar_cliente` (POST /cliente), `buscar_plano_por_id` (so API do painel, sem o
+    fallback psycopg2 do robo_v2).
+  - Nos: base `HubsoftPainelNode` (saidas sucesso/erro/dry_run, `retry_seguro=False`)
+    + `hubsoft_converter_prospecto`. Idempotencia tripla (status_api do lead,
+    espelho ClienteHubsoft, cpf_ja_cadastrado no painel) + guard de dry run do perfil
+    (so allowlist escreve) + CPF mascarado no output (LGPD).
+- **Output:** `manage.py check` ok, 28 testes passando
+  (`test_hubsoft_painel_fundacao.py`: +8 do payload; `test_hubsoft_converter_prospecto.py`:
+  8 de fluxo/idempotencia/dry-run com service stubado). 2 commits (2a payload+helpers,
+  2b no+testes).
+- **Bloqueio p/ validacao real:** (1) `template_conversao` do perfil demo-local ainda
+  vazio -> conversao real precisa capturar o template daquele HubSoft uma vez (sem
+  isso o no sai por `erro` "sem template", que e o comportamento correto); (2) host da
+  API interna `api.artelecom.hubsoft.com.br` deu connect-timeout em 24/07 (o host do
+  painel conecta; cara de allowlist de IP no lado HubSoft). Login+leitura ja foram
+  provados na Fase 1.
+- **Status:** completed (codigo + testes da conversao); pendente validacao live
+  (captura de template + acesso ao host da API). Proximo: Fase 3 (novo servico) e
+  Fase 4 (upgrade), depois seeds dos 3 fluxos.
