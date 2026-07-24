@@ -86,6 +86,13 @@ urlpatterns = [
     path('quadro/salvar/', quadro.salvar, name='quadro_salvar'),
     path('quadro/<int:pk>/remover/', quadro.remover, name='quadro_remover'),
 
+    # Recrutamento: requisicao de vaga com aprovacao (gap 16). Quem solicita
+    # usa `people.solicitar_vaga`; quem decide usa `people.gerir_vagas`.
+    path('vagas/solicitar/', vagas.solicitar, name='vaga_solicitar'),
+    path('vagas/<int:pk>/reenviar/', vagas.reenviar, name='vaga_reenviar'),
+    path('vagas/<int:pk>/aprovar/', vagas.aprovar, name='vaga_aprovar'),
+    path('vagas/<int:pk>/rejeitar/', vagas.rejeitar, name='vaga_rejeitar'),
+
     # Recrutamento: vagas
     path('vagas/', vagas.lista, name='vagas_lista'),
     path('vagas/nova/', vagas.criar, name='vaga_criar'),

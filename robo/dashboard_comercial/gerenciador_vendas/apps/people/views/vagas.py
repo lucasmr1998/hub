@@ -27,6 +27,7 @@ from apps.people.models_recrutamento import (
 )
 from apps.people import estados
 from apps.people.permissoes import pode_acessar, requer_people
+from apps.people.services import vagas as servicos_vaga
 from apps.sistema.utils import registrar_acao
 
 
@@ -57,13 +58,19 @@ class VagaForm(forms.ModelForm):
 
         # O Django rotula a opcao vazia como "---------". O resto do modulo usa
         # "Selecione" (ver o formulario publico), entao aqui tambem.
+        #
+        # O `if nome in self.fields` existe porque o RequisicaoVagaForm herda
+        # daqui com um SUBCONJUNTO de campos: sem a guarda, o form do gestor
+        # estouraria KeyError em `turno` na hora de instanciar.
         for nome in ['unidade', 'cargo', 'colaborador_substituido']:
-            self.fields[nome].empty_label = 'Selecione'
+            if nome in self.fields:
+                self.fields[nome].empty_label = 'Selecione'
         for nome in ['turno', 'modelo_trabalho', 'justificativa']:
-            self.fields[nome].choices = [
-                ('', 'Selecione'),
-                *[(v, r) for v, r in self.fields[nome].choices if v],
-            ]
+            if nome in self.fields:
+                self.fields[nome].choices = [
+                    ('', 'Selecione'),
+                    *[(v, r) for v, r in self.fields[nome].choices if v],
+                ]
 
     def clean(self):
         """
@@ -106,6 +113,33 @@ class RequisitoForm(forms.ModelForm):
         return dados
 
 
+class RequisicaoVagaForm(VagaForm):
+    """
+    O que o GESTOR preenche ao PEDIR uma vaga (gap 16).
+
+    Subconjunto do VagaForm de proposito. Titulo, descricao, remuneracao e
+    carga horaria sao o ANUNCIO, e o anuncio e trabalho do RH depois de
+    aprovar: pedir isso ao gestor faria a requisicao parecer uma vaga pronta e
+    reduziria a chance de ele simplesmente pedir. Aqui ele diz o essencial de
+    governanca: qual cargo, em qual loja, e por que.
+
+    `justificativa` vira OBRIGATORIA aqui (no VagaForm ela e opcional, porque o
+    RH abrindo direto ja responde pelo custo). E o campo que da sentido a
+    requisicao.
+    """
+    class Meta(VagaForm.Meta):
+        fields = ['unidade', 'cargo', 'justificativa',
+                  'colaborador_substituido', 'observacoes']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['justificativa'].required = True
+        self.fields['observacoes'].label = 'Contexto do pedido'
+        self.fields['observacoes'].help_text = (
+            'O que o RH precisa saber pra decidir. Ex: turno, urgência, se '
+            'já houve tentativa anterior.')
+
+
 @requer_people()
 def lista(request):
     vagas = Vaga.objects.select_related('unidade', 'cargo').annotate(
@@ -131,6 +165,16 @@ def lista(request):
             Unidade.objects.filter(ativo=True).values_list('pk', 'nome')),
         'unidade_selecionada': unidade_id,
         'pode_gerir': pode_acessar(request, 'people.gerir_vagas'),
+        # Gap 16. O form vive na LISTA porque a solicitacao acontece num modal
+        # ali mesmo: cadastro e botao + modal, e nao pagina propria.
+        'pode_solicitar': pode_acessar(request, 'people.solicitar_vaga'),
+        'form_requisicao': RequisicaoVagaForm(tenant=request.tenant),
+        # Fila do RH em destaque: requisicao esperando decisao e o unico estado
+        # em que alguem esta bloqueado esperando outra pessoa.
+        'aguardando': vagas.filter(
+            status=estados_rs.STATUS_VAGA_AGUARDANDO).count(),
+        'STATUS_AGUARDANDO': estados_rs.STATUS_VAGA_AGUARDANDO,
+        'STATUS_REJEITADA': estados_rs.STATUS_VAGA_REJEITADA,
     })
 
 
@@ -239,6 +283,98 @@ def mudar_status(request, pk):
                    request=request)
     messages.success(request, f'Vaga {rotulo.lower()}.')
     return redirect('people:vaga_editar', pk=vaga.pk)
+
+
+# ── Requisicao de vaga com aprovacao (gap 16) ───────────────────────────────
+#
+# Quem SOLICITA usa `people.solicitar_vaga`; quem DECIDE usa
+# `people.gerir_vagas`. A separacao e o ponto do fluxo: com a mesma permissao
+# nos dois lados, a aprovacao vira carimbo do proprio pedido.
+
+
+@require_POST
+@requer_people('people.solicitar_vaga')
+def solicitar(request):
+    """
+    O gestor pede a vaga. Nasce em `aguardando_aprovacao`, sem passar por
+    rascunho: rascunho e vaga aprovada esperando anuncio, e misturar os dois
+    faria a fila do RH conter coisa que ninguem pediu.
+    """
+    form = RequisicaoVagaForm(request.POST, tenant=request.tenant)
+    if not form.is_valid():
+        for erros in form.errors.values():
+            for erro in erros:
+                messages.error(request, erro)
+        return redirect('people:vagas_lista')
+
+    vaga = form.save(commit=False)
+    vaga.tenant = request.tenant
+    vaga.criada_por = request.user   # criada_por E o solicitante
+    vaga.status = estados_rs.STATUS_VAGA_AGUARDANDO
+    vaga.save()
+
+    try:
+        servicos_vaga.solicitar(vaga, usuario=request.user, request=request)
+    except servicos_vaga.RequisicaoInvalida as erro:
+        vaga.delete()
+        messages.error(request, str(erro))
+        return redirect('people:vagas_lista')
+
+    messages.success(
+        request,
+        f'Requisição de "{vaga.nome_exibido}" enviada para aprovação do RH.')
+    return redirect('people:vagas_lista')
+
+
+@require_POST
+@requer_people('people.solicitar_vaga')
+def reenviar(request, pk):
+    """Requisicao rejeitada volta pra fila depois que o gestor ajusta."""
+    vaga = get_object_or_404(Vaga.objects, pk=pk)
+    try:
+        servicos_vaga.solicitar(vaga, usuario=request.user, request=request)
+    except (servicos_vaga.RequisicaoInvalida, TransicaoInvalida) as erro:
+        messages.error(request, str(erro))
+        return redirect('people:vagas_lista')
+
+    messages.success(request, 'Requisição reenviada para aprovação.')
+    return redirect('people:vagas_lista')
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def aprovar(request, pk):
+    vaga = get_object_or_404(Vaga.objects, pk=pk)
+    try:
+        servicos_vaga.aprovar(vaga, usuario=request.user, request=request)
+    except (servicos_vaga.RequisicaoInvalida, TransicaoInvalida) as erro:
+        messages.error(request, str(erro))
+        return redirect('people:vagas_lista')
+
+    messages.success(
+        request,
+        f'Requisição aprovada. "{vaga.nome_exibido}" está em rascunho: '
+        f'revise o anúncio e publique.')
+    # Vai pra edicao, e nao pra lista: aprovar e o meio do caminho, e o passo
+    # seguinte (escrever o anuncio) e do RH que acabou de aprovar.
+    return redirect('people:vaga_editar', pk=vaga.pk)
+
+
+@require_POST
+@requer_people('people.gerir_vagas')
+def rejeitar(request, pk):
+    vaga = get_object_or_404(Vaga.objects, pk=pk)
+    try:
+        servicos_vaga.rejeitar(vaga, usuario=request.user,
+                               motivo=request.POST.get('motivo', ''),
+                               request=request)
+    except (servicos_vaga.RequisicaoInvalida, TransicaoInvalida) as erro:
+        messages.error(request, str(erro))
+        return redirect('people:vagas_lista')
+
+    messages.success(request, 'Requisição rejeitada. O gestor vê o motivo e '
+                              'pode corrigir e reenviar.')
+    return redirect('people:vagas_lista')
 
 
 @require_POST

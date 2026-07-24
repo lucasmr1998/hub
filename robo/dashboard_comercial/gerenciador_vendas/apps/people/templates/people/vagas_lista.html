@@ -15,11 +15,23 @@
           critérios ficam aqui, e o link de candidatura sai dela.
         </p>
       </div>
-      {% if pode_gerir %}
-        <a href="{% url 'people:vaga_criar' %}" class="btn btn-primary">
-          <i class="bi bi-plus-lg"></i> Nova vaga
-        </a>
-      {% endif %}
+      <div style="display: flex; gap: var(--sp-2); align-items: center;">
+        {% comment %}
+          Dois botoes com papeis diferentes, e nao um so: quem SOLICITA pede e
+          espera; quem GERE abre direto. Um perfil costuma ter so um dos dois.
+        {% endcomment %}
+        {% if pode_solicitar %}
+          <button type="button" class="btn {% if pode_gerir %}btn-secondary{% else %}btn-primary{% endif %}"
+                  data-solicitar-vaga>
+            <i class="bi bi-send"></i> Solicitar vaga
+          </button>
+        {% endif %}
+        {% if pode_gerir %}
+          <a href="{% url 'people:vaga_criar' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nova vaga
+          </a>
+        {% endif %}
+      </div>
     </div>
   </div>
 
@@ -27,6 +39,23 @@
     {% for mensagem in messages %}
       <p class="field-helper"><i class="bi bi-check-circle"></i> {{ mensagem }}</p>
     {% endfor %}
+  {% endif %}
+
+  {% comment %}
+    Requisicao esperando decisao e o unico estado em que alguem esta parado
+    esperando OUTRA pessoa. Por isso vira aviso no topo, e nao so mais uma
+    linha na tabela.
+  {% endcomment %}
+  {% if pode_gerir and aguardando %}
+    <div class="section-card section-card-info" style="margin-bottom: var(--sp-4);">
+      <div class="section-card-body" style="display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3);">
+        <p class="field-helper" style="margin: 0;">
+          <i class="bi bi-hourglass-split"></i>
+          <strong>{{ aguardando }}</strong> na fila, aguardando sua aprova&ccedil;&atilde;o.
+        </p>
+        <a href="?status={{ STATUS_AGUARDANDO }}" class="btn btn-ghost btn-sm">Ver só essas</a>
+      </div>
+    </div>
   {% endif %}
 
   <form method="get" id="filtro-vagas"
@@ -47,6 +76,7 @@
             <th>Requisitos</th>
             <th>Status</th>
             <th>Aberta em</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -75,6 +105,39 @@
                 {% endif %}
               </td>
               <td>{{ vaga.criado_em|date:"d/m/Y" }}</td>
+              <td style="text-align: right; white-space: nowrap;">
+                {% comment %}
+                  Decidir e do RH; reenviar e de quem pediu. Cada botao so
+                  aparece pra quem pode, e nunca devolve 403 na cara.
+                {% endcomment %}
+                {% if vaga.status == STATUS_AGUARDANDO and pode_gerir %}
+                  <form method="post" action="{% url 'people:vaga_aprovar' vaga.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" title="Aprovar requisição">
+                      <i class="bi bi-check-lg"></i> Aprovar
+                    </button>
+                  </form>
+                  <button type="button" class="btn btn-ghost btn-sm"
+                          data-rejeitar="{% url 'people:vaga_rejeitar' vaga.pk %}"
+                          data-vaga="{{ vaga.nome_exibido }}" title="Rejeitar requisição">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                {% elif vaga.status == STATUS_REJEITADA %}
+                  {% if vaga.motivo_rejeicao %}
+                    <span class="field-helper" title="{{ vaga.motivo_rejeicao }}">
+                      <i class="bi bi-info-circle"></i> {{ vaga.motivo_rejeicao|truncatechars:40 }}
+                    </span>
+                  {% endif %}
+                  {% if pode_solicitar %}
+                    <form method="post" action="{% url 'people:vaga_reenviar' vaga.pk %}" style="display: inline;">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-ghost btn-sm" title="Corrigi, quero reenviar">
+                        <i class="bi bi-arrow-repeat"></i> Reenviar
+                      </button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -84,9 +147,112 @@
     {% include "components/empty_state.html" with icon="bi-megaphone" text="Nenhuma vaga por aqui" subtext="Abra uma vaga pra começar a receber candidatos." %}
   {% endif %}
 
+  {% comment %}
+    Modais FORA da tabela: overlay preso dentro de <td> herda o empilhamento da
+    celula e aparece cortado. Regra do produto: cadastrar e botao + modal.
+  {% endcomment %}
+  {% if pode_solicitar %}
+    <div id="modal-solicitar" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <h3 class="modal-title">Solicitar vaga</h3>
+          <button type="button" class="modal-close" onclick="fecharModal('modal-solicitar')" aria-label="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form method="post" action="{% url 'people:vaga_solicitar' %}" id="form-solicitar">
+          {% csrf_token %}
+          <div class="modal-body form-stack">
+            <p class="field-helper">
+              Você pede, o RH aprova. Descrição, remuneração e o texto do anúncio
+              são preenchidos depois, por quem aprovar.
+            </p>
+            {% include "components/select.html" with name="unidade" label="Unidade" options=form_requisicao.unidade.field.choices required=True %}
+            {% include "components/select.html" with name="cargo" label="Cargo" options=form_requisicao.cargo.field.choices required=True %}
+            {% include "components/select.html" with name="justificativa" label="Justificativa" options=form_requisicao.justificativa.field.choices required=True id="req-justificativa" helper="Aumento de quadro é posição nova. Substituição é vaga de quem saiu." %}
+            {% comment %}
+              Quem saiu so faz sentido em substituicao, e o banco tem
+              CheckConstraint exigindo. Some no aumento de quadro pra ninguem
+              preencher a toa e levar erro depois.
+            {% endcomment %}
+            <div id="req-bloco-substituido" hidden>
+              {% include "components/select.html" with name="colaborador_substituido" label="Quem saiu" options=form_requisicao.colaborador_substituido.field.choices helper="É o que liga esta vaga ao Quadro da unidade." %}
+            </div>
+            {% include "components/textarea.html" with name="observacoes" label="Contexto do pedido" rows=3 placeholder="O que o RH precisa saber pra decidir. Ex: turno, urgência." %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-solicitar')">Cancelar</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Enviar para aprovação</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if pode_gerir %}
+    <div id="modal-rejeitar" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <h3 class="modal-title">Rejeitar requisição</h3>
+          <button type="button" class="modal-close" onclick="fecharModal('modal-rejeitar')" aria-label="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form method="post" id="form-rejeitar">
+          {% csrf_token %}
+          <div class="modal-body form-stack">
+            <p class="field-helper" id="rejeitar-qual"></p>
+            {% comment %}
+              Motivo OBRIGATORIO: e o que o gestor le pra corrigir e reenviar.
+              Rejeicao sem motivo devolve a pessoa pro mesmo erro, e ai o fluxo
+              so adicionou atrito. O servico tambem barra, esta aqui pra avisar
+              antes de enviar.
+            {% endcomment %}
+            {% include "components/textarea.html" with name="motivo" label="Motivo" rows=3 required=True placeholder="Ex: o quadro desta loja já está completo neste turno." %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-rejeitar')">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Rejeitar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
   <script>
     document.querySelectorAll('#filtro-vagas select').forEach(function (campo) {
       campo.addEventListener('change', function () { campo.form.submit(); });
     });
+
+    // Delegacao: os botoes de rejeitar vivem nas linhas da tabela, que mudam a
+    // cada filtro. Listener por elemento morreria no primeiro recarregamento.
+    document.addEventListener('click', function (evento) {
+      if (evento.target.closest('[data-solicitar-vaga]')) {
+        document.getElementById('form-solicitar')?.reset();
+        sincronizarSubstituido();
+        abrirModal('modal-solicitar');
+        return;
+      }
+      const rej = evento.target.closest('[data-rejeitar]');
+      if (rej) {
+        const form = document.getElementById('form-rejeitar');
+        form.action = rej.dataset.rejeitar;
+        form.reset();
+        document.getElementById('rejeitar-qual').textContent =
+          'Requisição de ' + rej.dataset.vaga + '.';
+        abrirModal('modal-rejeitar');
+      }
+    });
+
+    // "Quem saiu" so aparece em substituicao. O banco exige (CheckConstraint),
+    // entao mostrar sempre convidaria a submeter algo que ele recusa.
+    function sincronizarSubstituido() {
+      const just = document.getElementById('req-justificativa');
+      const bloco = document.getElementById('req-bloco-substituido');
+      if (just && bloco) bloco.hidden = just.value !== 'substituicao';
+    }
+    document.getElementById('req-justificativa')
+      ?.addEventListener('change', sincronizarSubstituido);
+    sincronizarSubstituido();
   </script>
 {% endblock %}

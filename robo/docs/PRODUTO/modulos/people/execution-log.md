@@ -750,3 +750,14 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Output**: estados (`aguardando_aprovacao`, `rejeitada`, transicoes, `STATUS_VAGA_PRE_PROCESSO`), campos `aprovada_por`/`decidida_em`/`motivo_rejeicao`, migration 0025, funcionalidade nova no seed, `services/vagas.py`, 12 testes novos. Regressao: 65 verdes em vaga/vaga_views/candidatura_publica.
 - **Falta**: telas (formulario de solicitacao, fila de aprovacao, aprovar/rejeitar) e testes de view.
 - **Status**: pending (backend completo, UI pendente).
+
+## 2026-07-24 — Gap 16: telas de requisicao, aprovacao e recusa (fecha a tarefa #222)
+
+- **Acao**: UI do fluxo. Na lista de Vagas: botao "Solicitar vaga" (modal) pra quem tem `people.solicitar_vaga`; aviso no topo com a fila pro RH; por linha, Aprovar e Rejeitar (modal com motivo) pra quem tem `people.gerir_vagas`; e, na rejeitada, o motivo visivel mais o botao Reenviar pro solicitante.
+- **Detalhes de desenho**: dois botoes distintos no cabecalho (Solicitar x Nova vaga), porque um perfil costuma ter so um dos dois. "Quem saiu" so aparece quando a justificativa e substituicao, ja que o banco tem CheckConstraint exigindo. Modais ficam FORA da tabela: overlay dentro de `<td>` herda o empilhamento da celula e aparece cortado. Botoes de rejeitar usam delegacao, porque as linhas mudam a cada filtro.
+- **Views**: `solicitar`, `reenviar` (com `people.solicitar_vaga`), `aprovar`, `rejeitar` (com `people.gerir_vagas`). Aprovar redireciona pra EDICAO, e nao pra lista: aprovar e o meio do caminho, e escrever o anuncio e do RH que acabou de aprovar.
+- **Output**: `RequisicaoVagaForm` (subconjunto do VagaForm; `VagaForm.__init__` ficou tolerante a subconjunto), 4 rotas, UI na lista, 6 testes de view. 18 testes no arquivo, todos verdes. Verificado no browser.
+
+**ARMADILHA DE AMBIENTE que custou um ciclo:** `pkill -f "runserver"` do Git Bash NAO mata o processo no Windows, e falha calado. O servidor antigo continuou segurando a 8001, o novo nao bindou, e o browser ficou recebendo TEMPLATE ANTIGO. O sintoma parecia bug de permissao. Matar sempre via PowerShell (`Get-CimInstance ... | Stop-Process -Force`) e conferir que sobrou zero antes de subir.
+
+- **Status**: completed (backend + UI). Falta so o Lucas remover `people.gerir_vagas` do perfil Gestor pra a governanca valer.
