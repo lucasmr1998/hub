@@ -49,6 +49,13 @@ def _derivar_api_base(painel_url: str) -> str:
     return url
 
 
+def _botao_xpath(texto: str) -> str:
+    """XPath de botao por texto, sem depender da caixa (o painel usa CAIXA ALTA)."""
+    minus = 'abcdefghijklmnopqrstuvwxyz'
+    maius = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    return f"//button[contains(translate(., '{minus}', '{maius}'), '{texto.upper()}')]"
+
+
 def _jwt_exp(token: str):
     """Le o campo `exp` (epoch) do payload do JWT, ou None se nao der."""
     try:
@@ -157,17 +164,19 @@ class HubsoftPainelService:
             email_in.send_keys(usuario)
             time.sleep(1.0)
             # O HubSoft valida o email num primeiro passo antes de pedir a senha.
+            # O texto do botao vem em caixa alta ("VALIDAR"), por isso o XPath
+            # normaliza a caixa antes de comparar.
             try:
-                WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Validar')]"))
+                WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, _botao_xpath('validar')))
                 ).click()
             except TimeoutException:
-                pass  # fluxo de 1 etapa
+                pass  # fluxo de 1 etapa (raro)
             pwd = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='password']")))
             pwd.clear()
             pwd.send_keys(senha)
             time.sleep(1.0)
-            wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Entrar')]"))).click()
+            wait.until(EC.element_to_be_clickable((By.XPATH, _botao_xpath('entrar')))).click()
 
             # Espera sair de /login (dashboard renderizado).
             fim = time.time() + 30
