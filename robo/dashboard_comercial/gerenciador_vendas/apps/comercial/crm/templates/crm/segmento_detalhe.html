@@ -102,9 +102,9 @@
         </thead>
         <tbody>
           {% for membro in membros %}
-          <tr data-busca="{{ membro.lead.nome_completo|lower }} {{ membro.lead.telefone|default:'' }}">
+          <tr data-busca="{{ membro.lead.nome_razaosocial|lower }} {{ membro.lead.telefone|default:'' }}">
             <td>
-              <div class="seg-det-lead-nome">{{ membro.lead.nome_completo }}</div>
+              <div class="seg-det-lead-nome">{{ membro.lead.nome_razaosocial }}</div>
               <div class="seg-det-lead-email">{{ membro.lead.email|default:"" }}</div>
             </td>
             <td style="color: var(--color-text-muted);">{{ membro.lead.telefone|default:"—" }}</td>
@@ -120,7 +120,7 @@
               {% endif %}
             </td>
             <td style="text-align: right;">
-              <button class="btn btn-ghost btn-sm" style="color: var(--color-danger);" onclick="removerMembro({{ membro.pk }}, '{{ membro.lead.nome_completo|escapejs }}')" title="Remover">
+              <button class="btn btn-ghost btn-sm" style="color: var(--color-danger);" onclick="removerMembro({{ membro.pk }}, '{{ membro.lead.nome_razaosocial|escapejs }}')" title="Remover">
                 <i class="bi bi-x-lg"></i>
               </button>
             </td>

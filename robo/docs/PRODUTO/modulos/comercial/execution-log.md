@@ -482,3 +482,23 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
      `_validar_cpf` local que so aceita 11 digitos).
   3. Lead 2520 (Angelica) precisa de correcao humana do CPF.
 - **Status:** completed (validador); pending (os 3 debitos acima)
+
+## 2026-07-24 — Fix: busca de lead nao funcionava em Segmentos (CRM)
+
+- **Bug:** tela CRM > Segmentos > Detalhe > "Adicionar lead ao segmento" promete
+  buscar "por nome ou telefone", mas `api_segmento_buscar_leads`
+  (`apps/comercial/crm/views.py`) filtrava por `Q(nome_completo__icontains=q)`,
+  campo que **nao existe** em `LeadProspecto` (o campo certo e
+  `nome_razaosocial`; `nome_completo` e de outro model, `CadastroCliente`). Como o
+  `Q()` e resolvido inteiro no `.filter()`, o Django estourava `FieldError` pra
+  QUALQUER busca (mesmo por telefone), nao so pra busca por nome.
+- **Acao:** trocado `nome_completo` por `nome_razaosocial` em `api_segmento_buscar_leads`
+  (view) e no template `segmento_detalhe.html` (3 ocorrencias: `data-busca` do
+  filtro client side, nome exibido na tabela de membros, e o `onclick` de
+  `removerMembro`). Sem mudanca de contrato/comportamento, so o campo certo.
+- **Output:** query validada direto no shell contra o banco de dev (antes
+  estourava `FieldError`, depois retornou resultado normal); `manage.py check` ok.
+- **Nota:** o fix foi aplicado por engano no checkout `/hub/` (branch
+  `feat/robo-matrix-venda-automatica`) e reaplicado depois em `/hub-main/`
+  (branch `main`, onde o resto do trabalho da sessao vive) pra ir no mesmo commit.
+- **Status:** completed.

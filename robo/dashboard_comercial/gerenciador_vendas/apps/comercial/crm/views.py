@@ -3147,9 +3147,9 @@ def api_segmento_buscar_leads(request, pk):
     from django.db.models import Q
     existentes = seg.membros.values_list('lead_id', flat=True)
     leads = LeadProspecto.objects.filter(
-        Q(nome_completo__icontains=q) | Q(telefone__icontains=q)
+        Q(nome_razaosocial__icontains=q) | Q(telefone__icontains=q)
     ).exclude(pk__in=existentes)[:20]
-    return JsonResponse({'leads': [{'pk': l.pk, 'nome': l.nome_completo, 'telefone': l.telefone or ''} for l in leads]})
+    return JsonResponse({'leads': [{'pk': l.pk, 'nome': l.nome_razaosocial, 'telefone': l.telefone or ''} for l in leads]})
 
 
 @login_required
