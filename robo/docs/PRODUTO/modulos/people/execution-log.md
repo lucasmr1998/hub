@@ -715,3 +715,12 @@ Dois "Configuracoes", um por area; a secao desambigua, e o is-active nao colide 
 - **Verificado no browser**: ids unicos (`checklist-2-0/1/2`) e clicar o 3o item mudou SO o indice 2, sem tocar nos outros.
 - **Output**: `components/checkbox.html`, `views/candidatos.py`, `blocos/_roteiro.html`, `blocos/_checklist.html`. Sem migration.
 - **Status**: completed em dev.
+
+## 2026-07-23 — Item 13 do GAPS reclassificado: era configuracao, nao gap
+
+- **Acao**: o Lucas questionou ("entao isso dos campos nao e gap de produto?") e estava certo. O item 13 (Campos do Perfil que faltam, 4h, ABERTO) foi reclassificado pra **NAO E GAP** e fechado.
+- **Por que era erro**: gap de produto e quando o produto NAO CONSEGUE fazer. Cargo pretendido, categoria de experiencia, "ja trabalhou aqui?" e trajetoria profissional sao criaveis hoje pela tela de Campos, sem codigo e sem deploy. O documento foi escrito comparando print a print, e nessa leitura "campo que eles mostram e a gente nao" virou gap, confundindo **capacidade que falta** com **configuracao que ninguem fez**.
+- **O que sobrou**: endereco com rua e numero em coluna propria (unico que exigiria codigo; fica ABERTO E OPCIONAL, porque e mais PII no formulario publico e mais peso pro expurgo LGPD, entao so vale com uso concreto declarado). E a nota de que campos nascem vazios pro tenant novo, o que e falta de DEFAULT (decisao de onboarding), nao de capacidade.
+- **Efeito na conta**: tira ~4h fantasma do backlog de recrutamento.
+- **Pendente (oferecido, nao autorizado)**: auditar o resto da lista com a mesma regua, separando capacidade que falta vs configuracao vs decisao. Suspeita de que 13 nao e o unico mal classificado.
+- **Status**: completed.

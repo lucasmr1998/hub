@@ -37,6 +37,7 @@ TR Carrion antes de construir mais coisa especifica de vertical.
 |---|---|---|---|
 | 1 | Curriculo: formatos e erro de upload do Chrome | medio | RESOLVIDO |
 | 33 | Triagem le curriculo em Word (docx); .doc recusado | 2h | RESOLVIDO |
+| 13 | Campos do Perfil: era configuracao, nao gap | sem codigo | NAO E GAP |
 | 2 | Mensagem de WhatsApp por etapa e por saida | meio dia | RESOLVIDO |
 | 3 | Analise por IA sob demanda | 1 dia | RESOLVIDO |
 | 4 | Ponte pro Departamento Pessoal | 1,5 dia | RESOLVIDO |
@@ -55,7 +56,6 @@ TR Carrion antes de construir mais coisa especifica de vertical.
 | 30 | Botao "Reativar" no card de saida | 1h | RESOLVIDO |
 | 31 | Board numa superficie branca so | 1h | RESOLVIDO |
 | 32 | Filtro e chip sem recarregar a pagina | 3h | RESOLVIDO |
-| **13** | **Campos do Perfil que faltam** | **4h** | **ABERTO** |
 | **15** | **"Selecionar varios" no kanban** | **3h** | **ABERTO** |
 | **16** | **Requisicao de vaga com aprovacao** | **2 dias** | **ABERTO** |
 | **17** | **Perfil comportamental (teste + perfil por IA)** | **2 dias** | **ABERTO** |
@@ -72,16 +72,35 @@ TR Carrion antes de construir mais coisa especifica de vertical.
 
 ## Os que estao abertos
 
-### 13. Campos do Perfil que faltam
+### 13. Campos do Perfil, RECLASSIFICADO em 23/07 (nao era gap)
 
-A aba Perfil deles mostra: cargo pretendido, categoria de experiencia, "ja
-trabalhou em alguma empresa deste grupo?", endereco com rua e numero, e
-trajetoria profissional em texto livre.
+Estava listado como gap de 4h. **Nao era.** O Lucas apontou o erro: gap de
+produto e quando o produto NAO CONSEGUE fazer. Aqui ele consegue.
+
+A aba Perfil da origem mostra cargo pretendido, categoria de experiencia, "ja
+trabalhou em alguma empresa deste grupo?" e trajetoria profissional. Todos esses
+sao criaveis HOJE, pela tela de Campos (aba do hub de Configuracoes), sem
+codigo e sem deploy: foi exatamente pra isso que os campos custom existem.
+
+**A licao de classificacao**, que vale pro resto desta lista: o documento foi
+escrito comparando print a print, e nessa leitura "campo que eles mostram e a
+gente nao" virou gap. Confundiu **capacidade que falta** com **configuracao que
+ninguem fez**. Item que so precisa de alguem preencher uma tela nao e backlog de
+engenharia, e infla a conta de quanto falta pra fechar o modulo.
+
+**O que sobrou de real, e e pequeno:**
+
+- **Endereco com rua e numero em coluna propria.** Unico que exigiria codigo +
+  migration. Fica ABERTO E OPCIONAL, sem estimativa, porque tem contra: e mais
+  PII no formulario publico e mais peso pro expurgo LGPD. So vale com uso
+  concreto declarado (ex: calcular deslocamento), e nao "porque eles tem".
+- **Campos nascem vazios pro tenant novo.** A origem entrega os campos prontos;
+  os nossos comecam do zero. Isso NAO e falta de capacidade, e falta de
+  DEFAULT. Se virar problema, a solucao e semear campos sugeridos no
+  provisionamento, que e decisao de onboarding, nao feature.
 
 **Nao copiar "como conheceu a vaga"**: eles PERGUNTAM ao candidato; nos MEDIMOS
 pelo link de origem, que e mais confiavel que memoria de quem preencheu.
-
-Parte disso ja da pra fazer sem codigo, com os campos custom por vaga.
 
 ### 15. "Selecionar varios" no kanban
 
