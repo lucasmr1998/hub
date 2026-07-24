@@ -967,7 +967,12 @@ class PerfilConversaoHubsoft(TenantMixin):
         default=11, verbose_name='Status do servico migrado (id)',
         help_text='Padrao 11 = Servico Habilitado (upgrade nasce habilitado).')
     forma_cobranca_id = models.IntegerField(
-        null=True, blank=True, verbose_name='Forma de cobranca (id HubSoft)')
+        null=True, blank=True, verbose_name='Forma de cobranca (id HubSoft)',
+        help_text='Ex: BANCO ITAU. O objeto completo fica em forma_cobranca_obj.')
+    forma_cobranca_obj = models.JSONField(
+        default=dict, blank=True, verbose_name='Forma de cobranca (objeto)',
+        help_text=('Objeto completo da forma de cobranca que o painel exige no payload '
+                   'de novo servico/upgrade. Vazio = o no busca pelo id no schema do painel.'))
     vencimentos_map = models.JSONField(
         default=dict, blank=True, verbose_name='Mapa de vencimentos (dia -> id)',
         help_text='Ex: {"1": 28, "5": 9, "10": 4}. Traduz o dia escolhido no id_vencimento do ERP.')

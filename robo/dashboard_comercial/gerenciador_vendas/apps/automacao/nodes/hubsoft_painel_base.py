@@ -63,6 +63,42 @@ def perfil_do_tenant(tenant, nome: str):
             .filter(tenant=tenant, nome=nome, ativo=True).first())
 
 
+def cliente_hubsoft_do_lead(lead):
+    """Espelho ClienteHubsoft do lead (carrega o id_cliente do HubSoft), ou None.
+
+    Novo servico e upgrade operam sobre um cliente que JA existe no ERP; o vinculo
+    lead -> cliente e o espelho gravado na conversao/sincronizacao."""
+    from apps.integracoes.models import ClienteHubsoft
+    return (ClienteHubsoft.all_tenants
+            .filter(tenant=lead.tenant, lead=lead).order_by('-data_sync').first())
+
+
+def resolver_endereco_cadastral(svc, id_cliente):
+    """Le o cliente no painel e devolve (id_endereco_numero, endereco_numero_obj) do
+    endereco cadastral, pro payload de servico. (None, None) se nao achar."""
+    try:
+        corpo = svc.get_cliente(int(id_cliente)) or {}
+    except Exception:
+        return None, None
+    cliente = corpo.get('cliente', corpo) if isinstance(corpo, dict) else {}
+    enderecos = (cliente.get('enderecos') if isinstance(cliente, dict) else None) or []
+    if not enderecos:
+        return None, None
+    cad = next((e for e in enderecos if (e.get('pivot') or {}).get('tipo') == 'cadastral'),
+               enderecos[0])
+    id_en = cad.get('id_endereco_numero')
+    obj = cad.get('endereco_numero') or cad
+    return id_en, obj
+
+
+def resolver_forma_cobranca(svc, perfil):
+    """Objeto da forma de cobranca pro payload: usa o capturado no perfil, senao
+    busca pelo id no schema do painel. Pode devolver None (o no decide o erro)."""
+    if perfil.forma_cobranca_obj:
+        return perfil.forma_cobranca_obj
+    return svc.forma_cobranca_do_schema(perfil.forma_cobranca_id)
+
+
 def mascara_cpf(cpf: str) -> str:
     """CPF/CNPJ mascarado pro output do nó (LGPD): mantem so os 3 ultimos digitos."""
     d = ''.join(c for c in str(cpf or '') if c.isdigit())
@@ -87,4 +123,5 @@ class HubsoftPainelNode(BaseNode):
 
 
 __all__ = ['HubsoftPainelNode', 'campo_conta_painel', 'campo_perfil', 'campo_dry_run',
-           'flag', 'perfil_do_tenant', 'mascara_cpf', 'integ_id_de']
+           'flag', 'perfil_do_tenant', 'mascara_cpf', 'integ_id_de',
+           'cliente_hubsoft_do_lead', 'resolver_endereco_cadastral', 'resolver_forma_cobranca']

@@ -479,6 +479,133 @@ class HubsoftPainelService:
                 or 'criar_cliente devolveu status != success')
         return resp
 
+    # ------------------------------------------------------------------
+    # ESCRITA — novo servico e upgrade (POST /api/v1/cliente/servico)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _servico_status_obj(status_id: int, *, habilitado: bool) -> dict:
+        """Objeto servico_status pro payload. A forma e generica do HubSoft; o id
+        vem do perfil. `habilitado` True (upgrade imediato) nasce ativo/cobrando;
+        False (novo servico) nasce Aguardando Instalacao."""
+        if habilitado:
+            return {
+                'id_servico_status': status_id, 'descricao': 'Serviço Habilitado',
+                'prefixo': 'servico_habilitado', 'ativo': True, 'habilitado': True,
+                'cobrar': True, 'permite_os': True, 'padrao_sistema': True,
+                'cobrar_dias_nao_utilizados': True, 'permite_atendimento': True,
+            }
+        return {
+            'id_servico_status': status_id, 'descricao': 'Aguardando Instalação',
+            'prefixo': 'aguardando_instalacao', 'ativo': True, 'habilitado': False,
+            'cobrar': False, 'permite_os': True, 'padrao_sistema': True,
+            'cobrar_dias_nao_utilizados': True, 'permite_atendimento': True,
+        }
+
+    def montar_payload_adicionar_servico(self, *, id_cliente, endereco_item, servico_obj,
+                                         forma_cobranca_obj, valor, id_vencimento,
+                                         agora=None, migracao=None) -> dict:
+        """Monta o payload do POST /cliente/servico (novo servico E upgrade).
+
+        Porte tenant-aware do montar_payload_adicionar_servico do robo_v2: os IDs
+        magicos (vendedor, grupo, forma de cobranca, status, validade, agrupamentos)
+        saem do perfil; `servico_obj`/`forma_cobranca_obj`/`endereco_item` (objetos
+        pesados) sao resolvidos pelo no e passados aqui, entao a funcao e pura e
+        golden testavel. `migracao` != None transforma o POST num UPGRADE:
+        acrescenta id_cliente_servico_antigo + executar_migracao_imediata + status
+        habilitado. Formato: {'id_cliente_servico_antigo': int, 'flags': dict|None}.
+        """
+        from datetime import datetime
+
+        if self.perfil is None:
+            raise HubsoftPainelError('montar_payload_adicionar_servico exige um PerfilConversaoHubsoft.')
+        p = self.perfil
+        agora = agora or datetime.now()
+        is_migracao = migracao is not None
+        status_id = p.status_servico_migrado_id if is_migracao else p.status_servico_novo_id
+
+        vendedor_id = p.vendedor_id_novo_servico
+        vendedor_obj = {'id': vendedor_id, 'name': '', 'id_imagem_upload': None,
+                        'enabled2fa': False, 'imagem': None}
+        grupos = [dict(p.grupo_servico_obj)] if p.grupo_servico_obj else []
+
+        cs_enderecos = []
+        for tipo in ('instalacao', 'cadastral', 'cobranca', 'fiscal'):
+            item = dict(endereco_item or {})
+            item['tipo'] = tipo
+            cs_enderecos.append(item)
+
+        payload = {
+            'id_cliente': id_cliente,
+            'id_usuario_vendedor': vendedor_id,
+            'id_vencimento': id_vencimento,
+            'valor': valor,
+            'validade': p.validade_meses or 12,
+            'carne': False,
+            'gerar_carne': 'nao_gerar_carne',
+            'tipo_cobranca': p.tipo_cobranca or 'postecipada',
+            'agrupamento_fatura': p.agrupamento_fatura or 'agrupado_cliente',
+            'agrupamento_nota': 'desagrupado',
+            'data_venda': agora.isoformat() + 'Z',
+            'dados_calculo': None,
+            'servico': servico_obj,
+            'servico_status': self._servico_status_obj(status_id, habilitado=is_migracao),
+            'forma_cobranca': forma_cobranca_obj,
+            'vendedor': vendedor_obj,
+            'grupos': grupos,
+            'cliente_servico_endereco': cs_enderecos,
+            'cliente_servico_taxa_instalacao': {
+                'cobrar_taxa_instalacao': False,
+                'tipo_taxa_instalacao': 'nao_cobrar_taxa',
+                'cobranca_parcelada': 'parcelado',
+                'parcelas': None,
+            },
+            'cliente_servico_contrato': [],
+            'cliente_servico_pacote': [],
+            'cliente_servico_pacote_migracao': [],
+            'cliente_servico_pacote_transmissao': [],
+            'promocoes': [],
+            'promocoes_desativar': [],
+            'migrar_durante_troca_servico': {
+                'atendimentosOS': [], 'tipoMigracaoAtendimentoOs': None,
+            },
+        }
+
+        if is_migracao:
+            payload['id_cliente_servico_antigo'] = migracao.get('id_cliente_servico_antigo')
+            payload['executar_migracao_imediata'] = True
+            payload['migrar_durante_troca_servico'] = migracao.get('flags') or {
+                'atendimentosOS': True, 'tipoMigracaoAtendimentoOs': 'atendimento_com_os_aberta',
+            }
+            payload['id_servico_status'] = status_id
+
+        return payload
+
+    def adicionar_servico(self, payload: dict, *, lead=None) -> dict:
+        """POST /api/v1/cliente/servico (serve pra novo servico e upgrade). Levanta
+        se a resposta nao vier com status success."""
+        resp = self._post('/api/v1/cliente/servico', json_body=payload, lead=lead)
+        status = resp.get('status') if isinstance(resp, dict) else None
+        if status and status != 'success':
+            raise HubsoftPainelError(
+                (resp.get('msg') if isinstance(resp, dict) else None)
+                or 'adicionar_servico devolveu status != success')
+        return resp
+
+    def forma_cobranca_do_schema(self, forma_cobranca_id: int):
+        """Busca o objeto completo da forma de cobranca no schema do painel pelo id,
+        ou None. Usado quando o perfil nao tem forma_cobranca_obj capturado."""
+        if not forma_cobranca_id:
+            return None
+        try:
+            schema = self.schema_cache()
+        except HubsoftPainelError:
+            return None
+        for fc in (schema.get('formas_cobranca') or []):
+            if fc.get('id_forma_cobranca') == int(forma_cobranca_id):
+                return fc
+        return None
+
 
 def hubsoft_painel_do_tenant(tenant, *, integracao_id=None, perfil=None):
     """Fabrica o service do painel a partir da IntegracaoAPI tipo hubsoft_painel do
